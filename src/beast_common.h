@@ -52,9 +52,14 @@ struct BASIS {
 } ;
 typedef struct BASIS BASIS;
 typedef struct Options {
-	char*inputFile;
-	char*outputFolder;
-	float*yInputData;
+	void * input,* output;
+	char  inputType,outputType;
+	int   M,L;
+	int8_t   timeDimensionIndex;
+	int8_t   isInput3DStack;
+	char  *inputFile;
+	char  *outputFolder;
+	float *yInputData;
 	uint64_t seed; 	
 	bool   isSingleyInput;
 	char   separator;
@@ -85,10 +90,10 @@ typedef struct Options {
 } Options;
 struct FILE_LIST
 {
-	FILE*sN,*tN,*sNProb,*tNProb,*sProb,*tProb,*s,*sCI,*sSD;
-	FILE*t,*tCI,*tSD,*b,*bCI,*bSD;
-	FILE*bsign;
-	FILE*infp;
+	FILE *sN,*tN,*sNProb,*tNProb,*sProb,*tProb,*s,*sCI,*sSD;
+	FILE *t,*tCI,*tSD,*b,*bCI,*bSD;
+	FILE * bsign;
+	FILE *infp;
 }FILE_LIST;
 enum  MOVETYPE { birth,death,merge,move,chorder };
 static INLINE void zeroOut_Xmars_zero(F32PTR Xt_mars,F32PTR Xt_zeroBackup,
@@ -128,7 +133,9 @@ extern void zeroOut_Xmars_zero3(F32PTR Xt_mars,F32PTR Xt_zeroBackup,U32PTR rowsM
 extern int32_t find_index_by_csum(rU08PTR good,rI32 N,rI32 randIdx);
 extern int32_t int8_arr_sum(rU08PTR good,rI32 N);
 #include "abc_mem_ext.h"
-extern  void print_error(int code,MemPointers*MEM);
+extern  void print_error(int code,MemPointers *MEM);
+extern Options     *GLOBAL_OPTIONS;
+extern RESULT      *GLOBAL_RESULT;
 #if M_INTERFACE==1
 #define NULL_RET 
 #elif R_INTERFACE==1

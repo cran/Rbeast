@@ -16,10 +16,10 @@
 	#define  r_free(x)      Free(x) 
 #endif
 extern void    fill_1_to_N(rF32PTR p,int N);
-extern void    quickSortD(F32PTR arr,int32_t*_restrict index,int32_t low,int32_t high);
-extern void    quickSortA(F32PTR arr,int32_t*_restrict index,int32_t low,int32_t high);
+extern void    quickSortD(F32PTR arr,int32_t * _restrict index,int32_t low,int32_t high);
+extern void    quickSortA(F32PTR arr,int32_t * _restrict index,int32_t low,int32_t high);
 extern void    transpose_inplace(F32PTR m,int w,int h);
-extern int32_t strcicmp(char const*_restrict a,char const*_restrict b);
+extern int32_t strcicmp(char const * _restrict a,char const * _restrict b);
 extern float   determine_period(F32PTR data,int32_t N,float  omissionValue);
 extern int32_t find_changepoint(F32PTR prob,F32PTR mem,float threshold,I32PTR cpt,F32PTR cptCI,int32_t N,int32_t minSepDist,int32_t maxCptNumber);
 extern float fastlog(float x);

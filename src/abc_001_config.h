@@ -1,6 +1,6 @@
 #pragma once
 #include "abc_000_macro.h"
-#if MSVC==1
+#ifdef MSVC_COMPILER
 	#if R_INTERFACE==1
 		#define DllExport   __declspec( dllexport ) 
 	#elif M_INTERFACE==1
@@ -28,7 +28,7 @@
 		#pragma comment( lib,RLib(Rblas.lib)   )
 		#pragma comment( lib,RLib(Rlapack.lib) )
 	#endif
-#elif GNU==1 
+#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)
 	#define  DllExport  
 	#define _GNU_SOURCE
 	#include <fenv.h>	
@@ -48,7 +48,7 @@
 	#pragma comment(lib,ippLib(ippvmmt.lib))
 	#pragma comment(lib,ippLib(ippsmt.lib))
 #endif
-#if (MYMAT_LIBRARY==1) && (MSVC==1)
+#if (MYMAT_LIBRARY==1) && defined(MSVC_COMPILER)
 	#pragma comment(lib,myMatLib(blas.lib))
 #endif
 #if  MATLAB_LIBRARY==1
@@ -77,4 +77,8 @@
 	#endif
 	enum { false=0,true=1 };
 	#define mwSize size_t
+	#ifdef CLANG_COMPILER
+	   #undef sign
+	   #undef warning
+	#endif
 #endif

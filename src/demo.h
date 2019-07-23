@@ -28,7 +28,7 @@ typedef struct style__
 }Style;
 typedef struct log_
 {
-	char*str;
+	char *str;
 	int  LEN;
 	int  len;
 } Logger;
@@ -38,9 +38,13 @@ typedef struct lpParam
 	SEXP pY;
 	SEXP pOpt;
 #else
-	mxArray**plhs,**prhs;
+	mxArray ** plhs,** prhs;
 	int nlhs,nrhs;
 #endif
+	MemPointers *GLOBAL_MEM;
+	Options     *GLOBAL_OPTIONS;
+	F32PTR      *GLOBAL_Y;
+	RESULT      *GLOBAL_RESULT;
 } LParam;
 typedef struct GlobalStruct
 {
@@ -52,17 +56,17 @@ typedef struct GlobalStruct
 	int    sleepInterval;
 	enum stat { RUN,PAUSE,DONE } status;
 	byte  quit;
-	int*plotData[5][5];
+	int * plotData[5][5];
 	float yMin,yMax;	
 	int N,sample;
-	float*y;
-	float*t,*tCI,*ct;
-	uint16_t*T;
-	int32_t*tProb;
+	float *y;
+	float *t,*tCI,*ct;
+	uint16_t * T;
+	int32_t * tProb;
 	int16_t tKnotNum;
-	float*s,*sCI,*curs;
-	uint16_t*S;
-	int32_t*sProb;
+	float *s,*sCI,*curs;
+	uint16_t * S;
+	int32_t * sProb;
 	int16_t sKnotNum;
 	float yMinS,yMaxS;
 	float yMinT,yMaxT;
@@ -79,7 +83,7 @@ extern Style style;
 extern GlobalStruct gData;
 extern LParam threadParam;
 extern Logger logger;
-extern void LoggerInsert(char*newMsg);
+extern void LoggerInsert(char *newMsg);
 extern DWORD WINAPI beastST_demo(__in LPVOID lpParameter);
 extern DWORD WINAPI beastTrend_demo(__in LPVOID lpParameter);
 extern void InitGlobalData();
@@ -90,14 +94,14 @@ extern void DeleteGDIObject(int N);
 extern void GeneratePlotData();
 extern void DrawPlots(HDC hdc);
 extern void ResizeDialogControls(HWND hwnd);
-extern void EnableButtons(HWND*hButton,HWND*hDiag);
+extern void EnableButtons(HWND *hButton,HWND *hDiag);
 extern DWORD WINAPI beastST_demo(__in LPVOID lpParameter);
 extern void InitGlobalData_ST();
 extern void AllocatePlotData_ST();
 extern void GeneratePlotData_ST();
 extern void DrawPlots_ST(HDC hdc);
 extern void ResizeDialogControls_ST(HWND hwnd);
-extern void EnableButtons_ST(HWND*hButton,HWND*hDiag);
+extern void EnableButtons_ST(HWND *hButton,HWND *hDiag);
 extern BYTE ANDmaskIcon[];
 extern BYTE XORmaskIcon[];
 extern HICON   hIcon;

@@ -1,4 +1,6 @@
-CHANGES IN mat 0.2:
+CHANGES IN Rbeast 0.2:
 
- * Rbeast v0.1 released!
+Jul 20,2019 * Bug fixes: Fixed the compilation errors in the Solaris Linux system.
+	
+May 21,2019 * Rbeast v0.1 released!
 

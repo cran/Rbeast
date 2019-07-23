@@ -65,7 +65,7 @@ beast <- function(data, option=list(),demoGUI=FALSE,...)
   {
 
   OPTION$computeChangepoints=1
-  ANS=.Call(SARAH_beastST_multipleChain_fast, data, OPTION)
+  ANS=.Call(SARAH_beast2, data, OPTION)
   #cat("\n\n==================================================================\n")
   #s=paste("The beast output variable (e.g., x) is a LIST object. Type names(x)", 
   #"to see a list of elements in x.  \n\nThe current 'x' contains the following #elements: ")
@@ -80,11 +80,11 @@ beast <- function(data, option=list(),demoGUI=FALSE,...)
   }
  else
  {
-  if(is.loaded("WinMainDemoST"))
+  if(is.loaded("WinMainDemoST") && is.loaded("GUI_beast") )
   {
     OPTION$computeCredible=1
 	OPTION$fastCIComputation=1  
-    ANS=.Call("WinMainDemoST", data, OPTION) 
+    ANS=.Call("GUI_beast", data, OPTION) 
   }
   else
   {

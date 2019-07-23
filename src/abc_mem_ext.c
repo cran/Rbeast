@@ -9,27 +9,27 @@
 	#define  r_malloc(x) Calloc(x,char)  
 	#define  r_free(x)   Free(x) 
 #endif
-static void*malloc_64(size_t N)	{
-	void*mem=malloc(N+64);
-	void*ptr=(void*)(((uintptr_t)mem+64) & ~(uintptr_t)0x3F);
-	*((char*)((char*)ptr - 1))=(char)((char*)ptr - (char*)mem);
+static void* malloc_64(size_t N)	{
+	void * mem=malloc(N+64);
+	void * ptr=(void *)(((uintptr_t)mem+64) & ~(uintptr_t)0x3F);
+	*((char *)((char*)ptr - 1))=(char)((char *)ptr - (char *)mem);
 	return ptr;
 }
-static  void  free_64(void*_restrict p)	{
-	char*_restrict porig=(char*)p;
-	porig=porig -*(porig - 1);
+static  void  free_64(void * _restrict p)	{
+	char * _restrict porig=(char *)p;
+	porig=porig - *(porig - 1);
 	free(porig);
 }
-void mem_init_x(xMemPointers*_restrict self)
+void mem_init_x(xMemPointers* _restrict self)
 {
-	self->memPointer=(void**)malloc(sizeof(void*)*self->maxNumOfPointers);  
-	self->mem64Aligned=(int8_t*)malloc(sizeof(int8_t)*self->maxNumOfPointers); 
-	self->memNames=(char**)malloc(sizeof(char*)*self->maxNumOfPointers);
+	self->memPointer=(void **)malloc(sizeof(void *)*	self->maxNumOfPointers);  
+	self->mem64Aligned=(int8_t *)malloc(sizeof(int8_t)*self->maxNumOfPointers); 
+	self->memNames=(char **)malloc(sizeof(char *)*self->maxNumOfPointers);
 	self->memNum=0;
 }
-void*mem_alloc_x(xMemPointers*_restrict self,int64_t sizeInByte,uint8_t alignment,char*name)
+void * mem_alloc_x(xMemPointers * _restrict self,int64_t sizeInByte,uint8_t alignment,char * name)
 {
-	void*newPointer;
+	void * newPointer;
 	if (alignment==0)
 		newPointer=malloc(sizeInByte);
 	else
@@ -43,7 +43,7 @@ void*mem_alloc_x(xMemPointers*_restrict self,int64_t sizeInByte,uint8_t alignmen
 	self->memNum++;
 	return newPointer;
 }
-void mem_free_all_x(xMemPointers*_restrict self)
+void mem_free_all_x(xMemPointers * _restrict self)
 {
 	for (int i=0; i < self->memNum; i++)
 	{

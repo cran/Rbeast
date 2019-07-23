@@ -6,8 +6,13 @@ print.beast<-function (x,...)
  #argName=deparse(substitute(x))
  
  #argName=strtrim(argName)
+  if (is.null(x))
+  {
+     return( invisible(NULL))
+  }
+  
   nTS= length(x$tN);
-  cat(paste("\n------Decomposition results for a total of", sprintf("%4d",nTS)," time series------\n"))
+  cat(paste("\nDecomposition results for a total of", sprintf("%4d",nTS)," time series: \n"))
   if (attributes(x)$algorithm=='beastTrend')
   {
 	  for (i in 1:nTS)
@@ -22,23 +27,20 @@ print.beast<-function (x,...)
   {
 	  for (i in 1:nTS)
 	  {
-		s=paste("Time series #",as.character(i),": ",  
+		s=paste("    Time series #",as.character(i),": ",  
 				sprintf("%4.1f",x$sN[i]) , " seasonal changepoints &",
 				sprintf("%4.1f",x$tN[i]) , " trend changepoints \n"          );
 		cat(s)
 	  }
   }
   
-  cat("\n\n==================================================================\n")
-  s=paste("The beast output variable (e.g., x) is a LIST object. Type names(x)", 
-  "to see a list of elements in x.  \n\nThe current 'x' contains the following elements: ")
+  cat("\n\n======\n")
+  s=paste("The beast output variable, say 'y', is a LIST object. Type names(y)", 
+  "to see a list of elements in y. The current 'y' contains the following elements:\n")
   cat(s)
   namesList=names(x);
-  cat(namesList)
-  cat(". ")
-  cat("\n\nCheck individual elements to see the model outputs (e.g, type x$t to see the fitted trend).")
-    cat("\n==================================================================")
-   
-   
+  namesList[1]=paste("  ", namesList[1]);
+  cat(namesList,sep="\n  ")
+  cat("\nCheck individual elements to see the model outputs (e.g, Type 'y$t' to see the fitted trend).\n")  
   
 }

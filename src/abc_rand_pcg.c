@@ -2,9 +2,6 @@
 #include "abc_rand_pcg.h" 
 #include "abc_datatype.h" 
 #include <math.h>  
-#if defined(__GNUC__)||defined(__CLANG__) 
-	DISABLE_WARNING(strict-aliasing,strict-aliasing,NOT_USED)
-#endif
 typedef struct pcg32_random_struct {
 	uint64_t state;
 	uint64_t inc;
@@ -19,7 +16,7 @@ void pcg_set_seed(uint64_t initstate,uint64_t initseq)
 	globalStream.state+=initstate;
 	pcg_random(&rnd,1);
 }
-void pcg_random(uint32_t*_restrict rnd,int32_t N)
+void pcg_random(uint32_t * _restrict rnd,int32_t N)
 {
 	uint64_t oldstate=globalStream.state;
 	uint64_t shift=globalStream.inc;
@@ -28,7 +25,7 @@ void pcg_random(uint32_t*_restrict rnd,int32_t N)
 		uint32_t xorshifted=((oldstate >> 18u) ^ oldstate) >> 27u   ;
 		uint32_t rot=oldstate >> 59u;
 		*rnd++=(xorshifted >> rot)|(xorshifted << ((-rot) & 31));
-		oldstate=oldstate*6364136223846793005ULL+shift;
+		oldstate=oldstate * 6364136223846793005ULL+shift;
 	}
 	globalStream.state=oldstate;
 }
@@ -85,13 +82,13 @@ void pcg_gauss(F32PTR RND,int N)
 		if (u8 < 63)
 		{
 			float delta;
-			delta=(GAUSS.x[IDX+1] - GAUSS.x[IDX])*2.328306436538696e-10f;
+			delta=(GAUSS.x[IDX+1] - GAUSS.x[IDX]) * 2.328306436538696e-10f;
 			while (1)
 			{
 				x=GAUSS.x[IDX]+delta*(float)rnd[1];
 				if (U24 <=GAUSS.yRatio[IDX])
 					break;
-				if (U24 <=expf(-0.5f*x*x)*GAUSS.yInverse[IDX])
+				if (U24 <=expf(-0.5f*x*x)* GAUSS.yInverse[IDX])
 					break;
 				pcg_random(rnd,2);
 				U24=rnd[0] >> 8;
@@ -100,21 +97,22 @@ void pcg_gauss(F32PTR RND,int N)
 		else
 		{
 			float U1,U2;
-			U2=(float)U24*5.960464477539063e-08f; 
+			U2=(float)U24* 5.960464477539063e-08f; 
 			while (1)
 			{
-				U1=rnd[1]*2.328306436538696e-10f; 
+				U1=rnd[1] * 2.328306436538696e-10f; 
 				U1=1 - U1;
-				x=GAUSS.PARAM_R - logf(U1)*GAUSS.INV_PARAM_R;
-				if (exp(-GAUSS.PARAM_R*(x - 0.5f*GAUSS.PARAM_R))*U2  < expf(-0.5f*x*x))
+				x=GAUSS.PARAM_R - logf(U1) *GAUSS.INV_PARAM_R;
+				if (exp(-GAUSS.PARAM_R * (x - 0.5f * GAUSS.PARAM_R)) * U2  < expf(-0.5f * x * x))
 					break;
 				pcg_random(rnd,2);
-				U2=rnd[0]*2.328306436538696e-10f;
+				U2=rnd[0] * 2.328306436538696e-10f;
 			}
 		}
 		*RND++=x*sign;
 	}
 }
+DISABLE_MANY_WARNINGS
 void pcg_gamma(F32PTR rnd,float a,int N)
 {
 	float b;
@@ -131,26 +129,24 @@ void pcg_gamma(F32PTR rnd,float a,int N)
 			while (1)
 			{
 				pcg_random((uint32_t*)u,2);
-
-				u[0]=(float)(*(uint32_t*)&u[0])*INV_MAX;
-				u[1]=(float)(*(uint32_t*)&u[1])*INV_MAX;
- 
-				float w=u[0]*(1 - u[0]);
-				float y=sqrtf(c/w)*(u[0] - 0.5f);
+				u[0]=(float)(*(uint32_t *)&u[0]) * INV_MAX;
+				u[1]=(float)(*(uint32_t *)&u[1]) * INV_MAX;
+				float w=u[0] * (1 - u[0]);
+				float y=sqrtf(c/w) * (u[0] - 0.5f);
 				gam=b+y;
 				if (gam >=0)
 				{
-					float z=64.0f*(w*w*w)*(u[1]*u[1]);
-					if (z <=(1 - 2*(y*y)/gam))
+					float z=64.0f * (w*w*w) * (u[1] * u[1]);
+					if (z <=(1 - 2 * (y*y)/gam))
 						break;
 					float logZ=logf(z);
 					if (b==0)
 					{
-						if (logZ <=-2*y) break;
+						if (logZ <=-2 * y) break;
 					}
 					else
 					{
-						if (logZ <=2*(b*logf(gam/b) - y)) break;
+						if (logZ <=2 * (b * logf(gam/b) - y)) break;
 					}
 				} 
 			}
@@ -160,17 +156,15 @@ void pcg_gamma(F32PTR rnd,float a,int N)
 	}
 	if (a > 0) 
 	{
-		b=1+.3678794f*a;
+		b=1+.3678794f * a;
 		for (int i=0; i < N; i++)
 		{
 			while (1)
 			{
- 
 				pcg_random((uint32_t*)u,2);
-				u[0]=(float)(*(uint32_t*)&u[0])*INV_MAX;
-				u[1]=(float)(*(uint32_t*)&u[1])*INV_MAX;
-
-				c=b*u[0];
+				u[0]=(float)(*(uint32_t *)&u[0]) * INV_MAX;
+				u[1]=(float)(*(uint32_t *)&u[1]) * INV_MAX;
+				c=b * u[0];
 				if (c < 1)
 				{
 					gam=expf(logf(c)/a);
@@ -179,7 +173,7 @@ void pcg_gamma(F32PTR rnd,float a,int N)
 				else
 				{
 					gam=-logf((b - c)/a);
-					if (-logf(1 - u[1]) >=(1 - a)*logf(gam))
+					if (-logf(1 - u[1]) >=(1 - a) * logf(gam))
 						break;
 				}
 			}
@@ -206,6 +200,7 @@ void pcg_gamma(F32PTR rnd,float a,int N)
 		return;
 	}
 }
+ENABLE_MANY_WARNINGS
 void pcg_wishart_unit(F32PTR rnd,F32PTR tmp,int32_t m,int32_t df,char upperOrLower,char zerofill)
 {
 	int32_t N=(m - 1)*m/2;
@@ -225,10 +220,7 @@ void pcg_wishart_unit(F32PTR rnd,F32PTR tmp,int32_t m,int32_t df,char upperOrLow
 	for (int i=1; i <=m; i++)
 	{
 		pcg_gamma(tmp,(float)(df-i+1.)/2.f,1);
-		*tmp=sqrtf((*tmp)*2.f);
+		*tmp=sqrtf((*tmp) * 2.f);
 		tmp=tmp+(m+1);
 	}
 }
-#if defined(__GNUC__)||defined(__CLANG__) 
-	ENABLE_WARNING(strict-aliasing,strict-aliasing,NOT_USED)
-#endif

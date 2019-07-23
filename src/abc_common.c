@@ -5,18 +5,18 @@ void transpose_inplace(rF32PTR m,int32_t w,int32_t h )
 {
 	int32_t start,next,i;
 	float tmp;
-	int32_t totalElement=w*h - 1;
+	int32_t totalElement=w * h - 1;
 	for (start=0; start <=totalElement; start++) {
 		next=start;
 		i=0;
 		do {
 			i++;
-			next=(next%h)*w+next/h;
+			next=(next%h) * w+next/h;
 		} while (next > start);
 		if (next < start||i==1) continue;
 		tmp=m[next=start];
 		do {
-			i=(next%h)*w+next/h;
+			i=(next%h) * w+next/h;
 			m[next]=(i==start) ? tmp : m[i];
 			next=i;
 		} while (next > start);
@@ -24,10 +24,10 @@ void transpose_inplace(rF32PTR m,int32_t w,int32_t h )
 }
 void  fill_1_to_N(rF32PTR p,int N)
 {
-	for (rI32 i=1; i <=N; i++)*p++=(float)i;
+	for (rI32 i=1; i <=N; i++) *p++=(float)i;
 	p -=N;
 }
-int32_t strcicmp(char const*_restrict a,char const*_restrict b)
+int32_t strcicmp(char const * _restrict a,char const * _restrict b)
 {
 	for (;; a++,b++) {
 		rI32 d=((*a)|(uint8_t)32) - ((*b)|(uint8_t)32);
@@ -37,7 +37,7 @@ int32_t strcicmp(char const*_restrict a,char const*_restrict b)
 }
 float determine_period(rF32PTR data,int32_t N,float  omissionValue)
 {
-	rF32PTR xData=(float*)r_malloc(sizeof(float)*N*4);
+	rF32PTR xData=(float *)r_malloc(sizeof(float)*N * 4);
 	float delta=1.f/N;
 	float curValue=0.f;
 	for (register int32_t i=0; i < N; i++)
@@ -52,7 +52,7 @@ float determine_period(rF32PTR data,int32_t N,float  omissionValue)
 		*(xData+N+N+N+i)=tmp;
 		curValue=curValue+delta;
 	}
-	uint8_t*_restrict isNA=(uint8_t*) r_malloc(sizeof(char)*N);
+	uint8_t * _restrict isNA=(uint8_t * ) r_malloc(sizeof(char)*N);
 	memset(isNA,0,sizeof(char)*N);
 	rF32PTR y=data;
 	for (register int32_t i=0; i < N; i++,y++)
@@ -67,13 +67,13 @@ float determine_period(rF32PTR data,int32_t N,float  omissionValue)
 			*y=0.f;
 		}
 	}
-	rF32PTR XtX=(float*)r_malloc(sizeof(float)*4*4);
-	rF32PTR XtY=(float*)r_malloc(sizeof(float)*4);
+	rF32PTR XtX=(float *)r_malloc(sizeof(float)* 4 * 4);
+	rF32PTR XtY=(float *)r_malloc(sizeof(float)* 4);
 	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,4,4,N,1.0f,xData,N,xData,N,0,XtX,4);
 	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',4,XtX,4);
 	r_cblas_sgemv(CblasColMajor,CblasTrans,N,4,1.f,xData,N,data,1L,0.f,XtY,1L);
 	r_LAPACKE_spotrs(LAPACK_COL_MAJOR,'U',4,1,XtX,4,XtY,4);
-	rF32PTR yFit=(float*)r_malloc(sizeof(float)*N);
+	rF32PTR yFit=(float *)r_malloc(sizeof(float)* N);
 	r_cblas_sgemv(CblasColMajor,CblasNoTrans,N,4,1.f,xData,N,XtY,1L,0.f,yFit,1L);
 	r_ippsSub_32f_I(yFit,data,N);
 	r_free(yFit);
@@ -81,7 +81,7 @@ float determine_period(rF32PTR data,int32_t N,float  omissionValue)
 	r_free(XtX);
 	r_free(xData);
 	int32_t M=(int)ceil(N/2);
-	rF32PTR ans=(float*)r_malloc(sizeof(float)*M);
+	rF32PTR ans=(float *)r_malloc(sizeof(float)*M);
 	for (register int32_t i=1; i <=M; i++)
 	{
 		int32_t len=N - i;
@@ -108,7 +108,7 @@ float determine_period(rF32PTR data,int32_t N,float  omissionValue)
 		ans[i - 1]=(XY/NUM - MX*MY)/sqrtf((XX/N - MX*MX)*(YY/N - MY*MY));
 	}
 	memset(isNA,0,M);
-	I32PTR index=(int32_t*)r_malloc(sizeof(int32_t)*M);
+	I32PTR index=(int32_t *)r_malloc(sizeof(int32_t)*M);
 	size_t  totalLMnum=0;
 	for (register int32_t i=2; i <=(M - 1); i++)
 	{
@@ -150,12 +150,12 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
 {
 	if (maxCptNumber==0)	{return maxCptNumber;}
 	int32_t w=(int32_t) round((minSepDist - 1)/2);
-	int32_t w2=w*2+1;
+	int32_t w2=w * 2+1;
 	r_ippsSet_32f(0,mem,N);			
 	I32PTR cpfromSum_Pos=(int32_t*) mem+N;
-	F32PTR cpfromSum_Val=(float*)mem+N*2;
-	I32PTR cpfromProb_Pos=(int32_t*) mem+N*3;
-	F32PTR cpfromProb_Val=(float*)mem+N*4;
+	F32PTR cpfromSum_Val=(float *)mem+N * 2;
+	I32PTR cpfromProb_Pos=(int32_t *) mem+N * 3;
+	F32PTR cpfromProb_Val=(float *)mem+N * 4;
 	for (int32_t i=-w; i <=w; i++)
 	{
 		int32_t len=i > 0 ? i : -i;
@@ -169,7 +169,7 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
 	{
 		if (mem[i] < threshold) continue;
 		bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
-		bool isLargeThanNearestTwoNeighors=(mem[i]*4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
+		bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
 		if (!(isLargeThanNearestNeighor && isLargeThanNearestTwoNeighors)) continue;
 		int32_t		upperIdx_1=i+w;
 		int32_t		maxIdx=-999;
@@ -207,9 +207,9 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
 	if (cptNumber==0) { return cptNumber; }
 	quickSortD(cpfromProb_Val,cpfromProb_Pos,0,cptNumber - 1);
 	cptNumber=min(cptNumber,maxCptNumber);
-	r_cblas_scopy(cptNumber,(float*)cpfromProb_Pos,1,(float*) cpt,1);
-	I32PTR index=(int32_t*) mem;
-	float*cpt_float=mem+N;
+	r_cblas_scopy(cptNumber,(float *)cpfromProb_Pos,1,(float *) cpt,1);
+	I32PTR index=(int32_t *) mem;
+	float *cpt_float=mem+N;
 	for (int32_t i=0; i < cptNumber; i++)
 	{
 		*index++=i;
@@ -241,7 +241,7 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
     	del=cpt_float[i+1] - cpt_float[i];
 		if (del2 <=0)
 		{
-				del1=del1*2.f;
+				del1=del1 * 2.f;
 				del=(del1 > del) ? del/2 : del1;
 		}else
 		{
@@ -252,19 +252,19 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
 		del=cpt_float[i+1] - cpt_float[i];
 		if (del2 <=0)
 		{
-			delta=del - delta*2;
+			delta=del - delta * 2;
 			del=delta <=0 ? del/2 : delta;
 		}
 		else
 		{
-			del2=del2*2.f;
+			del2=del2 * 2.f;
 			del=(del2 >=del) ? del/2 : del2;
 		}
 		int32_t len=(int32_t)ceil(del);
 		delta=confidenceInterval(prob+(int32_t)cpt_float[i+1]-(len-1),len,'L');
 		cptCI[i+1]=delta;
 	}
-	float*temp=mem+2*N;
+	float *temp=mem+2 * N;
 	r_cblas_scopy(2*cptNumber,cptCI,1,temp,1);
 	for (int32_t i=0; i < cptNumber; i++)
 	{
@@ -288,7 +288,7 @@ static float confidenceInterval( rF32PTR half,int32_t n,char leftOrRight)
 		for (j=0; j < n; j++)
 		{
 			cumSum=cumSum+half[j];
-			if (cumSum*inv_sum >=0.95) break;
+			if (cumSum *inv_sum >=0.95) break;
 		}
 		float J=j+1.f;
 		delta=J - (cumSum - 0.95f*sum)/half[j];	
@@ -311,10 +311,10 @@ int32_t find_changepoint(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF3
 	int32_t w0=minSepDist/2;
 	int32_t w1=minSepDist - w0;
 	r_ippsSet_32f(0,mem,N);
-	I32PTR cpfromSum_Pos=(int32_t*) mem+N;
-	F32PTR cpfromSum_Val=(float*) mem+N*2;
-	I32PTR cpfromProb_Pos=(int32_t*) mem+N*3;
-	F32PTR cpfromProb_Val=(float*)mem+N*4;
+	I32PTR cpfromSum_Pos=(int32_t *) mem+N;
+	F32PTR cpfromSum_Val=(float *) mem+N * 2;
+	I32PTR cpfromProb_Pos=(int32_t *) mem+N * 3;
+	F32PTR cpfromProb_Val=(float *)mem+N * 4;
 	for (int32_t i=-w1; i <=w0; i++)
 	{
 		int32_t len=i > 0 ? i : -i;
@@ -328,7 +328,7 @@ int32_t find_changepoint(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF3
 	{
 		if (mem[i] < threshold) continue;
 		bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
-		bool isLargeThanNearestTwoNeighors=(mem[i]*4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
+		bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
 		if (!(isLargeThanNearestNeighor && isLargeThanNearestTwoNeighors)) continue;
 		int32_t		UPPERIDX_1=i+w1;
 		int32_t		maxIdx=-999;
@@ -366,9 +366,9 @@ int32_t find_changepoint(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF3
 	if (cptNumber==0) { return cptNumber; }
 	quickSortD(cpfromSum_Val,cpfromProb_Pos,0,cptNumber - 1);
 	cptNumber=min(cptNumber,maxCptNumber);
-	r_cblas_scopy(cptNumber,(float*)cpfromProb_Pos,1,(float*) cpt,1);
-	I32PTR index=(int32_t*) mem;
-	F32PTR cpt_float=(float*) mem+N;
+	r_cblas_scopy(cptNumber,(float *)cpfromProb_Pos,1,(float *) cpt,1);
+	I32PTR index=(int32_t * ) mem;
+	F32PTR cpt_float=(float	* ) mem+N;
 	for (int32_t i=0; i < cptNumber; i++)
 	{
 		*index++=i;
@@ -383,8 +383,8 @@ int32_t find_changepoint(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF3
 		cptCI[cptNumber+i]=-9999.f;
 	}
 	float	delta;
-	F32PTR tmpSeg=(float*)  mem+3*N;
-	I32PTR nullSeg=(int32_t*) mem+4*N;
+	F32PTR tmpSeg=(float	* )  mem+3 * N;
+	I32PTR nullSeg=(int32_t	*) mem+4 * N;
 	for (int32_t i=0; i < cptNumber; i++)
 	{
 		int32_t startIdx,endIdx;
@@ -405,8 +405,8 @@ int32_t find_changepoint(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF3
 		delta=confidenceInterval(tmpSeg,len,'R');		
 		cptCI[cptNumber+i]=delta;
 	}
-	float*temp=mem+2*N;
-	r_cblas_scopy(2*cptNumber,cptCI,1,temp,1);
+	float *temp=mem+2 * N;
+	r_cblas_scopy(2 * cptNumber,cptCI,1,temp,1);
 	for (int32_t i=0; i < cptNumber; i++)
 	{
 		int32_t idx;
@@ -484,9 +484,9 @@ float fastlog1(float x)
 {
 	register union { float f; uint32_t i; } vx={ x };
 	register union{ uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-	vx.f=(float)vx.i*1.1920928955078125e-7f*0.69314718f;
+	vx.f=(float)vx.i* 1.1920928955078125e-7f*0.69314718f;
 	vx.f=vx.f - 124.22551499f*0.69314718f
-		- 1.498030302f*0.69314718f*mx.f
+		- 1.498030302f*0.69314718f * mx.f
 		- 1.72587999f*0.69314718f/(0.3520887068f+mx.f);
 	return vx.f;
 }
@@ -494,9 +494,9 @@ float fastlog2(float x)
 {
 	register union { float f; uint32_t i; } vx={ x };
 	register union{ uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-	vx.f=(float) ( (double)vx.i*(double)(1.1920928955078125e-7f*0.69314718f) );
+	vx.f=(float) ( (double)vx.i* (double)(1.1920928955078125e-7f*0.69314718f) );
 	vx.f=vx.f - 124.2098722217282f*0.69314718f
-		- 1.502704726439149f*0.69314718f*mx.f
+		- 1.502704726439149f*0.69314718f * mx.f
 		- 1.746553042329640f*0.69314718f/(0.356745518976678f+mx.f);
 	return vx.f;
 }
@@ -504,7 +504,7 @@ float fastlog(float x)
 {
 	register union { float f; uint32_t i; } vx={ x };
 	register union { uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-	vx.f=(float)vx.i*(1.1920928955078125e-7f*0.69314718f);
+	vx.f=(float)vx.i* (1.1920928955078125e-7f*0.69314718f);
 	vx.f=vx.f - 125.5233166734556f*0.69314718f+mx.f*(-0.413356886671142+mx.f*(-0.472721975352920+0.078018528401178*mx.f))*0.69314718f+
 		-0.787757784962750f*0.69314718f/(0.1781810261970705f+mx.f);
 	return vx.f;
@@ -514,9 +514,9 @@ float sum_log_diag(rF32PTR p,rI32 K)
 	rF32 x=0;
 	for (rI32 i=0; i < K; i++)
 	{
-		register union { float f; uint32_t i; } vx={*p };
+		register union { float f; uint32_t i; } vx={ *p };
 		register union{ uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-		vx.f=(float)vx.i*(1.1920928955078125e-7f*0.69314718f);
+		vx.f=(float)vx.i* (1.1920928955078125e-7f*0.69314718f);
 		vx.f=vx.f - 125.5233166734556f*0.69314718f+mx.f*(-0.413356886671142+mx.f*(-0.472721975352920+0.078018528401178*mx.f))*0.69314718f+
 			-0.787757784962750f*0.69314718f/(0.1781810261970705f+mx.f);
 		x+=vx.f;
@@ -529,7 +529,7 @@ float fastexp(float x){
 	x=(x < -126) ? -126.0f : x;
 	register float z=x - (float)((int)x)+((x < 0) ? 1.0f : 0.0f);
 	register  union { uint32_t i; float f; } v;
-	v.i=(uint32_t)     (    8388608.f*(x+121.2740575f+27.7280233f/(4.84252568f - z) - 1.49012907f*z)          );
+	v.i=(uint32_t)     (    8388608.f * (x+121.2740575f+27.7280233f/(4.84252568f - z) - 1.49012907f * z)          );
 	return v.f;
 }
 float fast_sqrt(float x)

@@ -1,11 +1,8 @@
 #include "abc_000_macro.h"
-#if defined(__GNUC__)||defined(__CLANG__) 
-DISABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-DISABLE_WARNING(unused-function,unused-function,NOT_USED)
-DISABLE_WARNING(strict-aliasing,strict-aliasing,NOT_USED)
-DISABLE_WARNING(maybe-uninitialized,maybe-uninitialized,NOT_USED)
-#endif
+DISABLE_MANY_WARNINGS
 #include "beast_common.h"
+Options     *GLOBAL_OPTIONS;
+RESULT      *GLOBAL_RESULT;
 void zeroOut_Xmars_zero0(F32PTR Xt_mars,F32PTR Xt_zeroBackup,
 	U32PTR rowsMissing,int32_t nMissing,int32_t N,int32_t Npad,int32_t k)
 {
@@ -140,9 +137,6 @@ void zeroOut_Xmars_zero3(F32PTR Xt_mars,F32PTR Xt_zeroBackup,U32PTR rowsMissing,
 		Xt_mars=Xt_mars+Npad;
 	}
 }
-#if defined(__GNUC__)||defined(__CLANG__) 
-	DISABLE_WARNING(strict-aliasing,strict-aliasing,NOT_USED)
-#endif
 int32_t find_index_by_csum(rU08PTR good,rI32 N,rI32 randIdx) 
 {
 	  rI32 newKnot;
@@ -153,16 +147,16 @@ int32_t find_index_by_csum(rU08PTR good,rI32 N,rI32 randIdx)
 		  for (i=0; i<N16; i++) {
 			  int64_t sum;
 			  sum=*((int64_t*)good)+*((int64_t*)good+1);
-			  *((int32_t*)&sum)=*((int32_t*)&sum)+*((int32_t*)&sum+1);
-			  *((int16_t*)&sum)=*((int16_t*)&sum)+*((int16_t*)&sum+1);
-			  *((int8_t*)&sum)=*((int8_t*)&sum)+*((int8_t*)&sum+1);
+			  *((int32_t*)&sum)+=*((int32_t*)&sum+1);
+			  *((int16_t*)&sum)+=*((int16_t*)&sum+1);
+			  *((int8_t*)&sum)+=*((int8_t *)&sum+1);
 			  delta=*((int8_t*)&sum);
 			  count+=delta;
 			  if (count >=randIdx) break;
 			  good+=16;
 		  }
 		  count -=delta;
-		  newKnot=i*16;
+		  newKnot=i * 16;
 	  }
 	  {
 		  rI32 j;
@@ -174,9 +168,6 @@ int32_t find_index_by_csum(rU08PTR good,rI32 N,rI32 randIdx)
 	  }
 	  return newKnot;
   }
-#if defined(__GNUC__)||defined(__CLANG__) 
-	ENABLE_WARNING(strict-aliasing,strict-aliasing,NOT_USED)
-#endif
  int32_t int8_arr_sum(rU08PTR good,rI32 N)
  {
 	  rI32	 good_num=0;
@@ -192,7 +183,7 @@ int32_t find_index_by_csum(rU08PTR good,rI32 N,rI32 randIdx)
 	  }
 	  return good_num;
   }
- void print_error(int code,MemPointers*MEM)
+ void print_error(int code,MemPointers *MEM)
  {
 	 if (!MEM)
 		 MEM->free_all(MEM);
@@ -219,9 +210,4 @@ int32_t find_index_by_csum(rU08PTR good,rI32 N,rI32 randIdx)
 		 ;
 	 }
  }
-#if defined(__GNUC__)||defined(__CLANG__) 
-ENABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-ENABLE_WARNING(unused-function,unused-function,NOT_USED)
-ENABLE_WARNING(strict-aliasing,strict-aliasing,NOT_USED)
-ENABLE_WARNING(maybe-uninitialized,maybe-uninitialized,NOT_USED)
-#endif
+ ENABLE_MANY_WARNINGS

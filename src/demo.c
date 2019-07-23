@@ -1,9 +1,6 @@
 #include "abc_000_macro.h"
-#if defined(__GNUC__)||defined(__CLANG__) 
-DISABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-DISABLE_WARNING(unused-function,unused-function,NOT_USED)
-#endif
-#if defined(_WIN32) && defined(_WIN64) && !defined(__i386)  && !defined(__i686) && !defined(i386) && !defined(__i686)
+DISABLE_MANY_WARNINGS
+#if defined(WIN64_OS) 
 #include "demo.h"
 GlobalStruct gData;
 LParam threadParam;
@@ -31,10 +28,10 @@ void InitGlobalData()
 		.fractionEdit=0.5,
 		.widthDialg=270,
 	};
-	 memset(hBitmap,0,sizeof(HBITMAP)*2);
-	 memset(hBufferBitmap,0,sizeof(HBITMAP)*2);
-	 memset(memDC,0,sizeof(HDC)*2);
-	 memset(bufferDC,0,sizeof(HDC)*2);
+	 memset(hBitmap,0,sizeof(HBITMAP)* 2);
+	 memset(hBufferBitmap,0,sizeof(HBITMAP)* 2);
+	 memset(memDC,0,sizeof(HDC)* 2);
+	 memset(bufferDC,0,sizeof(HDC)* 2);
 	 blackBrush=0;
 	 greenPen=0,redPen=0;
 	 memset(&gData,0,sizeof(gData));
@@ -47,14 +44,14 @@ void InitGlobalData()
 }
 void AllocatePlotData()
 {
-	gData.plotData[0][0]=malloc(sizeof(int)*gData.N*2);
-	gData.plotData[0][1]=malloc(sizeof(int)*gData.N*2);
+	gData.plotData[0][0]=malloc(sizeof(int)*gData.N * 2);
+	gData.plotData[0][1]=malloc(sizeof(int)*gData.N * 2);
 	gData.plotData[0][2]=malloc(sizeof(int)*gData.N);
 	gData.plotData[0][3]=malloc(sizeof(int)*gData.N);
-	gData.plotData[0][4]=malloc(sizeof(int)*gData.N*4);
-	gData.plotData[1][0]=malloc(sizeof(int)*gData.N*2);
+	gData.plotData[0][4]=malloc(sizeof(int)*gData.N * 4);
+	gData.plotData[1][0]=malloc(sizeof(int)*gData.N * 2);
 }
-void EnableButtons(HWND*hButton,HWND*hDiag)
+void EnableButtons(HWND *hButton,HWND *hDiag)
 {
 	byte isDone=(gData.status==DONE);
 	if (hButton !=NULL)
@@ -99,13 +96,13 @@ void ResizeControls(int x,int y,int N)
 	x0=x0 - sep;
 	xExt=x - x0 -mgr;
 	int   len;
-	len=3*style.xChar+style.xCapChar;
-	width=xExt - 2*(len+2*style.labelGap);
+	len=3 * style.xChar+style.xCapChar;
+	width=xExt - 2 * (len+2 * style.labelGap);
 	height=yExt*style.vScrollRatio;
 	y0=(yExt - height)/2;
-	x0=x0+(len+2*style.labelGap);		
+	x0=x0+(len+2 * style.labelGap);		
 	SetWindowPos(hScroll,NULL,x0,y0,width,height,SWP_NOZORDER);
-	x0=mgr+4*style.wButton+3*sep+style.labelGap;
+	x0=mgr+4 * style.wButton+3 * sep+style.labelGap;
 	height=style.yChar;
 	y0=(yExt - height)/2;
 	width=len;
@@ -114,17 +111,17 @@ void ResizeControls(int x,int y,int N)
     SetWindowPos(hStatic[1],NULL,x0,y0,width,height,SWP_NOZORDER);
 	x0=mgr;
 	y0=y*(1 - style.rEdit);
-	height=y*style.rEdit;
-	width=x - 2*mgr;
+	height=y* style.rEdit;
+	width=x - 2 * mgr;
 	SetWindowPos(hEdit,NULL,x0,y0,width,height,SWP_NOZORDER);
 	int vGap=10;
-	width=x - 2*mgr;
+	width=x - 2 * mgr;
 	yExt=y - y*style.rEdit - style.hgtButtonBar - (N+1)*vGap;
 	y0=style.hgtButtonBar+vGap;	
 	for (int i=0; i < N; i++)
 	{
 		gData.w[i]=width;
-		gData.h[i]=yExt*style.rFig[i];
+		gData.h[i]=yExt * style.rFig[i];
 		gData.x0[i]=mgr;
 		gData.y0[i]=y0;
 		y0=y0+gData.h[i]+vGap;
@@ -200,12 +197,12 @@ void GeneratePlotData(  )
 	int sample=gData.sample;
 	float Ymax=gData.yMax;
 	float Ymin=gData.yMin;
-	float a=H+H/(Ymax - Ymin)*Ymin;
+	float a=H+H/(Ymax - Ymin) *Ymin;
 	float b1=H/(Ymax - Ymin)/sample;
 	float b2=H/(Ymax - Ymin);
 	float c=W/N;
 	float tmpX=0;
-	int*_restrict   data1,*_restrict    data2;
+	int * _restrict   data1,*_restrict    data2;
 	F32PTR Y1,Y2;
 	data1=gData.plotData[0][0];
 	data2=gData.plotData[0][1];
@@ -213,20 +210,20 @@ void GeneratePlotData(  )
 	Y2=gData.ct;
 	for (int i=0; i < N; i++)
 	{
-		data1[2*i]=tmpX; 
-		data1[2*i+1]=a - b1*Y1[i];
-		data2[2*i]=tmpX; 
-		data2[2*i+1]=a - b2*Y2[i];
+		data1[2 * i]=tmpX; 
+		data1[2 * i+1]=a - b1*Y1[i];
+		data2[2 * i]=tmpX; 
+		data2[2 * i+1]=a - b2*Y2[i];
 		tmpX+=c;
 	}
 	data1=gData.plotData[0][2];
 	data2=gData.plotData[0][3];
 		for (int i=0; i < gData.tKnotNum; i++)
 	{
-		data1[4*i]=c*gData.T[i];
-		data1[4*i+1]=0;
-		data1[4*i+2]=c*gData.T[i];
-		data1[4*i+3]=H; 
+		data1[4 * i]=c * gData.T[i];
+		data1[4 * i+1]=0;
+		data1[4 * i+2]=c * gData.T[i];
+		data1[4 * i+3]=H; 
 		data2[i]=2;
 	}
 	data1=gData.plotData[0][4]; 
@@ -250,16 +247,16 @@ void GeneratePlotData(  )
 	Ymin=-0.02;
 	W=gData.w[1];
 	H=gData.h[1];
-	a=H+H/(Ymax - Ymin)*Ymin;
+	a=H+H/(Ymax - Ymin) *Ymin;
 	b1=H/(Ymax - Ymin)/sample;	
 	c=W/N;
 	data1=gData.plotData[1][0];	
-	int32_t*_restrict Yi=gData.tProb;
+	int32_t * _restrict Yi=gData.tProb;
 	tmpX=0;
 	for (int i=0; i < N; i++)
 	{
-		data1[2*i]=tmpX;
-		data1[2*i+1]=a - b1*Yi[i];		
+		data1[2 * i]=tmpX;
+		data1[2 * i+1]=a - b1*Yi[i];		
 		tmpX+=c;
 	}
 }
@@ -273,12 +270,12 @@ void DrawPlots(HDC hdc)
 	BitBlt(memDC[0],0,0,W,H,bufferDC[0],0,0,SRCCOPY);
 	int mode=SetROP2(memDC[0],R2_MERGEPEN); 
 	SelectObject(memDC[0],grayBrush);
-	Polygon(memDC[0],(POINT*)gData.plotData[0][4],gData.N*2);
+	Polygon(memDC[0],(POINT *)gData.plotData[0][4],gData.N * 2);
 	SetROP2(memDC[0],mode);
-	Polyline(memDC[0],(POINT*)gData.plotData[0][0],gData.N); 
+	Polyline(memDC[0],(POINT *)gData.plotData[0][0],gData.N); 
 	SelectObject(memDC[0],yellowPen);
-	Polyline(memDC[0],(POINT*)gData.plotData[0][1],gData.N);
-	PolyPolyline(memDC[0],(POINT*)gData.plotData[0][2],(DWORD*)gData.plotData[0][3],gData.tKnotNum);
+	Polyline(memDC[0],(POINT *)gData.plotData[0][1],gData.N);
+	PolyPolyline(memDC[0],(POINT *)gData.plotData[0][2],(DWORD*)gData.plotData[0][3],gData.tKnotNum);
 	SelectObject(memDC[0],greenPen);
 	wsprintf(str,"iteration:%d data+fitted",gData.ite);
 	TextOut(memDC[0],0,0,str,lstrlen(str));
@@ -288,7 +285,7 @@ void DrawPlots(HDC hdc)
 	SetRect(&rect,0,0,W,H);
 	FillRect(memDC[1],&rect,blackBrush);
 	SelectObject(memDC[1],yellowPen);
-	Polyline(memDC[1],(POINT*)gData.plotData[1][0],gData.N); 
+	Polyline(memDC[1],(POINT *)gData.plotData[1][0],gData.N); 
 	wsprintf(str,"iteration:%d Probability",gData.ite);
 	TextOut(memDC[1],0,0,str,lstrlen(str));
 	BitBlt(hdc,gData.x0[1],gData.y0[1],W,H,memDC[1],0,0,SRCCOPY);
@@ -332,12 +329,12 @@ void ResizeDialogControls(HWND hwnd)
 		SetWindowPos(hc,NULL,x0,y0,width,height,SWP_NOZORDER);
 	}
 }
-void LoggerInsert(char*newMsg)
+void LoggerInsert(char *newMsg)
 {
 	int lenMsg=lstrlen(newMsg);
 	if ((lenMsg+logger.len) >=logger.LEN)
 	{
-		char*tmp;
+		char *tmp;
 		int   newBytes;
 		newBytes=max(lenMsg,1000);
 		tmp=malloc(logger.LEN+newBytes+1);
@@ -366,7 +363,7 @@ HWND GetConsoleHwnd(void)
 	SetConsoleTitle(pszOldWindowTitle);
 	return(hwndFound);
 }
-#if MSVC==1
+#if defined(MSVC_COMPILER)
 void SetupConsole()
 {
 	BOOL bCreated=AllocConsole();
@@ -455,15 +452,15 @@ void InitGlobalData_ST()
 			.vButtonRatio=0.7,
 			.vScrollRatio=0.5,
 			.labelGap=8,
-			.rFig={ 0.3,0.7/2.*2/3.,0.7/2./3,0.7/2.*2./3,0.7/2./3 },
+			.rFig={ 0.3,0.7/2. * 2/3.,0.7/2./3,0.7/2. * 2./3,0.7/2./3 },
 			.fractionLabel=0.5,
 			.fractionEdit=0.5,
 			.widthDialg=270,
 	};
-	memset(hBitmap,0,sizeof(HBITMAP)*5);
-	memset(hBufferBitmap,0,sizeof(HBITMAP)*5);
-	memset(memDC,0,sizeof(HDC)*5);
-	memset(bufferDC,0,sizeof(HDC)*5);
+	memset(hBitmap,0,sizeof(HBITMAP)* 5);
+	memset(hBufferBitmap,0,sizeof(HBITMAP)* 5);
+	memset(memDC,0,sizeof(HDC)* 5);
+	memset(bufferDC,0,sizeof(HDC)* 5);
 	blackBrush=0;
 	greenPen=0,redPen=0;
 	memset(&gData,0,sizeof(gData));
@@ -476,20 +473,20 @@ void InitGlobalData_ST()
 }
 void AllocatePlotData_ST()
 {
-	gData.plotData[0][0]=malloc(sizeof(int)*gData.N*2); 
-	gData.plotData[0][1]=malloc(sizeof(int)*gData.N*2); 
-	gData.plotData[1][0]=malloc(sizeof(int)*gData.N*2); 
-	gData.plotData[1][1]=malloc(sizeof(int)*gData.N*2); 
+	gData.plotData[0][0]=malloc(sizeof(int)*gData.N * 2); 
+	gData.plotData[0][1]=malloc(sizeof(int)*gData.N * 2); 
+	gData.plotData[1][0]=malloc(sizeof(int)*gData.N * 2); 
+	gData.plotData[1][1]=malloc(sizeof(int)*gData.N * 2); 
 	gData.plotData[1][2]=malloc(sizeof(int)*gData.N);     
 	gData.plotData[1][3]=malloc(sizeof(int)*gData.N);     
-	gData.plotData[1][4]=malloc(sizeof(int)*gData.N*4); 
-	gData.plotData[2][0]=malloc(sizeof(int)*gData.N*2); 
-	gData.plotData[3][0]=malloc(sizeof(int)*gData.N*2); 
-	gData.plotData[3][1]=malloc(sizeof(int)*gData.N*2); 
+	gData.plotData[1][4]=malloc(sizeof(int)*gData.N * 4); 
+	gData.plotData[2][0]=malloc(sizeof(int)*gData.N * 2); 
+	gData.plotData[3][0]=malloc(sizeof(int)*gData.N * 2); 
+	gData.plotData[3][1]=malloc(sizeof(int)*gData.N * 2); 
 	gData.plotData[3][2]=malloc(sizeof(int)*gData.N);     
 	gData.plotData[3][3]=malloc(sizeof(int)*gData.N);     
-	gData.plotData[3][4]=malloc(sizeof(int)*gData.N*4); 
-	gData.plotData[4][0]=malloc(sizeof(int)*gData.N*2); 
+	gData.plotData[3][4]=malloc(sizeof(int)*gData.N * 4); 
+	gData.plotData[4][0]=malloc(sizeof(int)*gData.N * 2); 
 }
 void GeneratePlotData_ST()
 {
@@ -504,13 +501,13 @@ void GeneratePlotData_ST()
 	float b2;
 	float c;
 	float tmpX;
-	int*_restrict   data1,*_restrict    data2;
+	int * _restrict   data1,*_restrict    data2;
 	F32PTR Y1,Y2;
 	W=gData.w[0];
 	H=gData.h[0];
 	Ymax=gData.yMax;
 	Ymin=gData.yMin;
-	a=H+H/(Ymax - Ymin)*Ymin;
+	a=H+H/(Ymax - Ymin) *Ymin;
 	b1=H/(Ymax - Ymin)/sample;
 	b2=H/(Ymax - Ymin);
 	c=W/N;
@@ -524,17 +521,17 @@ void GeneratePlotData_ST()
 	Y4=gData.ct;
 	for (int i=0; i < N; i++)
 	{
-		data1[2*i]=tmpX;
-		data1[2*i+1]=a - b1*(Y1[i]+Y3[i]);
-		data2[2*i]=tmpX;
-		data2[2*i+1]=a - b2*(Y2[i]+Y4[i]);
+		data1[2 * i]=tmpX;
+		data1[2 * i+1]=a - b1*(Y1[i]+Y3[i]);
+		data2[2 * i]=tmpX;
+		data2[2 * i+1]=a - b2*(Y2[i]+Y4[i]);
 		tmpX+=c;
 	}
 	W=gData.w[1];
 	H=gData.h[1];
 	Ymax=gData.yMaxS;
 	Ymin=gData.yMinS;
-	a=H+H/(Ymax - Ymin)*Ymin;
+	a=H+H/(Ymax - Ymin) *Ymin;
 	b1=H/(Ymax - Ymin)/sample;
 	b2=H/(Ymax - Ymin);
 	c=W/N;
@@ -545,20 +542,20 @@ void GeneratePlotData_ST()
 	Y2=gData.curs;
 	for (int i=0; i < N; i++)
 	{
-		data1[2*i]=tmpX;
-		data1[2*i+1]=a - b1*Y1[i];
-		data2[2*i]=tmpX;
-		data2[2*i+1]=a - b2*Y2[i];
+		data1[2 * i]=tmpX;
+		data1[2 * i+1]=a - b1*Y1[i];
+		data2[2 * i]=tmpX;
+		data2[2 * i+1]=a - b2*Y2[i];
 		tmpX+=c;
 	}
 	data1=gData.plotData[1][2];
 	data2=gData.plotData[1][3];
 	for (int i=0; i < gData.sKnotNum; i++)
 	{
-		data1[4*i]=c*gData.S[i];
-		data1[4*i+1]=0;
-		data1[4*i+2]=c*gData.S[i];
-		data1[4*i+3]=H;
+		data1[4 * i]=c * gData.S[i];
+		data1[4 * i+1]=0;
+		data1[4 * i+2]=c * gData.S[i];
+		data1[4 * i+3]=H;
 		data2[i]=2;
 	}
 	data1=gData.plotData[1][4];
@@ -571,7 +568,7 @@ void GeneratePlotData_ST()
 		tmpX+=c;
 	}
 	tmpX=c*(N - 1);
-	Y2=gData.sCI+2*N - 1;
+	Y2=gData.sCI+2 * N - 1;
 	for (int i=0; i < N; i++)
 	{
 		*data1++=tmpX;
@@ -582,23 +579,23 @@ void GeneratePlotData_ST()
 	H=gData.h[2];
 	Ymax=0.9;
 	Ymin=-0.02;
-	a=H+H/(Ymax - Ymin)*Ymin;
+	a=H+H/(Ymax - Ymin) *Ymin;
 	b1=H/(Ymax - Ymin)/sample;
 	c=W/N;
 	data1=gData.plotData[2][0];
-	int32_t*_restrict Yi=gData.sProb;
+	int32_t * _restrict Yi=gData.sProb;
 	tmpX=0;
 	for (int i=0; i < N; i++)
 	{
-		data1[2*i]=tmpX;
-		data1[2*i+1]=a - b1*Yi[i];
+		data1[2 * i]=tmpX;
+		data1[2 * i+1]=a - b1*Yi[i];
 		tmpX+=c;
 	}
 	W=gData.w[3];
 	H=gData.h[3];
 	Ymax=gData.yMaxT;
 	Ymin=gData.yMinT;
-	a=H+H/(Ymax - Ymin)*Ymin;
+	a=H+H/(Ymax - Ymin) *Ymin;
 	b1=H/(Ymax - Ymin)/sample;
 	b2=H/(Ymax - Ymin);
 	c=W/N;
@@ -609,20 +606,20 @@ void GeneratePlotData_ST()
 	Y2=gData.ct;
 	for (int i=0; i < N; i++)
 	{
-		data1[2*i]=tmpX;
-		data1[2*i+1]=a - b1*Y1[i];
-		data2[2*i]=tmpX;
-		data2[2*i+1]=a - b2*Y2[i];
+		data1[2 * i]=tmpX;
+		data1[2 * i+1]=a - b1*Y1[i];
+		data2[2 * i]=tmpX;
+		data2[2 * i+1]=a - b2*Y2[i];
 		tmpX+=c;
 	}
 	data1=gData.plotData[3][2];
 	data2=gData.plotData[3][3];
 	for (int i=0; i < gData.tKnotNum; i++)
 	{
-		data1[4*i]=c*gData.T[i];
-		data1[4*i+1]=0;
-		data1[4*i+2]=c*gData.T[i];
-		data1[4*i+3]=H;
+		data1[4 * i]=c * gData.T[i];
+		data1[4 * i+1]=0;
+		data1[4 * i+2]=c * gData.T[i];
+		data1[4 * i+3]=H;
 		data2[i]=2;
 	}
 	data1=gData.plotData[3][4];
@@ -635,7 +632,7 @@ void GeneratePlotData_ST()
 		tmpX+=c;
 	}
 	tmpX=c*(N - 1);
-	Y2=gData.tCI+2*N - 1;
+	Y2=gData.tCI+2 * N - 1;
 	for (int i=0; i < N; i++)
 	{
 		*data1++=tmpX;
@@ -646,7 +643,7 @@ void GeneratePlotData_ST()
 	H=gData.h[4];
 	Ymax=0.9;
 	Ymin=-0.02;
-	a=H+H/(Ymax - Ymin)*Ymin;
+	a=H+H/(Ymax - Ymin) *Ymin;
 	b1=H/(Ymax - Ymin)/sample;
 	c=W/N;
 	data1=gData.plotData[4][0];
@@ -654,8 +651,8 @@ void GeneratePlotData_ST()
 	tmpX=0;
 	for (int i=0; i < N; i++)
 	{
-		data1[2*i]=tmpX;
-		data1[2*i+1]=a - b1*Yi[i];
+		data1[2 * i]=tmpX;
+		data1[2 * i+1]=a - b1*Yi[i];
 		tmpX+=c;
 	}
 }
@@ -672,9 +669,9 @@ void DrawPlots_ST(HDC hdc)
 	SetRect(&rect,0,0,W,H);
 	hdcMEM=memDC[0];
 	BitBlt(hdcMEM,0,0,W,H,bufferDC[0],0,0,SRCCOPY);
-	Polyline(hdcMEM,(POINT*)gData.plotData[0][0],gData.N); 
+	Polyline(hdcMEM,(POINT *)gData.plotData[0][0],gData.N); 
 	SelectObject(hdcMEM,yellowPen);
-	Polyline(hdcMEM,(POINT*)gData.plotData[0][1],gData.N); 
+	Polyline(hdcMEM,(POINT *)gData.plotData[0][1],gData.N); 
 	SelectObject(hdcMEM,greenPen);
 	wsprintf(str,"iteration:%d Data+Fitted",gData.ite);
 	TextOut(hdcMEM,0,0,str,lstrlen(str));
@@ -686,12 +683,12 @@ void DrawPlots_ST(HDC hdc)
 	FillRect(hdcMEM,&rect,blackBrush);
 	mode=SetROP2(hdcMEM,R2_MERGEPEN); 
 	SelectObject(hdcMEM,grayBrush);
-	Polygon(hdcMEM,(POINT*)gData.plotData[1][4],gData.N*2);
+	Polygon(hdcMEM,(POINT *)gData.plotData[1][4],gData.N * 2);
 	SetROP2(hdcMEM,mode);
-	Polyline(hdcMEM,(POINT*)gData.plotData[1][0],gData.N); 
+	Polyline(hdcMEM,(POINT *)gData.plotData[1][0],gData.N); 
 	SelectObject(hdcMEM,yellowPen);
-	Polyline(hdcMEM,(POINT*)gData.plotData[1][1],gData.N);
-	PolyPolyline(hdcMEM,(POINT*)gData.plotData[1][2],(DWORD*)gData.plotData[1][3],gData.sKnotNum);
+	Polyline(hdcMEM,(POINT *)gData.plotData[1][1],gData.N);
+	PolyPolyline(hdcMEM,(POINT *)gData.plotData[1][2],(DWORD*)gData.plotData[1][3],gData.sKnotNum);
 	SelectObject(hdcMEM,greenPen);
 	wsprintf(str,"iteration:%d Season",gData.ite);
 	TextOut(hdcMEM,0,0,str,lstrlen(str));
@@ -702,7 +699,7 @@ void DrawPlots_ST(HDC hdc)
 	SetRect(&rect,0,0,W,H);
 	FillRect(hdcMEM,&rect,blackBrush);
 	SelectObject(hdcMEM,yellowPen);
-	Polyline(hdcMEM,(POINT*)gData.plotData[2][0],gData.N); 
+	Polyline(hdcMEM,(POINT *)gData.plotData[2][0],gData.N); 
 	wsprintf(str,"iteration:%d Probability of scp",gData.ite);
 	TextOut(hdcMEM,0,0,str,lstrlen(str));
 	BitBlt(hdc,gData.x0[2],gData.y0[2],W,H,hdcMEM,0,0,SRCCOPY);
@@ -713,12 +710,12 @@ void DrawPlots_ST(HDC hdc)
 	FillRect(hdcMEM,&rect,blackBrush);
 	mode=SetROP2(hdcMEM,R2_MERGEPEN); 
 	SelectObject(hdcMEM,grayBrush);
-	Polygon(hdcMEM,(POINT*)gData.plotData[3][4],gData.N*2);
+	Polygon(hdcMEM,(POINT *)gData.plotData[3][4],gData.N * 2);
 	SetROP2(hdcMEM,mode);
-	Polyline(hdcMEM,(POINT*)gData.plotData[3][0],gData.N); 
+	Polyline(hdcMEM,(POINT *)gData.plotData[3][0],gData.N); 
 	SelectObject(hdcMEM,yellowPen);
-	Polyline(hdcMEM,(POINT*)gData.plotData[3][1],gData.N);
-	PolyPolyline(hdcMEM,(POINT*)gData.plotData[3][2],(DWORD*)gData.plotData[3][3],gData.tKnotNum);
+	Polyline(hdcMEM,(POINT *)gData.plotData[3][1],gData.N);
+	PolyPolyline(hdcMEM,(POINT *)gData.plotData[3][2],(DWORD*)gData.plotData[3][3],gData.tKnotNum);
 	SelectObject(hdcMEM,greenPen);
 	wsprintf(str,"iteration:%d Trend",gData.ite);
 	TextOut(hdcMEM,0,0,str,lstrlen(str));
@@ -729,15 +726,12 @@ void DrawPlots_ST(HDC hdc)
 	SetRect(&rect,0,0,W,H);
 	FillRect(hdcMEM,&rect,blackBrush);
 	SelectObject(hdcMEM,yellowPen);
-	Polyline(hdcMEM,(POINT*)gData.plotData[4][0],gData.N); 
+	Polyline(hdcMEM,(POINT *)gData.plotData[4][0],gData.N); 
 	wsprintf(str,"iteration:%d Probability of tcp",gData.ite);
 	TextOut(hdcMEM,0,0,str,lstrlen(str));
 	BitBlt(hdc,gData.x0[4],gData.y0[4],W,H,hdcMEM,0,0,SRCCOPY);
 }
 #else
-static char fileID='c';
+static char fileID UNUSED_DECORATOR='c';
 #endif
-#if defined(__GNUC__)||defined(__CLANG__) 
-ENABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-ENABLE_WARNING(unused-function,unused-function,NOT_USED)
-#endif
+ENABLE_MANY_WARNINGS

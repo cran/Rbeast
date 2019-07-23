@@ -1,14 +1,6 @@
 #include "abc_000_macro.h"
-#if defined(__GNUC__)||defined(__CLANG__) 
-DISABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-DISABLE_WARNING(unused-function,unused-function,NOT_USED)
-DISABLE_WARNING(pointer-sign,pointer-sign,NOT_USED)
-DISABLE_WARNING(unused-but-set-variable,unused-but-set-variable,NOT_USED)
-DISABLE_WARNING(strict-aliasing,strict-aliasinge,NOT_USED)
-DISABLE_WARNING(maybe-uninitialized,maybe-uninitialized,NOT_USED)
-DISABLE_WARNING(implicit-function-declaration,implicit-function-declaration,NOT_USED)
-#endif
-#if MSVC==1
+DISABLE_MANY_WARNINGS
+#if defined(MSVC_COMPILER)
 #include <windows.h>               
 #include "intrin.h"                
 #endif
@@ -24,11 +16,6 @@ DISABLE_WARNING(implicit-function-declaration,implicit-function-declaration,NOT_
 #include "abc_blas_lapack_lib.h"  
 #include "beast_lib.h"  
 #include "beast_common.h"
-#if M_INTERFACE==1
-#include "beast_lib_matlab.h"
-#elif R_INTERFACE==1
-#include "beast_lib_R.h"
-#endif
 #if MYRAND_LIBRARY==1
 #include "abc_rand_pcg.h"
 #elif MKLRAND_LIBRARY==1
@@ -41,36 +28,36 @@ static F32PTR GlobalMEMBuf_2nd=NULL;
 struct THREADPAR_WRITE {
 	int		curIdx;
 	struct RESULT output;
-	Options*opt;
+	Options *opt;
 };
 static pthread_mutex_t MUTEX_WRITE;
 static pthread_cond_t  CONDITION_WRITE;
 static bool			   DATA_AVAILABLE_WRITE=false;
-static void*WRITE(void*arg)
+static void *WRITE(void* arg)
 {
-	struct THREADPAR_WRITE*par=(struct THREADPAR_WRITE*) arg;
-	Options*opt=par->opt;
-	int M=opt->totalPixelNum;
+	struct THREADPAR_WRITE *par=(struct THREADPAR_WRITE *) arg;
+	Options *opt=par->opt;
+	int M=opt->M;
 	if (M==0)	 return NULL;
 	r_printf("Entering the WRITE thread...... \n");
-	char*outPath=opt->outputFolder;
+	char *outPath=opt->outputFolder;
 	char fn[230];
-	strcpy(fn,outPath); 	strcat(fn,"/sN");		FILE*f_sN=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/tN");  	FILE*f_tN=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/sNProb");  FILE*f_sNProb=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/tNProb");  FILE*f_tNProb=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/sProb");  	FILE*f_sProb=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/tProb");  	FILE*f_tProb=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/s");  		FILE*f_s=fopen(fn,"wb+");
-	FILE*f_sCI; if (opt->computeCredible)  strcpy(fn,outPath),strcat(fn,"/sCI"),f_sCI=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/sSD");  	FILE*f_sSD=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/t");  		FILE*f_t=fopen(fn,"wb+");
-	FILE*f_tCI; if (opt->computeCredible)  strcpy(fn,outPath),strcat(fn,"/tCI"),f_tCI=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/tSD");  	FILE*f_tSD=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/b");  		FILE*f_b=fopen(fn,"wb+");
-	FILE*f_bCI; 	if (opt->computeCredible)  strcpy(fn,outPath),strcat(fn,"/bCI"),f_bCI=fopen(fn,"wb+");
-	strcpy(fn,outPath); 	strcat(fn,"/bSD");  	FILE*f_bSD=fopen(fn,"wb+");
-	FILE*f_bsign; 	if (opt->computeSlopeSign) strcpy(fn,outPath),strcat(fn,"/bsign"),f_bsign=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/sN");		FILE *f_sN=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/tN");  	FILE *f_tN=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/sNProb");  FILE *f_sNProb=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/tNProb");  FILE *f_tNProb=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/sProb");  	FILE *f_sProb=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/tProb");  	FILE *f_tProb=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/s");  		FILE *f_s=fopen(fn,"wb+");
+	FILE *f_sCI; if (opt->computeCredible)  strcpy(fn,outPath),strcat(fn,"/sCI"),f_sCI=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/sSD");  	FILE *f_sSD=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/t");  		FILE *f_t=fopen(fn,"wb+");
+	FILE *f_tCI; if (opt->computeCredible)  strcpy(fn,outPath),strcat(fn,"/tCI"),f_tCI=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/tSD");  	FILE *f_tSD=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/b");  		FILE *f_b=fopen(fn,"wb+");
+	FILE *f_bCI; 	if (opt->computeCredible)  strcpy(fn,outPath),strcat(fn,"/bCI"),f_bCI=fopen(fn,"wb+");
+	strcpy(fn,outPath); 	strcat(fn,"/bSD");  	FILE *f_bSD=fopen(fn,"wb+");
+	FILE *f_bsign; 	if (opt->computeSlopeSign) strcpy(fn,outPath),strcat(fn,"/bsign"),f_bsign=fopen(fn,"wb+");
 	while (true)
 	{
 		pthread_mutex_lock(&MUTEX_WRITE);
@@ -90,13 +77,13 @@ static void*WRITE(void*arg)
 			fwrite(par->output.sProb,sizeof(int32_t),N,f_sProb);
 			fwrite(par->output.tProb,sizeof(int32_t),N,f_tProb);
 			fwrite(par->output.s,sizeof(float),N,f_s);
-			if (opt->computeCredible)  fwrite(par->output.sCI,sizeof(float),N*2,f_sCI);
+			if (opt->computeCredible)  fwrite(par->output.sCI,sizeof(float),N * 2,f_sCI);
 			fwrite(par->output.sSD,sizeof(float),N,f_sSD);
 			fwrite(par->output.t,sizeof(float),N,f_t);
-			if (opt->computeCredible)  fwrite(par->output.tCI,sizeof(float),N*2,f_tCI);
+			if (opt->computeCredible)  fwrite(par->output.tCI,sizeof(float),N * 2,f_tCI);
 			fwrite(par->output.tSD,sizeof(float),N,f_tSD);
 			fwrite(par->output.b,sizeof(float),N,f_b);
-			if (opt->computeCredible)  fwrite(par->output.bCI,sizeof(float),N*2,f_bCI);
+			if (opt->computeCredible)  fwrite(par->output.bCI,sizeof(float),N * 2,f_bCI);
 			fwrite(par->output.bSD,sizeof(float),N,f_bSD);
 			if (opt->computeSlopeSign)  fwrite(par->output.bsign,sizeof(float),N,f_bsign);
 			r_printf("Finished writing output ..%d\n",par->curIdx);
@@ -133,17 +120,17 @@ static void*WRITE(void*arg)
 }
 struct THREADPAR_READ {
 	int			curIdx;
-	Options*opt;
+	Options		*opt;
 	YINFO input;
 };
 static pthread_mutex_t MUTEX_READ;
 static pthread_cond_t  CONDITION_READ;
 static bool  DATA_AVAILABLE_READ=false;
-static void*READ(void*arg)
+static void *READ(void* arg)
 {
-	struct THREADPAR_READ*par=(struct THREADPAR_READ*) arg;
-	Options*opt=par->opt;
-	int		M=opt->totalPixelNum;
+	struct THREADPAR_READ *par=(struct THREADPAR_READ *) arg;
+	Options *opt=par->opt;
+	int		M=opt->M;
 	int		N=opt->N;
 	float  omissionValue=opt->omissionValue;
 	if (M==0)
@@ -151,9 +138,9 @@ static void*READ(void*arg)
 		return NULL;
 	}
 	r_printf("Entering the READ thread...... \n");
-	FILE*infp=fopen(opt->inputFile,"rb");
+	FILE * infp=fopen(opt->inputFile,"rb");
 	if (infp==NULL)  return NULL;
-	float*tmp_MEMBuf=r_malloc(sizeof(float)*N);
+	float *tmp_MEMBuf=r_malloc(sizeof(float)*N);
 	while (true)
 	{
 		pthread_mutex_lock(&MUTEX_READ);
@@ -174,8 +161,8 @@ static void*READ(void*arg)
 			r_printf("Starting to read a time series from the file ...%d \n",par->curIdx);
 			fseek(infp,(par->curIdx - 1)*N*sizeof(float),SEEK_SET);
 			fread(par->input.Y,sizeof(float),N,infp);
-			float*yInput=par->input.Y;
-			float*buf_start=tmp_MEMBuf; 
+			float *yInput=par->input.Y;
+			float *buf_start=tmp_MEMBuf; 
 			int nMissing=0;
 			for (int32_t i=1; i <=N; i++)
 			{
@@ -217,41 +204,28 @@ static void*READ(void*arg)
 }
 #endif
 static uint64_t elapsedTime;
-#if MSVC==1
+#if defined(MSVC_COMPILER)
 static LARGE_INTEGER t1,t2;
 static LARGE_INTEGER Frequency;
 #else
 static struct timespec t1,t2;
 #endif
-#if M_INTERFACE==1
-#define pY    prhs[0]
-#define pOpt  prhs[1]
-#define NULL_RET NULL
-void DllExport beastST_multipleChain_fast(int nlhs,mxArray*plhs[],int nrhs,const mxArray*prhs[])
-#else 
-extern int nlhs;
-#define NULL_RET R_NilValue
-SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
-#endif
+extern Options     *GLOBAL_OPTIONS;
+extern RESULT      *GLOBAL_RESULT;
+int beastST2()
 {
 #if MKL_LIBRARY==1
 #endif
-#if MSVC==1
+#if defined(MSVC_COMPILER)
 #else	
 #endif
-	float nan;
+	F32 nan;
 	nan=1.00000e300;
 	nan=nan*nan*0.f;
-	MemPointers MEM=(MemPointers) {.init=mem_init};
+	MemPointers MEM=(MemPointers) {.init=mem_init };
 	MEM.init(&MEM);
 	Options	opt;
-	get_options(&opt,pY,pOpt,&MEM);
-	print_options(&opt);
-	if (!opt.outputToDisk && nlhs==0)
-	{
-		print_error(1,&MEM);
-		return NULL_RET;
-	}
+	memcpy(&opt,GLOBAL_OPTIONS,sizeof(Options));
 	uint32_t  numCISample=0;
 	uint32_t  numStrips=0;
 	I32PTR    rowsPerStrip=NULL;
@@ -270,7 +244,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			}
 			else
 			{
-				subsampleFraction_x_INT32MAX=(uint32_t)((double)subsampleFraction*(double)4294967295LL);
+				subsampleFraction_x_INT32MAX=(uint32_t)((double)subsampleFraction * (double)4294967295LL);
 			}
 		}
 		if (!opt.fastCIComputation)
@@ -320,29 +294,29 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		min_credT_upperStrip=MEM.alloc(&MEM,sizeof(float)*opt.N*numStrips,0);
 		whichMin_credT_upper=MEM.alloc(&MEM,sizeof(int)*opt.N,0);
 		credT_lower=MEM.alloc(&MEM,sizeof(float)*opt.N*numCISample,0);
-		max_credT_lower_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N*numStrips,0);
-		max_credT_lowerStrip=MEM.alloc(&MEM,sizeof(float)*opt.N*numStrips,0);
+		max_credT_lower_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N * numStrips,0);
+		max_credT_lowerStrip=MEM.alloc(&MEM,sizeof(float)*opt.N * numStrips,0);
 		whichMax_credT_lower=MEM.alloc(&MEM,sizeof(int)*opt.N,0);
 		credS_upper=MEM.alloc(&MEM,sizeof(float)*opt.N*numCISample,0);
 		min_credS_upper_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N*numStrips,0);
 		min_credS_upperStrip=MEM.alloc(&MEM,sizeof(float)*opt.N*numStrips,0);
 		whichMin_credS_upper=MEM.alloc(&MEM,sizeof(int)*opt.N,0);
 		credS_lower=MEM.alloc(&MEM,sizeof(float)*opt.N*numCISample,0);
-		max_credS_lower_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N*numStrips,0);
-		max_credS_lowerStrip=MEM.alloc(&MEM,sizeof(float)*opt.N*numStrips,0);
+		max_credS_lower_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N * numStrips,0);
+		max_credS_lowerStrip=MEM.alloc(&MEM,sizeof(float)*opt.N * numStrips,0);
 		whichMax_credS_lower=MEM.alloc(&MEM,sizeof(int)*opt.N,0);
 		credB_upper=MEM.alloc(&MEM,sizeof(float)*opt.N*numCISample,0);
 		min_credB_upper_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N*numStrips,0);
 		min_credB_upperStrip=MEM.alloc(&MEM,sizeof(float)*opt.N*numStrips,0);
 		whichMin_credB_upper=MEM.alloc(&MEM,sizeof(int)*opt.N,0);
 		credB_lower=MEM.alloc(&MEM,sizeof(float)*opt.N*numCISample,0);
-		max_credB_lower_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N*numStrips,0);
-		max_credB_lowerStrip=MEM.alloc(&MEM,sizeof(float)*opt.N*numStrips,0);
+		max_credB_lower_IdxInStrip=MEM.alloc(&MEM,sizeof(int)*opt.N * numStrips,0);
+		max_credB_lowerStrip=MEM.alloc(&MEM,sizeof(float)*opt.N * numStrips,0);
 		whichMax_credB_lower=MEM.alloc(&MEM,sizeof(int)*opt.N,0);
 	}
 	BASIS   BASISTEMP1,BASISTEMP2;
-	BASIS*_restrict basis=&BASISTEMP1;
-	BASIS*_restrict basis_prop=&BASISTEMP2;
+	BASIS * _restrict basis=&BASISTEMP1;
+	BASIS * _restrict basis_prop=&BASISTEMP2;
 	{
 		BASISTEMP1.XtX=MyALLOC(MEM,MAX_K*MAX_K,float,64);				
 		BASISTEMP2.XtX=MyALLOC(MEM,MAX_K*MAX_K,float,64);
@@ -354,11 +328,11 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		BASISTEMP2.beta_mean=MyALLOC(MEM,MAX_K,float,64);
 		BASISTEMP1.beta=MyALLOC(MEM,MAX_K,float,64);
 		BASISTEMP2.beta=MyALLOC(MEM,MAX_K,float,64);
-		if ((opt.maxKnotNum_Season+2L)*2*sizeof(uint16_t) <=64)
+		if ( (opt.maxKnotNum_Season+2L)*2*sizeof(uint16_t) <=64 )
 		{
 			BASISTEMP1.S=MyALLOC(MEM,64,uint16_t,64);			
 			*BASISTEMP1.S++=1L;
-			BASISTEMP2.S=(uint16_t*)BASISTEMP1.S+(opt.maxKnotNum_Season+1);
+			BASISTEMP2.S=(uint16_t *)BASISTEMP1.S+(opt.maxKnotNum_Season+1);
 			*BASISTEMP2.S++=1L;
 		}
 		else
@@ -368,10 +342,10 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			BASISTEMP2.S=MyALLOC(MEM,opt.maxKnotNum_Season+2,uint16_t,64); 
 			*BASISTEMP2.S++=1L;
 		}
-		if ((opt.maxKnotNum_Season+1L)*2*sizeof(char) <=64)
+		if ((opt.maxKnotNum_Season+1L) * 2 * sizeof(char) <=64)
 		{
 			BASISTEMP1.sOrder=MyALLOC(MEM,64,uint8_t,64);
-			BASISTEMP2.sOrder=(uint8_t*)BASISTEMP1.sOrder+(opt.maxKnotNum_Season+1);
+			BASISTEMP2.sOrder=(uint8_t *)BASISTEMP1.sOrder+(opt.maxKnotNum_Season+1);
 		}
 		else
 		{
@@ -382,11 +356,11 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		BASISTEMP2.sks=MyALLOC(MEM,MAX_K,int16_t,64);
 		BASISTEMP1.ske=MyALLOC(MEM,MAX_K,int16_t,64);
 		BASISTEMP2.ske=MyALLOC(MEM,MAX_K,int16_t,64);
-		if ((opt.maxKnotNum_Trend+2L)*2*sizeof(uint16_t) <=64)
+		if ((opt.maxKnotNum_Trend+2L) * 2 * sizeof(uint16_t) <=64)
 		{
 			BASISTEMP1.T=MyALLOC(MEM,64,uint16_t,64);
 			*BASISTEMP1.T++=1L;
-			BASISTEMP2.T=(uint16_t*)BASISTEMP1.T+opt.maxKnotNum_Trend+1;
+			BASISTEMP2.T=(uint16_t *)BASISTEMP1.T+opt.maxKnotNum_Trend+1;
 			*BASISTEMP2.T++=1L;
 		}
 		else
@@ -396,10 +370,10 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			BASISTEMP2.T=MyALLOC(MEM,opt.maxKnotNum_Trend+2,uint16_t,64);
 			*BASISTEMP2.T++=1L;
 		}
-		if ((opt.maxKnotNum_Trend+1)*2*sizeof(char) <=64)
+		if ((opt.maxKnotNum_Trend+1) * 2 * sizeof(char) <=64)
 		{
 			BASISTEMP1.tOrder=MyALLOC(MEM,64,uint8_t,64);
-			BASISTEMP2.tOrder=(uint8_t*)BASISTEMP1.tOrder+(opt.maxKnotNum_Trend+1);
+			BASISTEMP2.tOrder=(uint8_t *)BASISTEMP1.tOrder+(opt.maxKnotNum_Trend+1);
 		}
 		else
 		{
@@ -428,12 +402,12 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 	F32PTR COEFF_A=NULL;
 	F32PTR COEFF_B=NULL;
 	F32PTR SEASON_SQR_CSUM=NULL;
-	SEASON_TERMS=MyALLOC(MEM,opt.N*2*opt.maxSeasonOrder,float,64);  
+	SEASON_TERMS=MyALLOC(MEM,opt.N*2* opt.maxSeasonOrder,float,64);  
 	TREND_TERMS=MyALLOC(MEM,opt.N*(opt.maxTrendOrder+1L),float,64);
 	INV_SQR=MyALLOC(MEM,opt.N,float,0);   
 	COEFF_A=MyALLOC(MEM,opt.N,float,0);
 	COEFF_B=MyALLOC(MEM,opt.N,float,0);
-	SEASON_SQR_CSUM=MyALLOC(MEM,(opt.N+1L)*2*opt.maxSeasonOrder,float,64);  
+	SEASON_SQR_CSUM=MyALLOC(MEM,(opt.N+1L) * 2 * opt.maxSeasonOrder,float,64);  
 	preCompute_Xmars_terms_fast( 
 		SEASON_TERMS,SEASON_SQR_CSUM,TREND_TERMS, 
 		INV_SQR,COEFF_A,COEFF_B,
@@ -443,36 +417,28 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 	RESULT matOutput=(RESULT) { NULL,};
 	allocate_single_output(&resultChain,&opt,&MEM);
 	allocate_single_output(&result,&opt,&MEM);
-#if M_INTERFACE==1
-	#define ANS plhs[0]
-#else
-	SEXP    ANS=NULL;	
-#endif
-	int  nprt=0; 
-	if (nlhs==1){
-		ANS=allocate_output(&matOutput,&opt,&nprt);
-	}
+	memcpy(&matOutput,GLOBAL_RESULT,sizeof(RESULT));
 #if PTHREAD_INOUT==1
 	pthread_t		THREADID_WRITE;
 	pthread_attr_t	attr;
 	struct THREADPAR_WRITE threadParWrite;
-	if (opt.outputToDisk)
+	if (opt.outputType=='F')
 	{
 		threadParWrite.opt=&opt;
-		threadParWrite.output.sN=MEM.alloc(&MEM,sizeof(float)*1,0);
-		threadParWrite.output.tN=MEM.alloc(&MEM,sizeof(float)*1,0);
+		threadParWrite.output.sN=MEM.alloc(&MEM,sizeof(float)* 1,0);
+		threadParWrite.output.tN=MEM.alloc(&MEM,sizeof(float)* 1,0);
 		threadParWrite.output.sProb=MEM.alloc(&MEM,sizeof(int32_t)*opt.N,0);
 		threadParWrite.output.tProb=MEM.alloc(&MEM,sizeof(int32_t)*opt.N,0);
 		threadParWrite.output.sNProb=MEM.alloc(&MEM,sizeof(int32_t)*(opt.maxKnotNum_Season+1),0);
 		threadParWrite.output.tNProb=MEM.alloc(&MEM,sizeof(int32_t)*(opt.maxKnotNum_Trend+1),0);
 		threadParWrite.output.s=MEM.alloc(&MEM,sizeof(float)*opt.N,0);
-		if (opt.computeCredible) { threadParWrite.output.sCI=MEM.alloc(&MEM,sizeof(float)*opt.N*2,0); }
+		if (opt.computeCredible) { threadParWrite.output.sCI=MEM.alloc(&MEM,sizeof(float)*opt.N * 2,0); }
 		threadParWrite.output.sSD=MEM.alloc(&MEM,sizeof(float)*opt.N,0);
 		threadParWrite.output.t=MEM.alloc(&MEM,sizeof(float)*opt.N,0);
-		if (opt.computeCredible) { threadParWrite.output.tCI=MEM.alloc(&MEM,sizeof(float)*opt.N*2,0); }
+		if (opt.computeCredible) { threadParWrite.output.tCI=MEM.alloc(&MEM,sizeof(float)*opt.N * 2,0); }
 		threadParWrite.output.tSD=MEM.alloc(&MEM,sizeof(float)*opt.N,0);
 		threadParWrite.output.b=MEM.alloc(&MEM,sizeof(float)*opt.N,0);
-		if (opt.computeCredible) { threadParWrite.output.bCI=MEM.alloc(&MEM,sizeof(float)*opt.N*2,0); }
+		if (opt.computeCredible) { threadParWrite.output.bCI=MEM.alloc(&MEM,sizeof(float)*opt.N * 2,0); }
 		threadParWrite.output.bSD=MEM.alloc(&MEM,sizeof(float)*opt.N,0);
 		if (opt.computeSlopeSign) { threadParWrite.output.bsign=MEM.alloc(&MEM,sizeof(float)*opt.N,0); }
 		pthread_mutex_init(&MUTEX_WRITE,NULL);
@@ -480,13 +446,13 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);
 		DATA_AVAILABLE_WRITE=false;
-		pthread_create(&THREADID_WRITE,&attr,WRITE,(void*)&threadParWrite);
+		pthread_create(&THREADID_WRITE,&attr,WRITE,(void *)&threadParWrite);
 		pthread_attr_destroy(&attr);
 	}
 #else
 	struct FILE_LIST file;
 	memset(&file,0,sizeof(FILE_LIST));
-	if (opt.outputToDisk)
+	if (opt.outputType=='F')
 	{
 		char fn[230];
 		strcpy(fn,opt.outputFolder); 	strcat(fn,"/sN"); 	    file.sN=fopen(fn,"wb+");
@@ -532,20 +498,13 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);
 		DATA_AVAILABLE_READ=0;
-		pthread_create(&THREADID_READ,&attr,READ,(void*)&threadParRead);
+		pthread_create(&THREADID_READ,&attr,READ,(void *)&threadParRead);
 		pthread_attr_destroy(&attr);
 	}
 #else
-	if (opt.inputFromDisk)
+	if (opt.inputType=='F')
 	{
-		file.infp=fopen(opt.inputFile,"rb");
-		if (file.infp==NULL) {
-#if R_INTERFACE==1
-			UNPROTECT(nprt);
-#endif
-			print_error(2,&MEM);
-			return NULL_RET;
-		}
+		file.infp=fopen(opt.inputFile,"rb");		
 	}
 #endif
 	struct {
@@ -557,50 +516,57 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 	if (opt.maxTrendOrder==opt.minTrendOrder)
 		opt.resamplingTrendOrderProb=0;
 	opt.resamplingTrendOrderProb=1 - opt.resamplingTrendOrderProb;
-	T_propProb.birth=(uint8_t)(opt.resamplingTrendOrderProb*0.33*127);
-	T_propProb.death=(uint8_t)(opt.resamplingTrendOrderProb*(0.33+0.165)*127);
-	T_propProb.merge=(uint8_t)(opt.resamplingTrendOrderProb*(0.33+0.33)*127);
-	T_propProb.move=(uint8_t)(opt.resamplingTrendOrderProb*1.0*127);
+	T_propProb.birth=(uint8_t)(opt.resamplingTrendOrderProb *  0.33 * 127);
+	T_propProb.death=(uint8_t)(opt.resamplingTrendOrderProb * (0.33+0.165) * 127);
+	T_propProb.merge=(uint8_t)(opt.resamplingTrendOrderProb * (0.33+0.33) * 127);
+	T_propProb.move=(uint8_t)(opt.resamplingTrendOrderProb * 1.0 * 127);
 	if (opt.maxSeasonOrder==opt.minSeasonOrder)
 		opt.resamplingSeasonOrderProb=0;
 	opt.resamplingSeasonOrderProb=1 - opt.resamplingSeasonOrderProb;
-	S_propProb.birth=(uint8_t)(opt.resamplingSeasonOrderProb*0.33*127);
-	S_propProb.death=(uint8_t)(opt.resamplingSeasonOrderProb*(0.33+0.165)*127);
-	S_propProb.merge=(uint8_t)(opt.resamplingSeasonOrderProb*(0.33+0.33)*127);
-	S_propProb.move=(uint8_t)(opt.resamplingSeasonOrderProb*1.0*127);
-#if MSVC==1	
+	S_propProb.birth=(uint8_t)(opt.resamplingSeasonOrderProb *  0.33 * 127);
+	S_propProb.death=(uint8_t)(opt.resamplingSeasonOrderProb * (0.33+0.165) * 127);
+	S_propProb.merge=(uint8_t)(opt.resamplingSeasonOrderProb * (0.33+0.33) * 127);
+	S_propProb.move=(uint8_t)(opt.resamplingSeasonOrderProb * 1.0 * 127);
+#if defined(MSVC_COMPILER)
 	QueryPerformanceFrequency(&Frequency); 
 #endif
-#if	MSVC==1
+#if	defined(MSVC_COMPILER) 
 	if (opt.seed==0) 	opt.seed=GetTickCount64();
-#elif defined(GNU) && ! (defined(__APPLE__)||defined(__MACH__))
+#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
 	struct timespec tmpTimer;
 	clock_gettime(CLOCK_REALTIME,&tmpTimer);
-	if (opt.seed==0) 	opt.seed=tmpTimer.tv_sec*1000000000LL+tmpTimer.tv_nsec;
+	if (opt.seed==0) 	opt.seed=tmpTimer.tv_sec * 1000000000LL+tmpTimer.tv_nsec;
 #elif defined(__MACH__)
 	#include <mach/mach_time.h>
 	if (opt.seed==0) opt.seed=mach_absolute_time();
 #endif
 	r_vslNewStream(&stream,VSL_BRNG_MT19937,opt.seed);
-	for (uint32_t pixelIndex=1; pixelIndex <=opt.totalPixelNum; pixelIndex++)
+	I64 totalPixelNumber;
+	if (opt.isInput3DStack)	
+		totalPixelNumber=opt.M*opt.L;	
+	else
+		totalPixelNumber=opt.M;
+	elapsedTime=0;
+	for (uint32_t pixelIndex=1; pixelIndex <=totalPixelNumber; pixelIndex++)
 	{
-		if (pixelIndex%200==0)
-			r_printf("Processing the%d -th time series out of%d \n ..",pixelIndex,opt.totalPixelNum);
-		elapsedTime=0;
-#if MSVC==1
+#if defined(MSVC_COMPILER)
 		QueryPerformanceCounter(&t1);
-#elif defined(GNU) && ! (defined(__APPLE__)||defined(__MACH__))
+#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
 		clock_gettime(CLOCK_REALTIME,&t1);
 #endif
+		if (pixelIndex%100==0)
+		{
+			r_printf("Processing the%d-th out of%d time series: remaining time estimated to be%0.2f secs ... \n",pixelIndex,opt.M,(double)elapsedTime/(pixelIndex - 1) * (totalPixelNumber - pixelIndex)/1000000000.f);
+		}
 		int32_t N=opt.N;
 		int32_t Npad=opt.Npad;
-		if (opt.inputFromDisk)
+		if (opt.inputType=='F')
 		{
 #if PTHREAD_INOUT==1
 			pthread_mutex_lock(&MUTEX_READ);
 			if (DATA_AVAILABLE_READ)
 			{
-				memcpy(yInfo.rowsMissing,threadParRead.input.rowsMissing,sizeof(int)*threadParRead.input.nMissing);
+				memcpy(yInfo.rowsMissing,threadParRead.input.rowsMissing,sizeof(int)* threadParRead.input.nMissing);
 				r_cblas_scopy(N,threadParRead.input.Y,1,yInfo.Y,1);
 				yInfo.n=threadParRead.input.n;
 				yInfo.nMissing=threadParRead.input.nMissing;
@@ -615,7 +581,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			{
 				while (!DATA_AVAILABLE_READ)
 					pthread_cond_wait(&CONDITION_READ,&MUTEX_READ);
-				memcpy(yInfo.rowsMissing,threadParRead.input.rowsMissing,sizeof(int)*threadParRead.input.nMissing);
+				memcpy(yInfo.rowsMissing,threadParRead.input.rowsMissing,sizeof(int)* threadParRead.input.nMissing);
 				r_cblas_scopy(N,threadParRead.input.Y,1,yInfo.Y,1);
 				yInfo.n=threadParRead.input.n;
 				yInfo.nMissing=threadParRead.input.nMissing;
@@ -637,8 +603,8 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		}
 		else 
 		{
-			GlobalMEMBuf_1st=Xnewterm;
-			fetch_next_time_series(&yInfo,opt.yInputData,pixelIndex,GlobalMEMBuf_1st,opt.isSingleyInput,N,opt.omissionValue);
+			GlobalMEMBuf_1st=Xnewterm;			
+			fetch_next_time_series2(&yInfo,opt.input,pixelIndex,GlobalMEMBuf_1st,opt.inputType,N,opt.omissionValue,&opt);
 		}
 		void(*p_zeroOut_Xmars_zero)(F32PTR,F32PTR,U32PTR,int32_t,int32_t,int32_t,int32_t);
 		{
@@ -660,19 +626,28 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		int32_t accT[5]={ 0,0,0,0,0 };
 		uint32_t RND[MAX_RAND_NUM];
 		float	 RNDGAMMA[MAX_RAND_NUM];
-		uint8_t  RNDCHAR[MAX_RAND_NUM*4];
+		uint8_t  RNDCHAR[MAX_RAND_NUM * 4];
 		U32PTR rnd=RND;
 		U32PTR RND_END=RND+MAX_RAND_NUM - 50;
 		F32PTR rndgamma=RNDGAMMA;
 		F32PTR RNDGAMMA_END=RNDGAMMA+MAX_RAND_NUM - 50;
 		U08PTR rndchar=RNDCHAR;
-		U08PTR RNDCHAR_END=RNDCHAR+MAX_RAND_NUM*4 - 10;
-		r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t*)RND);
-		r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,MAX_RAND_NUM,rndgamma,(modelPar.del_1+yInfo.n*0.5f),0,1);
-		r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t*)RNDCHAR);
-		zero_out_result_output(&opt,&result);
+		U08PTR RNDCHAR_END=RNDCHAR+MAX_RAND_NUM * 4 - 10;
+		char skipCurrentTimeSeries;
+		skipCurrentTimeSeries=(yInfo.nMissing > (N * 0.75)) ? 1 : 0;
+		if (!skipCurrentTimeSeries)
+		{
+			r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t *)RND);
+			r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,MAX_RAND_NUM,rndgamma,(modelPar.del_1+yInfo.n *0.5f),0,1);
+			r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t *)RNDCHAR);
+			zero_out_result_output(&opt,&result);
+		}
+		else
+		{
+			nan_fill_result_output(&opt,&result);
+		}
 		uint32_t chainNumber=0;
-		while (chainNumber< opt.chainNumber)
+		while ( (chainNumber< opt.chainNumber) && !skipCurrentTimeSeries)
 		{
 			zero_out_result_output(&opt,&resultChain);
 			basis->sKnotNum=0; 
@@ -694,14 +669,14 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			}
 			if (opt.printToScreen)
 			{
-				register char*_restrict string;
+				register char * _restrict string;
 				string=(char*)Xnewterm;
 				rI32 i=opt.printCharLen+9; 
 				r_ippsSet_8u('#',string,i); 
 				string[i+1 - 1]=0;
 				r_printf("%s\n",string);
 				r_ippsSet_8u('-',string,i); 
-				char*tmpCharEnd=string+i+1 - 1;
+				char  *tmpCharEnd=string+i+1 - 1;
 				sprintf(tmpCharEnd,\
 					"TIMESEIRES #%04d being processed: "
 					"A total of%05d rows omitted.",\
@@ -716,7 +691,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				string[i+1 - 1]=0;
 				r_printf("%s\n\n",string);
 			}
-			uint16_t MAX_K_STOP_ADDING_NEWseasonTERMS=MAX_K - (2*opt.maxSeasonOrder);
+			uint16_t MAX_K_STOP_ADDING_NEWseasonTERMS=MAX_K - (2 * opt.maxSeasonOrder);
 			uint16_t MAX_K_STOP_ADDING_NEWtrendTERMS=MAX_K - (opt.maxTrendOrder+1);
 			uint32_t ite=0;
 			uint32_t sample=0;
@@ -746,15 +721,15 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				ite++;
 				if (rnd >=RND_END){
 					rnd=RND;
-					r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t*)rnd);
+					r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t *)rnd);
 				}
 				if (rndchar >=RNDCHAR_END)	{
 					rndchar=RNDCHAR;
-					r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t*)rndchar);
+					r_viRngUniformBits32(VSL_RNG_METHOD_UNIFORMBITS32_STD,stream,MAX_RAND_NUM,(uint32_t *)rndchar);
 				}
 				if (rndgamma >=RNDGAMMA_END){
 					rndgamma=RNDGAMMA;
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,MAX_RAND_NUM,rndgamma,(modelPar.del_1+yInfo.n*0.5f),0.f,1.f);
+					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,MAX_RAND_NUM,rndgamma,(modelPar.del_1+yInfo.n *0.5f),0.f,1.f);
 				}
 				int16_t k;
 				int16_t newIdx,endIdx;
@@ -801,7 +776,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					} 
 					basis_prop->sKnotNum=sKnotNum;
 					memcpy(basis_prop->S,basis->S,sizeof(uint16_t)*(sKnotNum+1));
-					memcpy(basis_prop->sOrder,basis->sOrder,sizeof(char)*(sKnotNum+1));
+					memcpy(basis_prop->sOrder,basis->sOrder,sizeof(char)    *(sKnotNum+1));
 					rU16PTR knotListNew=basis_prop->T;
 					rU08PTR orderListNew=basis_prop->tOrder;
 					rU16PTR knotListOld=basis->T;
@@ -814,7 +789,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 								  randIdx=(*rnd++)%goodT_num+1;
 								  newKnot=find_index_by_csum(goodT,opt.Npad16,randIdx);
 								  rU16PTR knotList=basis->T;
-								  for (newIdx=1; newKnot >*knotList++; newIdx++);
+								  for (newIdx=1; newKnot > *knotList++; newIdx++);
 								  basis_prop->tKnotNum=tKnotNum+1;
 								  memcpy(knotListNew,knotListOld,sizeof(uint16_t)*(newIdx - 1));
 								  *(knotListNew+newIdx - 1)=newKnot;
@@ -847,7 +822,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 								  rI16 count=(r2 - r1)+1L - 2L;
 								  if (count==0L)
 								  { 
-									  newKnot=*(*(int32_t**)&rnd)++> 0 ? r1 : r2;
+									  newKnot=*(*(int32_t **)&rnd)++> 0 ? r1 : r2;
 								  }
 								  else
 								  {  
@@ -857,7 +832,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 								  memcpy(knotListNew,knotListOld,sizeof(uint16_t)*(newIdx - 1));
 								  knotListNew[newIdx - 1]=newKnot;
 								  memcpy(knotListNew+(newIdx+1) - 1,knotListOld+(newIdx+2) - 1,sizeof(uint16_t)*(tKnotNum - (newIdx+1)));
-								  memcpy(orderListNew,orderListOld,sizeof(char)*newIdx);
+								  memcpy(orderListNew,orderListOld,sizeof(char)* newIdx);
 								  memcpy(orderListNew+(newIdx+1) - 1,orderListOld+(newIdx+2) - 1,sizeof(char)*(tKnotNum+1 - (newIdx+2)+1));
 								  k1_old=basis->tks[(newIdx)-1];
 								  k2_old=basis->tke[(newIdx+2) - 1];
@@ -881,11 +856,9 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 									   newKnot=newKnot < oldKnot ? newKnot : (newKnot+1L);
 								   }
 								   else  {
-#if R_INTERFACE==1
-									   UNPROTECT(nprt);
-#endif
+									   MEM.free_all(&MEM);
 									   print_error(3,&MEM);
-									   return NULL_RET;
+									   return 0;
 								   }
 								   basis_prop->tKnotNum=tKnotNum;
 								   memcpy(knotListNew,knotListOld,sizeof(uint16_t)*tKnotNum);
@@ -1021,11 +994,9 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 									if (j==1)
 									{
 										tmpTERM=tmpTERM+N;
-#if R_INTERFACE==1
-										UNPROTECT(nprt);
-#endif
 										print_error(4,&MEM);
-										return NULL_RET;
+										MEM.free_all(&MEM);
+										return 0;
 										continue;
 									}
 									else if (j==2)
@@ -1071,11 +1042,9 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							k--;
 							if (k !=k2_new)
 							{
-#if R_INTERFACE==1
-								UNPROTECT(nprt);
-#endif
 								print_error(5,&MEM);
-								return NULL_RET;
+								MEM.free_all(&MEM);
+								return 0;
 							}
 						}
 						else 
@@ -1115,7 +1084,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					}
 					basis_prop->tKnotNum=tKnotNum;
 					memcpy(basis_prop->T,basis->T,sizeof(uint16_t)*(tKnotNum+1));
-					memcpy(basis_prop->tOrder,basis->tOrder,sizeof(char)*(tKnotNum+1));
+					memcpy(basis_prop->tOrder,basis->tOrder,sizeof(char)  * (tKnotNum+1));
 					rU16PTR knotListNew=basis_prop->S;
 					rU08PTR  orderListNew=basis_prop->sOrder;
 					rU16PTR knotListOld=basis->S;
@@ -1129,7 +1098,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 									}	
 									{
 										rU16PTR knotList=basis->S;
-										for (newIdx=1; newKnot >*knotList++; newIdx++);
+										for (newIdx=1; newKnot > *knotList++; newIdx++);
 					                }
 									basis_prop->sKnotNum=sKnotNum+1;
 									memcpy(knotListNew,knotListOld,sizeof(uint16_t)*(newIdx - 1));
@@ -1163,7 +1132,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 								   rI16 count=(r2 - r1)+1L - 2L;
 								   if (count==0L)
 								   { 
-									   newKnot=*(*(int32_t**)&rnd)++> 0 ? r1 : r2;
+									   newKnot=*(*(int32_t **)&rnd)++> 0 ? r1 : r2;
 								   }
 								   else
 								   {  
@@ -1173,7 +1142,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 								   memcpy(knotListNew,knotListOld,sizeof(uint16_t)*(newIdx - 1));
 								   knotListNew[newIdx - 1]=newKnot;
 								   memcpy(knotListNew+(newIdx+1) - 1,knotListOld+(newIdx+2) - 1,sizeof(uint16_t)*(sKnotNum - (newIdx+1)));
-								   memcpy(orderListNew,orderListOld,sizeof(char)*newIdx);
+								   memcpy(orderListNew,orderListOld,sizeof(char)* newIdx);
 								   memcpy(orderListNew+(newIdx+1) - 1,orderListOld+(newIdx+2) - 1,sizeof(char)*(sKnotNum+1 - (newIdx+2)+1));
 								   k1_old=basis->sks[(newIdx)-1];
 								   k2_old=basis->ske[(newIdx+2) - 1];
@@ -1199,11 +1168,9 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 								 }
 								 else
 								 {
-									 MEM.free_all(&MEM);
-#if R_INTERFACE==1
-									 UNPROTECT(nprt);
-#endif
+									 MEM.free_all(&MEM); 
 									 r_error("r2<r1(season move): there must be something wrong!\n");
+									 return 0;
 								 }
 								 basis_prop->sKnotNum=sKnotNum;
 								 memcpy(knotListNew,knotListOld,sizeof(uint16_t)*sKnotNum);
@@ -1250,7 +1217,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							rI16 r2=knotListNew[(i)-1]-1;
 							rI32 segLength=r2 - r1+1;
 							rF32 scale=INV_SQR[(segLength)-1];
-							rI32   ORDER=2*orderListNew[i - 1];
+							rI32   ORDER=2 * orderListNew[i - 1];
 							rF32PTR tmpTERM=SEASON_TERMS+(1 - 1)*N+r1 - 1;
 							rF32PTR season_csum=SEASON_SQR_CSUM+1L;
 							for (rI32 j=1; j <=ORDER; j++)
@@ -1301,7 +1268,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 								rI16 r2=knotListNew[(i)-1] - 1;
 								rI32 segLength=r2 - r1+1;
 								rF32 scale=INV_SQR[(segLength)-1];
-								rI32 ORDER=orderListNew[i - 1]*2;
+								rI32 ORDER=orderListNew[i - 1] * 2;
 								for (rI32 j=1; j <=ORDER; j++)
 								{
 #if BASIS_METHODS==1
@@ -1332,10 +1299,8 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							if (k !=k2_new)
 							{
 								MEM.free_all(&MEM);
-#if R_INTERFACE==1
-								UNPROTECT(nprt);
-#endif
 								r_error("The two K's differ8; there must be something wrong!");
+								return 0;
 							}
 						}
 						else
@@ -1434,8 +1399,8 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					rF32  half_log_det_prior;
 					rF32  half_log_det_post;
 					half_log_det_post=-sum_log_diag(post_P_U_prop,Knew);
-					half_log_det_prior=-0.5f*(basis_prop->k_SN*fastlog(modelPar.prec[0])+basis_prop->k_const*fastlog(modelPar.prec[1])+(Knew - basis_prop->k_SN - basis_prop->k_const)*fastlog(modelPar.prec[2]));
-					basis_prop->marg_lik=half_log_det_post - half_log_det_prior - (yInfo.n*0.5f+modelPar.alpha_2)*fastlog(modelPar.alpha_1+basis_prop->alpha_star*0.5f);
+					half_log_det_prior=-0.5f*(basis_prop->k_SN * fastlog(modelPar.prec[0])+basis_prop->k_const*fastlog(modelPar.prec[1])+(Knew - basis_prop->k_SN - basis_prop->k_const)*fastlog(modelPar.prec[2]));
+					basis_prop->marg_lik=half_log_det_post - half_log_det_prior - (yInfo.n * 0.5f+modelPar.alpha_2) *fastlog(modelPar.alpha_1+basis_prop->alpha_star  * 0.5f);
 				}
 				float scale=1;
 				{					
@@ -1459,12 +1424,12 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					factor=1;
 					for (rI32 i=1; i <=k - 1; i++)
 						factor=factor*(j - 1 - i+1)/(j0 - 1 - i+1);
-					factor=factor*(j - 1 - (k - 1))/k;
+					factor=factor * (j - 1 - (k - 1))/k;
 					factor=fastlog(factor);
 					factor=delta_k1 < delta_k2 ? -factor : factor;
 				}
 				float delta_lik=basis_prop->marg_lik - basis->marg_lik+factor;
-				if (delta_lik > 0||*rnd++<fastexp(delta_lik)*scale*4.294967296000000e+09)
+				if (delta_lik > 0||*rnd++<fastexp(delta_lik) * scale * 4.294967296000000e+09)
 				{
 					if (IsTrend)
 						++(accT[flag]) ;
@@ -1504,14 +1469,14 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					{
 						if (flag==birth)
 						{
-							r_ippsSet_8u(0,goodT+(newKnot - opt.minSepDist_Trend) - 1,2*opt.minSepDist_Trend+1);
+							r_ippsSet_8u(0,goodT+(newKnot - opt.minSepDist_Trend) - 1,2 * opt.minSepDist_Trend+1);
 						}
 						else if (flag==death)
 						{
 							oldKnot=basis->T[newIdx - 1];
 							rI16 r1=basis->T[(newIdx - 1) - 1] ;
 							rI16 r2=basis->T[(newIdx+1) - 1] -1;
-							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2*opt.minSepDist_Trend+1);
+							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2 * opt.minSepDist_Trend+1);
 							r_ippsSet_8u(0,goodT+(r1)-1,opt.minSepDist_Trend+1);
 							r_ippsSet_8u(0,goodT+(r2-opt.minSepDist_Trend+1) - 1,opt.minSepDist_Trend);
 						}
@@ -1519,8 +1484,8 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						{
 							rI16 r1=basis->T[(newIdx - 1) - 1] ;
 							rI16 r2=basis->T[(newIdx+1) - 1]-1;
-							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2*opt.minSepDist_Trend+1);
-							r_ippsSet_8u(0,goodT+(newKnot - opt.minSepDist_Trend) - 1,2*opt.minSepDist_Trend+1);
+							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2 * opt.minSepDist_Trend+1);
+							r_ippsSet_8u(0,goodT+(newKnot - opt.minSepDist_Trend) - 1,2 * opt.minSepDist_Trend+1);
 							r_ippsSet_8u(0,goodT+(r1)-1,opt.minSepDist_Trend+1);
 							r_ippsSet_8u(0,goodT+(r2 - opt.minSepDist_Trend+1) - 1,opt.minSepDist_Trend );
 						}
@@ -1529,10 +1494,10 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							rI16 r1=basis->T[(newIdx - 1) - 1] ;
 							rI16 r2=basis->T[(newIdx+2) - 1]-1;
 							oldKnot=basis->T[newIdx - 1];
-							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2*opt.minSepDist_Trend+1);
+							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2 * opt.minSepDist_Trend+1);
 							oldKnot=basis->T[(newIdx+1) - 1];
-							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2*opt.minSepDist_Trend+1);
-							r_ippsSet_8u(0,goodT+(newKnot - opt.minSepDist_Trend) - 1,2*opt.minSepDist_Trend+1);
+							r_ippsSet_8u(1,goodT+(oldKnot - opt.minSepDist_Trend) - 1,2 * opt.minSepDist_Trend+1);
+							r_ippsSet_8u(0,goodT+(newKnot - opt.minSepDist_Trend) - 1,2 * opt.minSepDist_Trend+1);
 							r_ippsSet_8u(0,goodT+(r1)-1,opt.minSepDist_Trend+1);
 							r_ippsSet_8u(0,goodT+(r2 - opt.minSepDist_Trend+1) - 1,opt.minSepDist_Trend );
 						}
@@ -1545,14 +1510,14 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					{
 						if (flag==birth)
 						{
-							r_ippsSet_8u(0,goodS+(newKnot - opt.minSepDist_Season) - 1,2*opt.minSepDist_Season+1);
+							r_ippsSet_8u(0,goodS+(newKnot - opt.minSepDist_Season) - 1,2 * opt.minSepDist_Season+1);
 						}
 						else if (flag==death)
 						{
 							oldKnot=basis->S[newIdx - 1];
 							rI16 r1=basis->S[(newIdx - 1) - 1] ;
 							rI16 r2=basis->S[(newIdx+1) - 1] -1;
-							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2*opt.minSepDist_Season+1);
+							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2 * opt.minSepDist_Season+1);
 							r_ippsSet_8u(0,goodS+(r1)-1,opt.minSepDist_Season+1);
 							r_ippsSet_8u(0,goodS+(r2 - opt.minSepDist_Season+1) - 1,opt.minSepDist_Season );
 						}
@@ -1560,8 +1525,8 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						{
 							rI16 r1=basis->S[(newIdx - 1) - 1] ;
 							rI16 r2=basis->S[(newIdx+1) - 1]-1;
-							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2*opt.minSepDist_Season+1);
-							r_ippsSet_8u(0,goodS+(newKnot - opt.minSepDist_Season) - 1,2*opt.minSepDist_Season+1);
+							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2 * opt.minSepDist_Season+1);
+							r_ippsSet_8u(0,goodS+(newKnot - opt.minSepDist_Season) - 1,2 * opt.minSepDist_Season+1);
 							r_ippsSet_8u(0,goodS+(r1)-1,opt.minSepDist_Season+1);
 							r_ippsSet_8u(0,goodS+(r2 - opt.minSepDist_Season+1) - 1,opt.minSepDist_Season );
 						}
@@ -1570,10 +1535,10 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							rI16 r1=basis->S[(newIdx - 1) - 1] ;
 							rI16 r2=basis->S[(newIdx+2) - 1] -1;
 							oldKnot=basis->S[newIdx - 1];
-							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2*opt.minSepDist_Season+1);
+							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2 * opt.minSepDist_Season+1);
 							oldKnot=basis->S[(newIdx+1) - 1];
-							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2*opt.minSepDist_Season+1);
-							r_ippsSet_8u(0,goodS+(newKnot - opt.minSepDist_Season) - 1,2*opt.minSepDist_Season+1);
+							r_ippsSet_8u(1,goodS+(oldKnot - opt.minSepDist_Season) - 1,2 * opt.minSepDist_Season+1);
+							r_ippsSet_8u(0,goodS+(newKnot - opt.minSepDist_Season) - 1,2 * opt.minSepDist_Season+1);
 							r_ippsSet_8u(0,goodS+(r1)-1,opt.minSepDist_Season+1);
 							r_ippsSet_8u(0,goodS+(r2 - opt.minSepDist_Season+1) - 1,opt.minSepDist_Season );
 						}
@@ -1583,7 +1548,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						}
 					}
 					{
-						register struct BASIS*tmp=basis;
+						register struct BASIS * tmp=basis;
 						basis=basis_prop;
 						basis_prop=tmp;
 						XtX_prop=basis_prop->XtX;
@@ -1605,7 +1570,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				if (ite < opt.burnin) continue;
 				if (ite%20==0||(ite%opt.thinningFactor==0 && ite>opt.burnin))
 				{
-					modelPar.sig2=(*rndgamma++)*1.f/(modelPar.alpha_1+basis->alpha_star*0.5f);
+					modelPar.sig2=(*rndgamma++)*1.f/(modelPar.alpha_1+basis->alpha_star *0.5f);
 					modelPar.sig2=1.f/modelPar.sig2;
 					r_vsRngGaussian(VSL_RNG_METHOD_GAUSSIAN_ICDF,stream,K,beta,0,1);
 					r_LAPACKE_strtrs(LAPACK_COL_MAJOR,'U','N','N',K,1,post_P_U,K,beta,K);
@@ -1616,7 +1581,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				{
 					GlobalMEMBuf_1st=Xnewterm;
 					rF32 sumq=DOT(K,beta,beta);
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,1,modelPar.prec,(modelPar.del_1+K*0.5f),0,1.f);
+					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,1,modelPar.prec,(modelPar.del_1+K *0.5f),0,1.f);
 					modelPar.prec[2]=modelPar.prec[1]=modelPar.prec[0]=(*modelPar.prec)/(modelPar.del_2+0.5f*sumq/modelPar.sig2);
 					r_cblas_scopy(K*K,XtX,1L,post_P_U,1L);
 					{
@@ -1633,14 +1598,14 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					basis->alpha_star=yInfo.YtY - DOT(K,beta_mean,XtY);
 					rF32 half_log_det_post ;
 					half_log_det_post=-sum_log_diag(post_P_U,K);
-					rF32 half_log_det_prior=-.5f*(K_SN*fastlog(modelPar.prec[0])+basis->k_const*fastlog(modelPar.prec[1])+(K - K_SN - basis->k_const)*fastlog(modelPar.prec[2]));
-					basis->marg_lik=half_log_det_post - half_log_det_prior - (yInfo.n*0.5f+modelPar.alpha_2)*fastlog(modelPar.alpha_1+basis->alpha_star*0.5f);
+					rF32 half_log_det_prior=-.5f*(K_SN * fastlog(modelPar.prec[0])+basis->k_const*fastlog(modelPar.prec[1])+(K - K_SN - basis->k_const)*fastlog(modelPar.prec[2]));
+					basis->marg_lik=half_log_det_post - half_log_det_prior - (yInfo.n *0.5f+modelPar.alpha_2) *fastlog(modelPar.alpha_1+basis->alpha_star * 0.5f);
 				}
 				if (ite <=opt.burnin||ite%opt.thinningFactor !=0) continue;
 				sample++;
 				if (opt.printToScreen && sample%5000==0)
 				{
-					register char*_restrict string;
+					register char * _restrict string;
 					string=(char*)Xnewterm;
 					r_printf("[Ite:%06d---Sample:%06d----MargLik:%7.3E]\n",ite,sample,basis->marg_lik);
 					r_ippsSet_8u(32,string,opt.printCharLen+1);
@@ -1649,9 +1614,9 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					rI16  r1;
 					for (rI32 i=1; i <=numOfSeg; i++)
 					{
-						rI32 r1=(int)((basis->S[(i - 1) - 1]+1.f)/(N+0.f)*opt.printCharLen);
+						rI32 r1=(int)((basis->S[(i - 1) - 1]+1.f)/(N+0.f) *opt.printCharLen);
 						r1=max(r1,r2+1);
-						r2=(int)((basis->S[i - 1])/(N+0.f)*opt.printCharLen);
+						r2=(int)((basis->S[i - 1])/(N+0.f) *opt.printCharLen);
 						r1=max(r1,1);
 						r2=max(r2,1);
 						r_ippsSet_8u(48+basis->sOrder[i - 1],string+r1 - 1,max(r2 - r1+1,0));
@@ -1664,9 +1629,9 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					r2=-9999;
 					for (rI32 i=1; i <=numOfSeg; i++)
 					{
-						r1=(i==1) ? 1 : (int)((basis->T[(i - 1) - 1]+1.f)/(N+0.f)*opt.printCharLen);
+						r1=(i==1) ? 1 : (int)((basis->T[(i - 1) - 1]+1.f)/(N+0.f) *opt.printCharLen);
 						r1=max(r1,r2+1);
-						r2=(i==numOfSeg) ? opt.printCharLen : (int)((basis->T[i - 1])/(N+0.f)*opt.printCharLen);
+						r2=(i==numOfSeg) ? opt.printCharLen : (int)((basis->T[i - 1])/(N+0.f) *opt.printCharLen);
 						r1=max(r1,1); 
 						r2=max(r2,1);
 						r_ippsSet_8u(48+basis->tOrder[i - 1],string+r1 - 1,max(r2 - r1+1,0));
@@ -1690,7 +1655,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						resultChain.sProb[(*knotList++) - 1]+=1;
 					if (opt.computeHarmonicOrder)
 					{
-						uint8_t*_restrict sOrderList=basis->sOrder;
+						uint8_t * _restrict sOrderList=basis->sOrder;
 						knotList=basis->S;
 						for (rI32 i=0; i <=sKnotNum; i++)
 						{
@@ -1701,7 +1666,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					}
 					if (opt.computeTrendOrder)
 					{
-						uint8_t*_restrict  tOrderList=basis->tOrder;
+						uint8_t * _restrict  tOrderList=basis->tOrder;
 						knotList=basis->T;
 						for (rI32 i=0; i <=tKnotNum; i++)
 						{
@@ -1719,21 +1684,23 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					r_ippsAdd_32f_I(GlobalMEMBuf_1st,resultChain.t,N);
 					r_ippsMul_32f_I(GlobalMEMBuf_1st,GlobalMEMBuf_1st,N);
 					r_ippsAdd_32f_I(GlobalMEMBuf_1st,resultChain.tSD,N); 
-					ONE_STEP_DIFF(GlobalMEMBuf_2nd,GlobalMEMBuf_2nd+1,GlobalMEMBuf_2nd,N - 1);
-					*(GlobalMEMBuf_2nd+N - 1)=0.f;
-					r_cblas_scopy(N,GlobalMEMBuf_2nd,1,GlobalMEMBuf_1st,1);
-					r_ippsAdd_32f_I(GlobalMEMBuf_2nd,resultChain.b,N - 1);
-					r_ippsMul_32f_I(GlobalMEMBuf_2nd,GlobalMEMBuf_2nd,N - 1);
-					r_ippsAdd_32f_I(GlobalMEMBuf_2nd,resultChain.bSD,N - 1); 
+					ONE_STEP_DIFF(GlobalMEMBuf_2nd,GlobalMEMBuf_2nd+1,GlobalMEMBuf_2nd,N - 1); 
+					*GlobalMEMBuf_1st=*GlobalMEMBuf_2nd; 
+					r_cblas_scopy( N-1,GlobalMEMBuf_2nd,1,GlobalMEMBuf_1st+1,1); 
+					*resultChain.b+=*GlobalMEMBuf_2nd;
+					r_ippsAdd_32f_I(GlobalMEMBuf_2nd,resultChain.b+1,N-1);
+					r_ippsMul_32f_I(GlobalMEMBuf_2nd,GlobalMEMBuf_2nd,N-1);
+					*resultChain.bSD+=*GlobalMEMBuf_2nd;
+					r_ippsAdd_32f_I(GlobalMEMBuf_2nd,resultChain.bSD+1,N - 1); 
 					if (opt.computeSlopeSign)
 					{
-						for (int i=0; i<(N - 1); i++)
+						for (int i=0; i<N; i++)
 						{
 							if (*GlobalMEMBuf_1st++>0)++*resultChain.bsign;
 							resultChain.bsign++;
 						}
-						GlobalMEMBuf_1st=GlobalMEMBuf_1st - (N - 1);
-						resultChain.bsign=resultChain.bsign - (N - 1);
+						GlobalMEMBuf_1st=GlobalMEMBuf_1st  - N;
+						resultChain.bsign=resultChain.bsign -N;
 					}
 					if (!opt.computeCredible)
 						continue;
@@ -1749,15 +1716,15 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						subSampleIndex=sample;
 					}
 					F32PTR tmpCredUpper;
-					int*_restrict tmpMinIdx;
+					int		* _restrict tmpMinIdx;
 					F32PTR tmpMinAll;
 					F32PTR tmpMinStrip;
-					int*_restrict whichStripMin;
+					int		* _restrict whichStripMin;
 					F32PTR tmpCredLower;
-					int*_restrict tmpMaxIdx;
+					int		* _restrict tmpMaxIdx;
 					F32PTR tmpMaxAll;
 					F32PTR tmpMaxStrip;
-					int*_restrict whichStripMax;
+					int		* _restrict whichStripMax;
 					r_cblas_sgemv(CblasColMajor,CblasNoTrans,Npad,K_SN,1,Xt_mars,Npad,beta,1,0.f,GlobalMEMBuf_1st+Npad,1);
 					r_cblas_sgemv(CblasColMajor,CblasNoTrans,Npad,(K - K_SN),1,Xt_mars+(K_SN+1 - 1)*Npad,Npad,beta+K_SN+1 - 1,1,0.f,GlobalMEMBuf_1st+Npad+Npad,1);
 					if (subSampleIndex <=numCISample)
@@ -1887,13 +1854,13 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						tmpMaxAll=resultChain.bCI+N;
 						tmpMaxStrip=max_credB_lowerStrip;
 						whichStripMax=whichMax_credB_lower;
-						float*tmpY=GlobalMEMBuf_1st;
+						float * tmpY=GlobalMEMBuf_1st;
 						int64_t which;
-						float*tmp;
+						float * tmp;
 						for (rI32 i=1; i <=N; i++)
 						{
 							rF32 CurrentYValue=*tmpY++;
-							if (CurrentYValue >*tmpMinAll)
+							if (CurrentYValue > *tmpMinAll)
 							{
 								which=(int64_t)*whichStripMin;
 								tmp=tmpCredUpper+startIdxOfStrip[which];
@@ -1906,7 +1873,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							tmpMinIdx+=numStrips;
 							tmpMinAll++;
 							whichStripMin++;
-							if (CurrentYValue <*tmpMaxAll)
+							if (CurrentYValue < *tmpMaxAll)
 							{
 								which=(int64_t)*whichStripMax;
 								tmp=tmpCredLower+startIdxOfStrip[which];
@@ -1934,7 +1901,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						for (rI32 i=1; i <=N; i++)
 						{
 							rF32 CurrentYValue=*tmpY++;
-							if (CurrentYValue >*tmpMinAll)
+							if (CurrentYValue > *tmpMinAll)
 							{
 								which=(int64_t)*whichStripMin;
 								tmp=tmpCredUpper+startIdxOfStrip[which];
@@ -1947,7 +1914,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							tmpMinIdx+=numStrips;
 							tmpMinAll++;
 							whichStripMin++;
-							if (CurrentYValue <*tmpMaxAll)
+							if (CurrentYValue < *tmpMaxAll)
 							{
 								which=(int64_t)*whichStripMax;
 								tmp=tmpCredLower+startIdxOfStrip[which];
@@ -1975,7 +1942,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 						for (rI32 i=1; i <=N; i++)
 						{
 							rF32 CurrentYValue=*tmpY++;
-							if (CurrentYValue >*tmpMinAll)
+							if (CurrentYValue > *tmpMinAll)
 							{
 								which=(int64_t)*whichStripMin;
 								tmp=tmpCredUpper+startIdxOfStrip[which];
@@ -1988,7 +1955,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 							tmpMinIdx+=numStrips;
 							tmpMinAll++;
 							whichStripMin++;
-							if (CurrentYValue <*tmpMaxAll)
+							if (CurrentYValue < *tmpMaxAll)
 							{
 								which=(int64_t)*whichStripMax;
 								tmp=tmpCredLower+startIdxOfStrip[which];
@@ -2005,49 +1972,44 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					}
 				}
 			}
-			r_printf("Model precison parameter is%8.4f; sig2 is%8.4f .\n",modelPar.prec[0],modelPar.sig2);
 			GlobalMEMBuf_1st=Xnewterm;
-			if (nlhs==1||opt.outputToDisk)
+			if (1L||opt.outputType=='F')
 			{
 				rF32 inv_sample=1.f/sample;
 				int sum;
 				r_ippsSum_32s_Sfs(resultChain.sProb,opt.N,&sum,0);
-				*resultChain.sN=inv_sample*sum;
+				*resultChain.sN=inv_sample * sum;
 				r_ippsSum_32s_Sfs(resultChain.tProb,opt.N,&sum,0);
-				*resultChain.tN=inv_sample*sum;
-				r_ippsMulC_32f_I(inv_sample*yInfo.yStd,resultChain.s,opt.N);
+				*resultChain.tN=inv_sample *sum;
+				r_ippsMulC_32f_I(inv_sample  * yInfo.yStd,resultChain.s,opt.N);
 				r_ippsMul_32f(resultChain.s,resultChain.s,GlobalMEMBuf_1st,opt.N);
-				r_ippsMulC_32f_I(inv_sample*yInfo.yStd*yInfo.yStd,resultChain.sSD,opt.N);
+				r_ippsMulC_32f_I(inv_sample  * yInfo.yStd * yInfo.yStd,resultChain.sSD,opt.N);
 				r_ippsSub_32f_I(GlobalMEMBuf_1st,resultChain.sSD,opt.N);
 				r_ippsSqrt_32f_I(resultChain.sSD,opt.N);
 				if (opt.computeCredible)
 					r_ippsMulC_32f_I(yInfo.yStd,resultChain.sCI,opt.N+opt.N);
-				r_ippsMulC_32f_I(inv_sample*yInfo.yStd,resultChain.t,opt.N);
+				r_ippsMulC_32f_I(inv_sample  * yInfo.yStd,resultChain.t,opt.N);
 				r_ippsMul_32f(resultChain.t,resultChain.t,GlobalMEMBuf_1st,opt.N);
-				r_ippsMulC_32f_I(inv_sample*yInfo.yStd*yInfo.yStd,resultChain.tSD,opt.N);
+				r_ippsMulC_32f_I(inv_sample  * yInfo.yStd * yInfo.yStd,resultChain.tSD,opt.N);
 				r_ippsSub_32f_I(GlobalMEMBuf_1st,resultChain.tSD,opt.N);
 				r_ippsSqrt_32f_I(resultChain.tSD,opt.N);
 				r_ippsSubC_32f_I(-yInfo.yMean,resultChain.t,opt.N);
 				if (opt.computeCredible)
 					r_ippsMulC_32f_I(yInfo.yStd,resultChain.tCI,opt.N+opt.N),
 					r_ippsSubC_32f_I(-yInfo.yMean,resultChain.tCI,opt.N+opt.N); 
-				r_ippsMulC_32f_I(inv_sample*yInfo.yStd/opt.timeInterval,resultChain.b,opt.N);
+				r_ippsMulC_32f_I(inv_sample  * yInfo.yStd/opt.timeInterval,resultChain.b,opt.N);
 				r_ippsMul_32f(resultChain.b,resultChain.b,GlobalMEMBuf_1st,opt.N);
-				r_ippsMulC_32f_I(inv_sample*yInfo.yStd*yInfo.yStd/(opt.timeInterval*opt.timeInterval),resultChain.bSD,opt.N);
+				r_ippsMulC_32f_I(inv_sample  * yInfo.yStd * yInfo.yStd/(opt.timeInterval* opt.timeInterval),resultChain.bSD,opt.N);
 				r_ippsSub_32f_I(GlobalMEMBuf_1st,resultChain.bSD,opt.N);
 				r_ippsSqrt_32f_I(resultChain.bSD,opt.N);
-				*((float*)resultChain.b+opt.N - 1)=nan;
-				*((float*)resultChain.bSD+opt.N - 1)=nan;
 				if (opt.computeCredible)
-					r_ippsMulC_32f_I(yInfo.yStd/opt.timeInterval,resultChain.bCI,opt.N+opt.N),
-					*((float*)resultChain.bCI+opt.N - 1)=nan,
-					*((float*)resultChain.bCI+opt.N+opt.N - 1)=nan;
-				*resultChain.marg_lik=*resultChain.marg_lik*inv_sample ;
-				*resultChain.sig2=*resultChain.sig2*inv_sample*yInfo.yStd*yInfo.yStd;
+					r_ippsMulC_32f_I(yInfo.yStd/opt.timeInterval,resultChain.bCI,opt.N+opt.N);
+				*resultChain.marg_lik=*resultChain.marg_lik *inv_sample ;
+				*resultChain.sig2=*resultChain.sig2 *inv_sample *yInfo.yStd * yInfo.yStd;
 				for (int i=0; i < opt.N; i++)
 				{
-					*((float*)resultChain.sProb)=inv_sample*(*resultChain.sProb);
-					*((float*)resultChain.tProb)=inv_sample*(*resultChain.tProb);
+					*((float *)resultChain.sProb)=inv_sample *(*resultChain.sProb);
+					*((float *)resultChain.tProb)=inv_sample *(*resultChain.tProb);
 					resultChain.sProb++;  resultChain.tProb++;
 				}
 				resultChain.sProb=resultChain.sProb - opt.N;
@@ -2056,21 +2018,20 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				{
 					for (int i=0; i < opt.N; i++)
 					{
-						*((float*)resultChain.bsign)=inv_sample*(*resultChain.bsign);
+						*((float *)resultChain.bsign)=inv_sample *(*resultChain.bsign);
 						resultChain.bsign++;
 					}
 					resultChain.bsign=resultChain.bsign - opt.N;
-					*((float*)resultChain.bsign+opt.N - 1)=nan;
 				}
 				for (int i=0; i < (opt.maxKnotNum_Season+1); i++)
 				{
-					*((float*)resultChain.sNProb)=inv_sample*(*resultChain.sNProb);
+					*((float *)resultChain.sNProb)=inv_sample *(*resultChain.sNProb);
 					resultChain.sNProb++;
 				}
 				resultChain.sNProb=resultChain.sNProb - (opt.maxKnotNum_Season+1);
 				for (int i=0; i < (opt.maxKnotNum_Trend+1); i++)
 				{
-					*((float*)resultChain.tNProb)=inv_sample*(*resultChain.tNProb);
+					*((float *)resultChain.tNProb)=inv_sample *(*resultChain.tNProb);
 					resultChain.tNProb++;
 				}
 				resultChain.tNProb=resultChain.tNProb - (opt.maxKnotNum_Trend+1);
@@ -2078,7 +2039,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				{
 					for (int i=0; i < opt.N; i++)
 					{
-						*((float*)resultChain.horder)=inv_sample*(*resultChain.horder);
+						*((float *)resultChain.horder)=inv_sample *(*resultChain.horder);
 						resultChain.horder++;
 					}
 					resultChain.horder=resultChain.horder - opt.N;
@@ -2087,7 +2048,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				{
 					for (int i=0; i < opt.N; i++)
 					{
-						*((float*)resultChain.torder)=inv_sample*(*resultChain.torder);
+						*((float *)resultChain.torder)=inv_sample *(*resultChain.torder);
 						resultChain.torder++;
 					}
 					resultChain.torder=resultChain.torder - opt.N;
@@ -2096,8 +2057,8 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			{
 				*result.sN+=*resultChain.sN;
 				*result.tN+=*resultChain.tN;
-				r_ippsAdd_32f_I((float*)resultChain.sProb,(float*)result.sProb,N);
-				r_ippsAdd_32f_I((float*)resultChain.tProb,(float*)result.tProb,N);
+				r_ippsAdd_32f_I((float *)resultChain.sProb,(float *)result.sProb,N);
+				r_ippsAdd_32f_I((float *)resultChain.tProb,(float *)result.tProb,N);
 				r_ippsAdd_32f_I(resultChain.s,result.s,N);
 				r_ippsAdd_32f_I(resultChain.t,result.t,N);
 				r_ippsAdd_32f_I(resultChain.b,result.b,N);
@@ -2108,26 +2069,26 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				r_ippsAdd_32f_I(resultChain.sSD,result.sSD,N);
 				r_ippsAdd_32f_I(resultChain.tSD,result.tSD,N);
 				r_ippsAdd_32f_I(resultChain.bSD,result.bSD,N);
-				r_ippsAdd_32f_I((float*)resultChain.sNProb,(float*)result.sNProb,opt.maxKnotNum_Season+1);
-				r_ippsAdd_32f_I((float*)resultChain.tNProb,(float*)result.tNProb,opt.maxKnotNum_Trend+1);
+				r_ippsAdd_32f_I((float *)resultChain.sNProb,(float *)result.sNProb,opt.maxKnotNum_Season+1);
+				r_ippsAdd_32f_I((float *)resultChain.tNProb,(float *)result.tNProb,opt.maxKnotNum_Trend+1);
 				*result.marg_lik+=*resultChain.marg_lik;
 				*result.sig2+=*resultChain.sig2;
 				if (opt.computeSlopeSign)
-					r_ippsAdd_32f_I((float*)resultChain.bsign,(float*)result.bsign,N);
+					r_ippsAdd_32f_I((float *)resultChain.bsign,(float *)result.bsign,N);
 				if (opt.computeHarmonicOrder)
-					r_ippsAdd_32f_I((float*)resultChain.horder,(float*)result.horder,N);
+					r_ippsAdd_32f_I((float *)resultChain.horder,(float *)result.horder,N);
 				if (opt.computeTrendOrder)
-					r_ippsAdd_32f_I((float*)resultChain.torder,(float*)result.torder,N);
+					r_ippsAdd_32f_I((float *)resultChain.torder,(float *)result.torder,N);
 			}
 			chainNumber++;
 		}
-		if (opt.chainNumber >=2)
+		if ((opt.chainNumber >=2) && !skipCurrentTimeSeries)
 		{
-			float invChainNumber=1.f/(float)opt.chainNumber;
+			float invChainNumber=1.f/(float) opt.chainNumber;
 			*result.sN=*result.sN*invChainNumber;
 			*result.tN=*result.tN*invChainNumber;
-			r_ippsMulC_32f_I(invChainNumber,(float*)result.sProb,N);
-			r_ippsMulC_32f_I(invChainNumber,(float*)result.tProb,N);
+			r_ippsMulC_32f_I(invChainNumber,(float *)result.sProb,N);
+			r_ippsMulC_32f_I(invChainNumber,(float *)result.tProb,N);
 			r_ippsMulC_32f_I(invChainNumber,result.s,N);
 			r_ippsMulC_32f_I(invChainNumber,result.t,N);
 			r_ippsMulC_32f_I(invChainNumber,result.b,N);
@@ -2138,34 +2099,25 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			r_ippsMulC_32f_I(invChainNumber,result.sSD,N);
 			r_ippsMulC_32f_I(invChainNumber,result.tSD,N);
 			r_ippsMulC_32f_I(invChainNumber,result.bSD,N);
-			r_ippsMulC_32f_I(invChainNumber,(float*)result.sNProb,opt.maxKnotNum_Season+1);
-			r_ippsMulC_32f_I(invChainNumber,(float*)result.tNProb,opt.maxKnotNum_Trend+1);
-			*result.marg_lik=*result.marg_lik*invChainNumber;
-			*result.sig2=*result.sig2*invChainNumber;
+			r_ippsMulC_32f_I(invChainNumber,(float *)result.sNProb,opt.maxKnotNum_Season+1);
+			r_ippsMulC_32f_I(invChainNumber,(float *)result.tNProb,opt.maxKnotNum_Trend+1);
+			*result.marg_lik=*result.marg_lik * invChainNumber;
+			*result.sig2=*result.sig2 * invChainNumber;
 			if (opt.computeSlopeSign)
-				r_ippsMulC_32f_I(invChainNumber,(float*)result.bsign,N);
+				r_ippsMulC_32f_I(invChainNumber,(float *)result.bsign,N);
 			if (opt.computeHarmonicOrder)
-				r_ippsMulC_32f_I(invChainNumber,(float*)result.horder,N);
+				r_ippsMulC_32f_I(invChainNumber,(float *)result.horder,N);
 			if (opt.computeTrendOrder)
-				r_ippsMulC_32f_I(invChainNumber,(float*)result.torder,N);
+				r_ippsMulC_32f_I(invChainNumber,(float *)result.torder,N);
 		}
-#if MSVC==1
-		QueryPerformanceCounter(&t2);
-		elapsedTime=elapsedTime+(long long)((double)(t2.QuadPart - t1.QuadPart)*1000.0/(double)Frequency.QuadPart);
-#elif defined(GNU) && ! (defined(__APPLE__)||defined(__MACH__))
-		clock_gettime(CLOCK_REALTIME,&t2);
-		elapsedTime=elapsedTime+(t2.tv_sec - t1.tv_sec)*1000000000LL+(t2.tv_nsec - t1.tv_nsec);
-#endif
-		r_printf("Time spent is%d \n",elapsedTime);
-#if M_INTERFACE==1
-		if (nlhs==1)
+		if ( opt.outputType=='s' )
 		{
 			*(matOutput.sN+(pixelIndex - 1))=*result.sN;
 			memcpy(matOutput.sProb+(pixelIndex - 1)*opt.N,result.sProb,sizeof(int32_t)*opt.N);
 			*(matOutput.tN+(pixelIndex - 1))=*result.tN;
 			memcpy(matOutput.tProb+(pixelIndex - 1)*opt.N,result.tProb,sizeof(int32_t)*opt.N);
-			memcpy(matOutput.sNProb+(pixelIndex - 1)*(opt.maxKnotNum_Season+1),result.sNProb,sizeof(int32_t)*(opt.maxKnotNum_Season+1));
-			memcpy(matOutput.tNProb+(pixelIndex - 1)*(opt.maxKnotNum_Trend+1),result.tNProb,sizeof(int32_t)*(opt.maxKnotNum_Trend+1));
+			memcpy(matOutput.sNProb+(pixelIndex - 1)*(opt.maxKnotNum_Season+1),result.sNProb,sizeof(int32_t)* (opt.maxKnotNum_Season+1));
+			memcpy(matOutput.tNProb+(pixelIndex - 1)*(opt.maxKnotNum_Trend+1),result.tNProb,sizeof(int32_t)* (opt.maxKnotNum_Trend+1));
 			matOutput.marg_lik[pixelIndex - 1]=*result.marg_lik;
 			memcpy(matOutput.s+(pixelIndex - 1)*opt.N,result.s,sizeof(float)*opt.N);
 			if (opt.computeCredible)	memcpy(matOutput.sCI+(pixelIndex - 1)*(opt.N+opt.N),result.sCI,sizeof(float)*(opt.N+opt.N));
@@ -2176,35 +2128,35 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			memcpy(matOutput.b+(pixelIndex - 1)*opt.N,result.b,sizeof(float)*opt.N);
 			if (opt.computeCredible) memcpy(matOutput.bCI+(pixelIndex - 1)*(opt.N+opt.N),result.bCI,sizeof(float)*(opt.N+opt.N));
 			memcpy(matOutput.bSD+(pixelIndex - 1)*opt.N,result.bSD,sizeof(float)*opt.N);
-			matOutput.sig2[pixelIndex - 1]=*result.sig2;
+			matOutput.sig2[pixelIndex-1]=*result.sig2;
 			if (opt.computeSlopeSign)	   memcpy(matOutput.bsign+(pixelIndex - 1)*opt.N,result.bsign,sizeof(float)*opt.N);
 			if (opt.computeHarmonicOrder)  memcpy(matOutput.horder+(pixelIndex - 1)*opt.N,result.horder,sizeof(float)*opt.N);
 			if (opt.computeTrendOrder)     memcpy(matOutput.torder+(pixelIndex - 1)*opt.N,result.torder,sizeof(float)*opt.N);
 			if (opt.computeChangepoints)
 			{
 				F32PTR	mem=Xnewterm; 
-				float		        threshold=0.001f;
-				int32_t*_restrict cptList=mem+5*N;
-				F32PTR  cptCIList=mem+6*N;
-				int32_t             cptNumber=(int32_t)round((double)*result.sN);
-				int32_t             trueCptNumber;
+				F32  	threshold=0.001f;
+				int32_t * _restrict cptList=(int32_t *) mem+5 * N;
+				F32PTR   cptCIList=mem+6 * N;
+				int32_t  cptNumber=(int32_t) round((double)*result.sN);
+				int32_t  trueCptNumber;
 				trueCptNumber=find_changepoint((float*)result.sProb,mem,threshold,cptList,cptCIList,opt.N,opt.minSepDist_Season,cptNumber);
 				float T0=(float)opt.startTime;
 				float dT=(float)opt.timeInterval;
 				int32_t baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Season;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*(matOutput.scp+baseIdx+i)=(float)(*(cptList+i))*dT+T0;
+					*(matOutput.scp+baseIdx+i)=(float)(*(cptList+i))* dT+T0;
 				}
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Season; i++)
 				{
 					*(matOutput.scp+baseIdx+i)=nan;
 				}
-				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Season*2;
+				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Season * 2;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*(matOutput.scpCI+baseIdx+i)=(float)(*(cptCIList+i))*dT+T0;
-					*(matOutput.scpCI+baseIdx+opt.maxKnotNum_Season+i)=(float)(*(cptCIList+trueCptNumber+i))*dT+T0;
+					*(matOutput.scpCI+baseIdx+i)=(float)(*(cptCIList+i))* dT+T0;
+					*(matOutput.scpCI+baseIdx+opt.maxKnotNum_Season+i)=(float)(*(cptCIList+trueCptNumber+i))* dT+T0;
 				}
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Season; i++)
 				{
@@ -2212,21 +2164,21 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 					*(matOutput.scpCI+baseIdx+opt.maxKnotNum_Season+i)=nan;
 				}
 				cptNumber=(int32_t)round((double)*result.tN);
-				trueCptNumber=find_changepoint((float*)result.tProb,mem,threshold,cptList,cptCIList,opt.N,opt.minSepDist_Trend,cptNumber);
+				trueCptNumber=find_changepoint((float  *)result.tProb,mem,threshold,cptList,cptCIList,opt.N,opt.minSepDist_Trend,cptNumber);
 				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Trend;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*(matOutput.tcp+baseIdx+i)=(float)(*(cptList+i))*dT+T0;
+					*(matOutput.tcp+baseIdx+i)=(float)(*(cptList+i)) * dT+T0;
 				}
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Trend; i++)
 				{
 					*(matOutput.tcp+baseIdx+i)=nan;
 				}
-				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Trend*2;
+				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Trend * 2;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*(matOutput.tcpCI+baseIdx+i)=(float)(*(cptCIList+i))*dT+T0;
-					*(matOutput.tcpCI+baseIdx+opt.maxKnotNum_Trend+i)=(float)(*(cptCIList+trueCptNumber+i))*dT+T0;
+					*(matOutput.tcpCI+baseIdx+i)=(float)(*(cptCIList+i))* dT+T0;
+					*(matOutput.tcpCI+baseIdx+opt.maxKnotNum_Trend+i)=(float)(*(cptCIList+trueCptNumber+i))* dT+T0;
 				}
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Trend; i++)
 				{
@@ -2235,14 +2187,13 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				}
 			}
 		}
-#else
-		if (nlhs==1)
+ 		else if (opt.outputType=='d')
 		{
 			double T0=(double)opt.startTime;
 			double dT=(double)opt.timeInterval;
 			for (rI32 i=0; i < N; i++)
-			{ 
-				*((double*)matOutput.time+i)=(double)i*dT+T0;
+			{ 		
+				*((double *)matOutput.time+i)=(double) (i*dT+T0);
 			}
 			int64_t baseIdx=pixelIndex - 1;
 			*((double*)matOutput.sN+baseIdx)=(double)*result.sN;
@@ -2252,24 +2203,24 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 			baseIdx=(pixelIndex - 1)*(opt.maxKnotNum_Season+1);
 			for (int i=0; i < (opt.maxKnotNum_Season+1); i++)
 			{ 
-				*((double*)matOutput.sNProb+baseIdx+i)=(double)(*(float*)(result.sNProb+i));
+				*((double *)matOutput.sNProb+baseIdx+i)=(double)(*(float *)(result.sNProb+i));
 			}
 			baseIdx=(pixelIndex - 1)*(opt.maxKnotNum_Trend+1);
 			for (int i=0; i < (opt.maxKnotNum_Trend+1); i++)
 			{ 
-				*((double*)matOutput.tNProb+baseIdx+i)=(double)(*(float*)(result.tNProb+i));
+				*((double *)matOutput.tNProb+baseIdx+i)=(double)(*(float *)(result.tNProb+i));
 			}
 			baseIdx=(pixelIndex - 1)*N;
 			for (int i=0; i < N; i++)
 			{
-				*((double*)matOutput.sProb+baseIdx+i)=(double)(*(float*)(result.sProb+i));;
-				*((double*)matOutput.tProb+baseIdx+i)=(double)(*(float*)(result.tProb+i));;
-				*((double*)matOutput.s+baseIdx+i)=(double)*(result.s+i);
-				*((double*)matOutput.sSD+baseIdx+i)=(double)*(result.sSD+i);
-				*((double*)matOutput.t+baseIdx+i)=(double)*(result.t+i);
-				*((double*)matOutput.tSD+baseIdx+i)=(double)*(result.tSD+i);
-				*((double*)matOutput.b+baseIdx+i)=(double)*(result.b+i);
-				*((double*)matOutput.bSD+baseIdx+i)=(double)*(result.bSD+i);
+				*((double *)matOutput.sProb+baseIdx+i)=(double)(*(float *)(result.sProb+i));;
+				*((double *)matOutput.tProb+baseIdx+i)=(double)(*(float *)(result.tProb+i));;
+				*((double *)matOutput.s+baseIdx+i)=(double)*(result.s+i);
+				*((double *)matOutput.sSD+baseIdx+i)=(double)*(result.sSD+i);
+				*((double *)matOutput.t+baseIdx+i)=(double)*(result.t+i);
+				*((double *)matOutput.tSD+baseIdx+i)=(double)*(result.tSD+i);
+				*((double *)matOutput.b+baseIdx+i)=(double)*(result.b+i);
+				*((double *)matOutput.bSD+baseIdx+i)=(double)*(result.bSD+i);
 			}
 			if (opt.computeCredible)
 			{
@@ -2277,9 +2228,9 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				baseIdx=(pixelIndex - 1)*N2;
 				for (int i=0; i < N2; i++)
 				{
-					*((double*)matOutput.sCI+baseIdx+i)=(double)*(result.sCI+i);
-					*((double*)matOutput.tCI+baseIdx+i)=(double)*(result.tCI+i);
-					*((double*)matOutput.bCI+baseIdx+i)=(double)*(result.bCI+i);
+					*((double *)matOutput.sCI+baseIdx+i)=(double)*(result.sCI+i);
+					*((double *)matOutput.tCI+baseIdx+i)=(double)*(result.tCI+i);
+					*((double *)matOutput.bCI+baseIdx+i)=(double)*(result.bCI+i);
 				}
 			}
 			if (opt.computeSlopeSign)
@@ -2287,7 +2238,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				baseIdx=(pixelIndex - 1)*N;
 				for (int i=0; i < N; i++)
 				{
-					*((double*)matOutput.bsign+baseIdx+i)=(double)*((float*)(result.bsign+i));
+					*((double *)matOutput.bsign+baseIdx+i)=(double)* ((float *)(result.bsign+i));
 				}
 			}
 			if (opt.computeHarmonicOrder)
@@ -2295,7 +2246,7 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				baseIdx=(pixelIndex - 1)*N;
 				for (int i=0; i < N; i++)
 				{
-					*((double*)matOutput.horder+baseIdx+i)=(double)*((float*)(result.horder+i));
+					*((double *)matOutput.horder+baseIdx+i)=(double)* ((float *)(result.horder+i));
 				}
 			}
 			if (opt.computeTrendOrder)
@@ -2303,81 +2254,111 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				baseIdx=(pixelIndex - 1)*N;
 				for (int i=0; i < N; i++)
 				{
-					*((double*)matOutput.torder+baseIdx+i)=(double)*((float*)(result.torder+i));
+					*((double *)matOutput.torder+baseIdx+i)=(double)* ((float *)(result.torder+i));
 				}
 			}
 			if (opt.computeChangepoints)
 			{
 				F32PTR mem=Xnewterm; 
 				float threshold=0.001f;
-				int32_t*_restrict cptList=(int32_t*)mem+5*N;
-				F32PTR cptCIList=mem+6*N;
+				int32_t * _restrict cptList=(int32_t *)mem+5 * N;
+				F32PTR cptCIList=mem+6 * N;
 				int32_t   cptNumber=(int32_t)round((double)*result.sN);
 				int32_t   trueCptNumber;
-				trueCptNumber=find_changepoint((float*)result.sProb,mem,threshold,cptList,cptCIList,opt.N,opt.minSepDist_Season,cptNumber);
+				trueCptNumber=find_changepoint((float  *)result.sProb,mem,threshold,cptList,cptCIList,opt.N,opt.minSepDist_Season,cptNumber);
 				double T0=(double)opt.startTime;
 				double dT=(double)opt.timeInterval;
 				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Season;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*((double*)matOutput.scp+baseIdx+i)=(double)(*(int32_t*)(cptList+i))*dT+T0;
+					*((double *)matOutput.scp+baseIdx+i)=(double)(*(int32_t *)(cptList+i)) *dT+T0;
 				}
+#if !defined(NA_REAL)
+#define NA_REAL nan
+#endif
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Season; i++)
 				{
-					*((double*)matOutput.scp+baseIdx+i)=NA_REAL;
+					*((double *)matOutput.scp+baseIdx+i)=NA_REAL;
 				}
-				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Season*2;
+				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Season * 2;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*((double*)matOutput.scpCI+baseIdx+i)=(double)(*(cptCIList+i))*dT+T0;
-					*((double*)matOutput.scpCI+baseIdx+opt.maxKnotNum_Season+i)=(double)(*(cptCIList+trueCptNumber+i))*dT+T0;
+					*((double *)matOutput.scpCI+baseIdx+i)=(double)(*(cptCIList+i)) *dT+T0;
+					*((double *)matOutput.scpCI+baseIdx+opt.maxKnotNum_Season+i)=(double)(*(cptCIList+trueCptNumber+i)) *dT+T0;
 				}
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Season; i++)
 				{
-					*((double*)matOutput.scpCI+baseIdx+i)=NA_REAL;
-					*((double*)matOutput.scpCI+baseIdx+opt.maxKnotNum_Season+i)=NA_REAL;
+					*((double *)matOutput.scpCI+baseIdx+i)=NA_REAL;
+					*((double *)matOutput.scpCI+baseIdx+opt.maxKnotNum_Season+i)=NA_REAL;
 				}
 				cptNumber=(int32_t)round((double)*result.tN);
-				trueCptNumber=find_changepoint((float*)result.tProb,mem,threshold,cptList,cptCIList,opt.N,opt.minSepDist_Trend,cptNumber);
+				trueCptNumber=find_changepoint((float  *)result.tProb,mem,threshold,cptList,cptCIList,opt.N,opt.minSepDist_Trend,cptNumber);
 				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Trend;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*((double*)matOutput.tcp+baseIdx+i)=(double)(*(int32_t*)(cptList+i))*dT+T0;
+					*((double *)matOutput.tcp+baseIdx+i)=(double)(*(int32_t *)(cptList+i)) *dT+T0;
 				}
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Trend; i++)
 				{
-					*((double*)matOutput.tcp+baseIdx+i)=NA_REAL;
+					*((double *)matOutput.tcp+baseIdx+i)=NA_REAL;
 				}
-				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Trend*2;
+				baseIdx=(pixelIndex - 1)*opt.maxKnotNum_Trend * 2;
 				for (int i=0; i <trueCptNumber; i++)
 				{
-					*((double*)matOutput.tcpCI+baseIdx+i)=(double)(*(cptCIList+i))*dT+T0;
-					*((double*)matOutput.tcpCI+baseIdx+opt.maxKnotNum_Trend+i)=(double)(*(cptCIList+trueCptNumber+i))*dT+T0;
+					*((double *)matOutput.tcpCI+baseIdx+i)=(double)(*(cptCIList+i)) *dT+T0;
+					*((double *)matOutput.tcpCI+baseIdx+opt.maxKnotNum_Trend+i)=(double)(*(cptCIList+trueCptNumber+i)) *dT+T0;
 				}
 				for (int i=trueCptNumber; i < opt.maxKnotNum_Trend; i++)
 				{
-					*((double*)matOutput.tcpCI+baseIdx+i)=NA_REAL;
-					*((double*)matOutput.tcpCI+baseIdx+opt.maxKnotNum_Trend+i)=NA_REAL;
+					*((double *)matOutput.tcpCI+baseIdx+i)=NA_REAL;
+					*((double *)matOutput.tcpCI+baseIdx+opt.maxKnotNum_Trend+i)=NA_REAL;
 				}
 			}
 		}
-#endif	
-		r_printf("SEED is%d\n",opt.seed);
-		r_printf("TREND is%d%d%d%d%d\n",accT[0],accT[1],accT[2],accT[3],accT[4]);
-		r_printf("SEASO is%d%d%d%d%d\n",accS[0],accS[1],accS[2],accS[3],accS[4]);
-		if (!opt.outputToDisk) continue;
-#if PTHREAD_INOUT==1
-		pthread_mutex_lock(&MUTEX_WRITE);
-		if (!DATA_AVAILABLE_WRITE)
+		if (opt.outputType=='F')
 		{
-			threadParWrite.curIdx=pixelIndex;
+#if PTHREAD_INOUT==1
+			pthread_mutex_lock(&MUTEX_WRITE);
+			if (!DATA_AVAILABLE_WRITE)
 			{
+				threadParWrite.curIdx=pixelIndex;
+				{
+					*threadParWrite.output.sN=*result.sN;
+					memcpy(threadParWrite.output.sProb,result.sProb,sizeof(int32_t)*N);
+					*threadParWrite.output.tN=*result.tN;
+					memcpy(threadParWrite.output.tProb,result.tProb,sizeof(int32_t)*N);
+					memcpy(threadParWrite.output.sNProb,result.sNProb,sizeof(int32_t)* (opt.maxKnotNum_Season+1));
+					memcpy(threadParWrite.output.tNProb,result.tNProb,sizeof(int32_t)* (opt.maxKnotNum_Trend+1));
+					r_cblas_scopy(N,result.s,1,threadParWrite.output.s,1);
+					if (opt.computeCredible)
+						r_cblas_scopy(N+N,result.sCI,1,threadParWrite.output.sCI,1);
+					r_cblas_scopy(N,result.sSD,1,threadParWrite.output.sSD,1);
+					r_cblas_scopy(N,result.t,1,threadParWrite.output.t,1);
+					if (opt.computeCredible)
+						r_cblas_scopy(N+N,result.tCI,1,threadParWrite.output.tCI,1);
+					r_cblas_scopy(N,result.tSD,1,threadParWrite.output.tSD,1);
+					r_cblas_scopy(N,result.b,1,threadParWrite.output.b,1);
+					if (opt.computeCredible)
+						r_cblas_scopy(N+N,result.bCI,1,threadParWrite.output.bCI,1);
+					if (opt.computeSlopeSign)
+						r_cblas_scopy(N,result.bsign,1,threadParWrite.output.bsign,1);
+					r_cblas_scopy(N,result.bSD,1,threadParWrite.output.bSD,1);
+				}
+				DATA_AVAILABLE_WRITE=1;
+				pthread_mutex_unlock(&MUTEX_WRITE);
+				pthread_cond_signal(&CONDITION_WRITE);
+			}
+			else if (DATA_AVAILABLE_WRITE)
+			{
+				while (DATA_AVAILABLE_WRITE)
+					pthread_cond_wait(&CONDITION_WRITE,&MUTEX_WRITE);
+				threadParWrite.curIdx=pixelIndex;
 				*threadParWrite.output.sN=*result.sN;
 				memcpy(threadParWrite.output.sProb,result.sProb,sizeof(int32_t)*N);
 				*threadParWrite.output.tN=*result.tN;
 				memcpy(threadParWrite.output.tProb,result.tProb,sizeof(int32_t)*N);
-				memcpy(threadParWrite.output.sNProb,result.sNProb,sizeof(int32_t)*(opt.maxKnotNum_Season+1));
-				memcpy(threadParWrite.output.tNProb,result.tNProb,sizeof(int32_t)*(opt.maxKnotNum_Trend+1));
+				memcpy(threadParWrite.output.sNProb,result.sNProb,sizeof(int32_t)* (opt.maxKnotNum_Season+1));
+				memcpy(threadParWrite.output.tNProb,result.tNProb,sizeof(int32_t)* (opt.maxKnotNum_Trend+1));
 				r_cblas_scopy(N,result.s,1,threadParWrite.output.s,1);
 				if (opt.computeCredible)
 					r_cblas_scopy(N+N,result.sCI,1,threadParWrite.output.sCI,1);
@@ -2389,79 +2370,57 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 				r_cblas_scopy(N,result.b,1,threadParWrite.output.b,1);
 				if (opt.computeCredible)
 					r_cblas_scopy(N+N,result.bCI,1,threadParWrite.output.bCI,1);
+				r_cblas_scopy(N,result.bSD,1,threadParWrite.output.bSD,1);
 				if (opt.computeSlopeSign)
 					r_cblas_scopy(N,result.bsign,1,threadParWrite.output.bsign,1);
-				r_cblas_scopy(N,result.bSD,1,threadParWrite.output.bSD,1);
+				DATA_AVAILABLE_WRITE=1;
+				pthread_mutex_unlock(&MUTEX_WRITE);
+				pthread_cond_signal(&CONDITION_WRITE);
 			}
-			DATA_AVAILABLE_WRITE=1;
-			pthread_mutex_unlock(&MUTEX_WRITE);
-			pthread_cond_signal(&CONDITION_WRITE);
-		}
-		else if (DATA_AVAILABLE_WRITE)
-		{
-			while (DATA_AVAILABLE_WRITE)
-				pthread_cond_wait(&CONDITION_WRITE,&MUTEX_WRITE);
-			threadParWrite.curIdx=pixelIndex;
-			*threadParWrite.output.sN=*result.sN;
-			memcpy(threadParWrite.output.sProb,result.sProb,sizeof(int32_t)*N);
-			*threadParWrite.output.tN=*result.tN;
-			memcpy(threadParWrite.output.tProb,result.tProb,sizeof(int32_t)*N);
-			memcpy(threadParWrite.output.sNProb,result.sNProb,sizeof(int32_t)*(opt.maxKnotNum_Season+1));
-			memcpy(threadParWrite.output.tNProb,result.tNProb,sizeof(int32_t)*(opt.maxKnotNum_Trend+1));
-			r_cblas_scopy(N,result.s,1,threadParWrite.output.s,1);
-			if (opt.computeCredible)
-				r_cblas_scopy(N+N,result.sCI,1,threadParWrite.output.sCI,1);
-			r_cblas_scopy(N,result.sSD,1,threadParWrite.output.sSD,1);
-			r_cblas_scopy(N,result.t,1,threadParWrite.output.t,1);
-			if (opt.computeCredible)
-				r_cblas_scopy(N+N,result.tCI,1,threadParWrite.output.tCI,1);
-			r_cblas_scopy(N,result.tSD,1,threadParWrite.output.tSD,1);
-			r_cblas_scopy(N,result.b,1,threadParWrite.output.b,1);
-			if (opt.computeCredible)
-				r_cblas_scopy(N+N,result.bCI,1,threadParWrite.output.bCI,1);
-			r_cblas_scopy(N,result.bSD,1,threadParWrite.output.bSD,1);
-			if (opt.computeSlopeSign)
-				r_cblas_scopy(N,result.bsign,1,threadParWrite.output.bsign,1);
-			DATA_AVAILABLE_WRITE=1;
-			pthread_mutex_unlock(&MUTEX_WRITE);
-			pthread_cond_signal(&CONDITION_WRITE);
-		}
 #else
-		r_printf("Writing Output..%d\n",pixelIndex);
-		fwrite(result.sN,sizeof(float),1,file.sN);
-		fwrite(result.tN,sizeof(float),1,file.tN);
-		fwrite(result.sNProb,sizeof(int32_t),opt.maxKnotNum_Season+1,file.sNProb);
-		fwrite(result.tNProb,sizeof(int32_t),opt.maxKnotNum_Trend+1,file.tNProb);
-		fwrite(result.sProb,sizeof(int32_t),opt.N,file.sProb);
-		fwrite(result.tProb,sizeof(int32_t),opt.N,file.tProb);
-		fwrite(result.s,sizeof(float),opt.N,file.s);
-		if (opt.computeCredible)  fwrite(result.sCI,sizeof(float),opt.N*2,file.sCI);
-		fwrite(result.sSD,sizeof(float),opt.N,file.sSD);
-		fwrite(result.t,sizeof(float),opt.N,file.t);
-		if (opt.computeCredible)  fwrite(result.tCI,sizeof(float),opt.N*2,file.tCI);
-		fwrite(result.tSD,sizeof(float),opt.N,file.tSD);
-		fwrite(result.b,sizeof(float),opt.N,file.b);
-		if (opt.computeCredible)  fwrite(result.bCI,sizeof(float),opt.N*2,file.bCI);
-		fwrite(result.bSD,sizeof(float),opt.N,file.bSD);
-		if (opt.computeSlopeSign)  fwrite(result.bsign,sizeof(float),opt.N,file.bsign);
+			r_printf("Writing Output..%d\n",pixelIndex);
+			fwrite(result.sN,sizeof(float),1,file.sN);
+			fwrite(result.tN,sizeof(float),1,file.tN);
+			fwrite(result.sNProb,sizeof(int32_t),opt.maxKnotNum_Season+1,file.sNProb);
+			fwrite(result.tNProb,sizeof(int32_t),opt.maxKnotNum_Trend+1,file.tNProb);
+			fwrite(result.sProb,sizeof(int32_t),opt.N,file.sProb);
+			fwrite(result.tProb,sizeof(int32_t),opt.N,file.tProb);
+			fwrite(result.s,sizeof(float),opt.N,file.s);
+			if (opt.computeCredible)  fwrite(result.sCI,sizeof(float),opt.N * 2,file.sCI);
+			fwrite(result.sSD,sizeof(float),opt.N,file.sSD);
+			fwrite(result.t,sizeof(float),opt.N,file.t);
+			if (opt.computeCredible)  fwrite(result.tCI,sizeof(float),opt.N * 2,file.tCI);
+			fwrite(result.tSD,sizeof(float),opt.N,file.tSD);
+			fwrite(result.b,sizeof(float),opt.N,file.b);
+			if (opt.computeCredible)  fwrite(result.bCI,sizeof(float),opt.N * 2,file.bCI);
+			fwrite(result.bSD,sizeof(float),opt.N,file.bSD);
+			if (opt.computeSlopeSign)  fwrite(result.bsign,sizeof(float),opt.N,file.bsign);
+#endif		
+		}
+#if defined(MSVC_COMPILER)
+		QueryPerformanceCounter(&t2);
+		elapsedTime=elapsedTime+(long long)((double)(t2.QuadPart - t1.QuadPart)* 1000.0/(double)Frequency.QuadPart);
+#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
+		clock_gettime(CLOCK_REALTIME,&t2);
+		elapsedTime=elapsedTime+(t2.tv_sec - t1.tv_sec) * 1000000000LL+(t2.tv_nsec - t1.tv_nsec);
 #endif
-	}	
+	}
 	r_vslDeleteStream(&stream);
 #if PTHREAD_INOUT==1
-	if (opt.outputToDisk)
+	if (opt.outputType=='F')
 	{
 		pthread_join(THREADID_WRITE,NULL);
 		pthread_mutex_destroy(&MUTEX_WRITE);
 		pthread_cond_destroy(&CONDITION_WRITE);
 	}
-	if (opt.inputFromDisk)
+	if (opt.inputType=='F')
 	{
 		pthread_join(THREADID_READ,NULL);
 		pthread_mutex_destroy(&MUTEX_READ);
 		pthread_cond_destroy(&CONDITION_READ);
 	}
 #else
-	if (opt.outputToDisk)
+	if (opt.outputType=='F')
 	{
 		fclose(file.sN);		fclose(file.tN);		fclose(file.sNProb);		fclose(file.tNProb);		fclose(file.sProb);
 		fclose(file.tProb);		fclose(file.s);		fclose(file.t);		fclose(file.b);		if (opt.computeCredible)  fclose(file.sCI);
@@ -2474,21 +2433,10 @@ SEXP DllExport beastST_multipleChain_fast(SEXP pY,SEXP pOpt)
 		fclose(file.sSD);
 		fclose(file.tSD); 	fclose(file.bSD);
 	}
-	if (opt.inputFromDisk)	
+	if (opt.inputType=='F')
 		fclose(file.infp);
 #endif
 	MEM.free_all(&MEM);
-#if R_INTERFACE==1	
-	UNPROTECT(nprt);
-	return ANS;
-#endif
+	return 1;
 } 
-#if defined(__GNUC__)||defined(__CLANG__) 
-ENABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-ENABLE_WARNING(unused-function,unused-function,NOT_USED)
-ENABLE_WARNING(pointer-sign,pointer-sign,NOT_USED)
-ENABLE_WARNING(unused-but-set-variable,unused-but-set-variable,NOT_USED)
-ENABLE_WARNING(strict-aliasing,strict-aliasinge,NOT_USED)
-ENABLE_WARNING(maybe-uninitialized,maybe-uninitialized,NOT_USED)
-ENABLE_WARNING(implicit-function-declaration,implicit-function-declaration,NOT_USED)
-#endif
+ENABLE_MANY_WARNINGS

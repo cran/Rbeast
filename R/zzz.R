@@ -4,7 +4,7 @@
   if (interactive())
   {
     v = utils::packageVersion("Rbeast")
-    packageStartupMessage("Rbeast", v, ". For help or bug reporting, please contact Kaiguang Zhao at lidar.rs@gmail.com.")
+    packageStartupMessage("Rbeast v", v, ". For help or bug reporting, please contact Kaiguang Zhao at lidar.rs@gmail.com.\n")
   }
    
    

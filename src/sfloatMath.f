@@ -1583,12 +1583,12 @@
       INTEGER            IEEECK, IPARMQ, IPARAM2STAGE
       EXTERNAL           IEEECK, IPARMQ, IPARAM2STAGE
           
-      IF( ISPEC .LE. 0) THEN
-          RILAENV = -1
-          RETURN
-      END IF
+	 IF( ISPEC .LE. 0) THEN
+		  RILAENV = -1
+		  RETURN
+	  END IF
       SELECT CASE (ISPEC)
-        CASE (1:3) 
+		CASE (1:3)	
    10 CONTINUE
       RILAENV = 1
       SUBNAM = NAME
@@ -1988,49 +1988,49 @@
       END IF
       RILAENV = NX
       RETURN
-      CASE (4)
+	  CASE (4)
    80 CONTINUE
       RILAENV = 6
       RETURN
-      CASE (5)
+	  CASE (5)
    90 CONTINUE
       RILAENV = 2
       RETURN
-      CASE (6)
+	  CASE (6)
   100 CONTINUE
       RILAENV = INT( REAL( MIN( N1, N2 ) )*1.6E0 )
       RETURN
-      CASE (7)
+	  CASE (7)
   110 CONTINUE
       RILAENV = 1
       RETURN
-      CASE (8)
+	  CASE (8)
   120 CONTINUE
       RILAENV = 50
       RETURN
-      CASE (9)
+	  CASE (9)
   130 CONTINUE
       RILAENV = 25
       RETURN
-      CASE (10)
+	  CASE (10)
   140 CONTINUE
       RILAENV = 1
       IF( RILAENV.EQ.1 ) THEN
          RILAENV = IEEECK( 1, 0.0, 1.0 )
       END IF
       RETURN
-      CASE (11)
+	  CASE (11)
   150 CONTINUE
       RILAENV = 1
       IF( RILAENV.EQ.1 ) THEN
          RILAENV = IEEECK( 0, 0.0, 1.0 )
       END IF
       RETURN
-      CASE (12:16)
+	  CASE (12:16)
   160 CONTINUE
       RILAENV = IPARMQ( ISPEC, NAME, OPTS, N1, N2, N3, N4 )
       RETURN
-      END SELECT
+	  END SELECT
       END
       LOGICAL FUNCTION RSISNAN( SIN )
       REAL, INTENT(IN) :: SIN

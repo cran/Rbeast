@@ -1,10 +1,6 @@
 #include "abc_000_macro.h"
-#if defined(__GNUC__)||defined(__CLANG__) 
-DISABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-DISABLE_WARNING(unused-function,unused-function,NOT_USED)
-DISABLE_WARNING(int-to-pointer-cast,int-to-pointer-cast,NOT_USED)
-#endif
-#if defined(_WIN32) && defined(_WIN64) && !defined(__i386)  && !defined(__i686) && !defined(i386) && !defined(__i686)
+DISABLE_MANY_WARNINGS
+#if defined(WIN64_OS) 
 #include <stdio.h>   
 #include <io.h>      
 #include <math.h>
@@ -39,12 +35,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 						  SendDlgItemMessage(hwnd,IDC_MAIN_EDIT,EM_SETREADONLY,(WPARAM)TRUE,0);
 					  }
 					  {
-						  char*caption[]={ "Run\0\0\0","Pause\0\0\0","Setting\0\0\0","Exit\0\0\0" };
+						  char *caption[]={ "Run\0\0\0","Pause\0\0\0","Setting\0\0\0","Exit\0\0\0" };
 						  for (int i=0; i < 4; i++)
 						  {
 							  hButton[i]=CreateWindowEx(WS_EX_CLIENTEDGE,"BUTTON",caption[i],
 								  WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON|BS_PUSHLIKE,
-								  10+100*i,20,30*9/4,30,hwnd,(HMENU) i,GetModuleHandle(NULL),NULL);
+								  10+100 * i,20,30 * 9/4,30,hwnd,(HMENU) i,GetModuleHandle(NULL),NULL);
 							  if (hButton[i]==NULL)  MessageBox(hwnd,"Could not create edit box.\0\0\0","Error",MB_OK|MB_ICONERROR);
 							  SendMessage(hButton[i],WM_SETFONT,(WPARAM)hfDefault,MAKELPARAM(FALSE,0));
 							  SendMessage(hButton[0],BM_SETCHECK,(WPARAM)BST_UNCHECKED,MAKELPARAM(FALSE,0));
@@ -77,7 +73,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 						  SetScrollInfo(hScroll,SB_CTL,&si,TRUE);
 						  float x=(max(950 - si.nPos,0));
 						  x=x*x*x*x;
-						  gData.sleepInterval=1e-9*x;
+						  gData.sleepInterval=1e-9 * x;
 					  }
 					  {
 						  hStatic[0]=CreateWindowEx(0,"STATIC","SLOW",WS_CHILD|WS_VISIBLE|SS_CENTER,
@@ -95,7 +91,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 						  hdc=GetDC(hStatic[0]);
 						  GetTextMetrics(hdc,&tm);
 						  style.xChar=tm.tmAveCharWidth;
-						  style.xCapChar=(tm.tmPitchAndFamily & 1 ? 3 : 2)*style.xChar/2;
+						  style.xCapChar=(tm.tmPitchAndFamily & 1 ? 3 : 2) * style.xChar/2;
 						  style.yChar=tm.tmHeight+tm.tmExternalLeading;
 						  ReleaseDC(hStatic[0],hdc);
 					  }
@@ -146,7 +142,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 					   SetScrollPos(hScroll,SB_CTL,pos,TRUE);
 					   float x=(max(950 - pos,0));
 					   x=x*x*x*x;
-					   gData.sleepInterval=1e-9*x;
+					   gData.sleepInterval=1e-9 * x;
 					   wsprintf(str,"%d%d",pos,gData.sleepInterval);
 	}
 		break;
@@ -169,11 +165,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 							   while (gData.y==NULL)
 								   SleepConditionVariableCS(&gData.cv,&gData.cs,INFINITE);
 							   {
-								   float*y=gData.y;
+								   float * y=gData.y;
 								   float W,H;
 								   W=gData.w[0];
 								   H=gData.h[0];
-								   float a1=H+H/(gData.yMax - gData.yMin)*gData.yMin;
+								   float a1=H+H/(gData.yMax - gData.yMin) *gData.yMin;
 								   float b1=H/(gData.yMax - gData.yMin);
 								   RECT  rect;
 								   SetRect(&rect,0,0,W,H);
@@ -188,8 +184,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 										   curRowIdx++;
 										   continue;
 									   }
-									   float xx=((float)(i+1)/gData.N)*W;
-									   float yy=a1 - y[i]*b1;
+									   float xx=((float)(i+1)/gData.N) *W;
+									   float yy=a1 - y[i] * b1;
 									   if (yy==yy)
 										   Ellipse(bufferDC[0],xx - RAIDUS,yy - RAIDUS,xx+RAIDUS,yy+RAIDUS);
 								   }
@@ -252,7 +248,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 		break;
 	case WM_GETMINMAXINFO:
 	{
-							 PMINMAXINFO lpMinMaxInfo=(MINMAXINFO*)lParam;
+							 PMINMAXINFO lpMinMaxInfo=(MINMAXINFO *)lParam;
 							 lpMinMaxInfo->ptMinTrackSize.x=600;
 							 lpMinMaxInfo->ptMinTrackSize.y=500;
 							 lpMinMaxInfo->ptMaxTrackSize.x=5000;
@@ -307,11 +303,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 					while (gData.y==NULL)
 						SleepConditionVariableCS(&gData.cv,&gData.cs,INFINITE);
 					{
-						float*y=gData.y;
+						float * y=gData.y;
 						float W,H;
 						W=gData.w[0];
 						H=gData.h[0];
-						float a1=H+H/(gData.yMax - gData.yMin)*gData.yMin;
+						float a1=H+H/(gData.yMax - gData.yMin) *gData.yMin;
 						float b1=H/(gData.yMax - gData.yMin);
 						RECT  rect;
 						SetRect(&rect,0,0,W,H);
@@ -326,8 +322,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 								curRowIdx++;
 								continue;
 							}
-							float xx=((float)(i+1)/gData.N)*W;
-							float yy=a1 - y[i]*b1;
+							float xx=((float)(i+1)/gData.N) *W;
+							float yy=a1 - y[i] * b1;
 							if (yy==yy)
 								Ellipse(bufferDC[0],xx - RAIDUS,yy - RAIDUS,xx+RAIDUS,yy+RAIDUS);
 						}
@@ -419,7 +415,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 		gData.threadHandle=NULL;
 		for (int i=0; i < sizeof(gData.plotData)/sizeof(gData.plotData[0][0]); i++)
 		{
-			if (*((int**)gData.plotData+i) !=NULL) free(*((int**)gData.plotData+i));
+			if (*((int **)gData.plotData+i) !=NULL) free(*((int **)gData.plotData+i));
 		}
 		UnregisterClass("myDiaglogClass3434",GetModuleHandle(NULL));
 		PostQuitMessage(0);
@@ -429,26 +425,14 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 	}
 	return 0;
 }
-#if M_INTERFACE==1
-void DllExport WinMainDemoST(int nlhs,mxArray*plhs[],int nrhs,const mxArray*prhs[])
-#else 
-extern int nlhs;
-SEXP DllExport WinMainDemoST(SEXP pY,SEXP pOpt)
-#endif
+void DllExport WinMainDemoST(Options * option,RESULT * result)
 {
 	HINSTANCE hInstance=GetModuleHandle(NULL);
 	WNDCLASSEX wc;
 	HWND hwnd;
 	MSG  Msg;
-#if R_INTERFACE==1
-	threadParam.pY=pY;
-	threadParam.pOpt=pOpt;
-#else
-	threadParam.nlhs=nlhs;
-	threadParam.nrhs=nrhs;
-	threadParam.plhs=plhs;
-	threadParam.prhs=prhs;
-#endif
+	threadParam.GLOBAL_OPTIONS=option;
+	threadParam.GLOBAL_RESULT=result;
 	hIcon=0;
 	InitGlobalData_ST();
 	{
@@ -481,7 +465,7 @@ SEXP DllExport WinMainDemoST(SEXP pY,SEXP pOpt)
 	if (!RegisterClassEx(&wc))
 	{
 		MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
-		return 0;
+		return;
 	}
 	hwnd=CreateWindowEx(
 		WS_EX_CLIENTEDGE,
@@ -493,7 +477,7 @@ SEXP DllExport WinMainDemoST(SEXP pY,SEXP pOpt)
 	gData.hwnd=hwnd;
 	if (!hwnd)	{
 		MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
-		return 0;
+		return;
 	}
 	ShowWindow(hwnd,SW_SHOWDEFAULT);
 	UpdateWindow(hwnd);
@@ -512,7 +496,7 @@ SEXP DllExport WinMainDemoST(SEXP pY,SEXP pOpt)
 	DestroyIcon(hIcon);
 	UnregisterClass(g_szClassName,hInstance);
 	free(logger.str);
-	return NULL_RET;
+	return ;
 }
 static void DialogClassRegister()
 {
@@ -544,7 +528,7 @@ static LRESULT CALLBACK DialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
 	{
 					  HFONT hfDefault=GetStockObject(SYSTEM_FONT);
 					  HWND  htmp;
-					  char*names[]={ "maxKnotNum_Trend","minTrendOrder","maxTrendOrder",
+					  char *names[]={ "maxKnotNum_Trend","minTrendOrder","maxTrendOrder",
 						  "minSepDist_Trend","maxMoveStepSize","burnin","samples","chainNumber" };
 					  int values[]={ gData.opt.maxKnotNum_Trend,
 						  gData.opt.minTrendOrder,
@@ -568,10 +552,10 @@ static LRESULT CALLBACK DialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
 					  }
 					  htmp=CreateWindowEx(WS_EX_CLIENTEDGE,"BUTTON","Apply",
 						  WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON|BS_PUSHLIKE,
-						  10,70,30*9/4,30,hwnd,(HMENU)200,GetModuleHandle(NULL),NULL);
+						  10,70,30 * 9/4,30,hwnd,(HMENU)200,GetModuleHandle(NULL),NULL);
 					  htmp=CreateWindowEx(WS_EX_CLIENTEDGE,"BUTTON","Close",
 						  WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON|BS_PUSHLIKE,
-						  10,70,30*9/4,30,hwnd,(HMENU)201,GetModuleHandle(NULL),NULL);
+						  10,70,30 * 9/4,30,hwnd,(HMENU)201,GetModuleHandle(NULL),NULL);
 					  style.numRows=8+1;
 					  wsprintf(str,"Diag Created..%d \r\n",GetTickCount());
 					  LoggerInsert(str);
@@ -675,10 +659,6 @@ static LRESULT CALLBACK DialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
 	return 0;
 }
 #else
-static char fileID='c';
+static char fileID UNUSED_DECORATOR='c';
 #endif
-#if defined(__GNUC__)||defined(__CLANG__) 
-ENABLE_WARNING(int-to-pointer-cast,int-to-pointer-cast,NOT_USED)
-ENABLE_WARNING(unused-variable,unused-variable,NOT_USED)
-ENABLE_WARNING(unused-function,unused-function,NOT_USED)
-#endif
+ENABLE_MANY_WARNINGS
