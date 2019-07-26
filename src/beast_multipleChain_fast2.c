@@ -4,12 +4,10 @@ DISABLE_MANY_WARNINGS
 #include <windows.h>               
 #include "intrin.h"                
 #endif
-#include <inttypes.h>
 #include <stdio.h>	               
 #include <string.h>	               
 #include <time.h>
 #include <math.h>
-#include <float.h>
 #include "abc_001_config.h"
 #include "abc_mem.h"              
 #include "abc_common.h"           
@@ -21,6 +19,9 @@ DISABLE_MANY_WARNINGS
 #elif MKLRAND_LIBRARY==1
 #include "abc_rand_mkl.h"
 VSLStreamStatePtr stream;  
+#endif
+#ifdef __MACH__
+#include <mach/mach_time.h>
 #endif
 static F32PTR GlobalMEMBuf_1st=NULL;
 static F32PTR GlobalMEMBuf_2nd=NULL;
@@ -207,8 +208,10 @@ static uint64_t elapsedTime;
 #if defined(MSVC_COMPILER)
 static LARGE_INTEGER t1,t2;
 static LARGE_INTEGER Frequency;
-#else
+#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
 static struct timespec t1,t2;
+#elif defined(__MACH__)
+static uint64_t t1,t2;
 #endif
 extern Options     *GLOBAL_OPTIONS;
 extern RESULT      *GLOBAL_RESULT;
@@ -531,33 +534,39 @@ int beastST2()
 	QueryPerformanceFrequency(&Frequency); 
 #endif
 #if	defined(MSVC_COMPILER) 
-	if (opt.seed==0) 	opt.seed=GetTickCount64();
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
+	if (opt.seed==0) 	 opt.seed=GetTickCount64();
+#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
 	struct timespec tmpTimer;
 	clock_gettime(CLOCK_REALTIME,&tmpTimer);
 	if (opt.seed==0) 	opt.seed=tmpTimer.tv_sec * 1000000000LL+tmpTimer.tv_nsec;
 #elif defined(__MACH__)
-	#include <mach/mach_time.h>
-	if (opt.seed==0) opt.seed=mach_absolute_time();
+	if (opt.seed==0)   opt.seed=mach_absolute_time();
 #endif
 	r_vslNewStream(&stream,VSL_BRNG_MT19937,opt.seed);
 	I64 totalPixelNumber;
-	if (opt.isInput3DStack)	
-		totalPixelNumber=opt.M*opt.L;	
-	else
-		totalPixelNumber=opt.M;
+	totalPixelNumber=opt.isInput3DStack ? (opt.M*opt.L) : opt.M;
 	elapsedTime=0;
 	for (uint32_t pixelIndex=1; pixelIndex <=totalPixelNumber; pixelIndex++)
 	{
 #if defined(MSVC_COMPILER)
 		QueryPerformanceCounter(&t1);
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
 		clock_gettime(CLOCK_REALTIME,&t1);
+#elif defined(__MACH__) 
+		t1=mach_absolute_time();
 #endif
 		if (pixelIndex%100==0)
 		{
-			r_printf("Processing the%d-th out of%d time series: remaining time estimated to be%0.2f secs ... \n",pixelIndex,opt.M,(double)elapsedTime/(pixelIndex - 1) * (totalPixelNumber - pixelIndex)/1000000000.f);
-		}
+#if defined(MSVC_COMPILER)
+			r_printf("Processing the%d-th out of%d time series: remaining time estimated to be%0.2f secs ... \n",pixelIndex,totalPixelNumber,(double)elapsedTime/(pixelIndex - 1) * (totalPixelNumber - pixelIndex)/1000.f);
+#elif (defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+			r_printf("Processing the%d-th out of%d time series: remaining time estimated to be%0.2f secs ... \n",pixelIndex,totalPixelNumber,(double)elapsedTime/(pixelIndex - 1) * (totalPixelNumber - pixelIndex)/1000000000.f);
+#elif defined(__MACH__) 
+		  mach_timebase_info_data_t timebase;
+		  mach_timebase_info(&timebase);
+		  r_printf("Processing the%d-th out of%d time series: remaining time estimated to be%0.2f secs ... \n",pixelIndex,totalPixelNumber,(double)elapsedTime/(pixelIndex - 1) * (totalPixelNumber - pixelIndex) *timebase.numer/timebase.denom   );
+#endif
+	    }
 		int32_t N=opt.N;
 		int32_t Npad=opt.Npad;
 		if (opt.inputType=='F')
@@ -2400,9 +2409,12 @@ int beastST2()
 #if defined(MSVC_COMPILER)
 		QueryPerformanceCounter(&t2);
 		elapsedTime=elapsedTime+(long long)((double)(t2.QuadPart - t1.QuadPart)* 1000.0/(double)Frequency.QuadPart);
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
 		clock_gettime(CLOCK_REALTIME,&t2);
 		elapsedTime=elapsedTime+(t2.tv_sec - t1.tv_sec) * 1000000000LL+(t2.tv_nsec - t1.tv_nsec);
+#elif defined(__MACH__) 
+		t2=mach_absolute_time();
+		elapsedTime=elapsedTime+(t2 - t1);
 #endif
 	}
 	r_vslDeleteStream(&stream);

@@ -80,7 +80,7 @@ beast <- function(data, option=list(),demoGUI=FALSE,...)
   }
  else
  {
-  if(is.loaded("WinMainDemoST") && is.loaded("GUI_beast") )
+  if(is.loaded("WinMainDemoST") || is.loaded("GUI_beast") )
   {
     OPTION$computeCredible=1
 	OPTION$fastCIComputation=1  

@@ -9,7 +9,7 @@
     data(modis_ohio)
 }
 \source{
-Rbeast v0.1
+Rbeast v0.2.1
 }
  
 \examples{

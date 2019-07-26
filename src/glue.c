@@ -162,7 +162,8 @@ void DllExport mexFunction(int nlhs,mxArray * _restrict plhs[],int nrhs,const mx
 		r_error("Error (mexFunction):The input parameter OPTION should be a struct variable!\n");
 		return;
 	}
-	mxArray *tmp=mxGetField(S,0,"algorithm");
+	mxArray *tmp;
+	tmp=mxGetField(S,0,"algorithm");
 	if (tmp==NULL)
 	{
 		r_error("Error (mexFunction): In the option,the algorithm parameter must be specified!\n");

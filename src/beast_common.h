@@ -88,14 +88,14 @@ typedef struct Options {
 	bool	 printToScreen;
 	int16_t	 printCharLen;
 } Options;
-struct FILE_LIST
+typedef struct FILE_LIST
 {
 	FILE *sN,*tN,*sNProb,*tNProb,*sProb,*tProb,*s,*sCI,*sSD;
 	FILE *t,*tCI,*tSD,*b,*bCI,*bSD;
 	FILE * bsign;
 	FILE *infp;
-}FILE_LIST;
-enum  MOVETYPE { birth,death,merge,move,chorder };
+} FILE_LIST;
+enum  MOVETYPE { birth,death,merge,move,chorder};
 static INLINE void zeroOut_Xmars_zero(F32PTR Xt_mars,F32PTR Xt_zeroBackup,
 	U32PTR rowsMissing,uint32_t nMissing,int32_t N,int32_t Npad,int k)
 {

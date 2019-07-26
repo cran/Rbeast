@@ -1,6 +1,6 @@
 Package: Rbeast
 Type: Package
-Version: 0.2
+Version: 0.2.1
 Date: 2019-07-22
 Title: Bayesian Change-Point Detection and Time Series Decomposition
 Authors@R: c(person(given = "Kaiguang", family = "Zhao", role = c("aut", "cre"), email = "lidar.rs@gmail.com"),
@@ -16,6 +16,6 @@ LazyData: true
 License: GPL (>= 2)
 NeedsCompilation: yes
 RoxygenNote: 6.0.1
-Packaged: 2019-07-23 00:37:32 UTC; zhaokg
+Packaged: 2019-07-26 04:43:19 UTC; zhaokg
 Repository: CRAN
-Date/Publication: 2019-07-23 05:50:02 UTC
+Date/Publication: 2019-07-26 08:10:02 UTC

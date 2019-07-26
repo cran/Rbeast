@@ -30,9 +30,9 @@
 #define r_cblas_sgemv					cblas_sgemv
 #define r_cblas_sgemm					cblas_sgemm
 #define r_cblas_ssymv					cblas_ssymv
+#define r_ippsSet_32f(value,dst,N)	    ippsSet_32f(value,dst,N)
+#define r_ippsSet_32s(value,dst,N)	    ippsSet_32s(value,dst,N)
+#define DOT(N,X,Y)						cblas_sdot(N,X,1,Y,1)
 #define r_cblas_sscal(N,alpha,X,incX)				cblas_sscal(N,alpha,X,incX);
 #define r_cblas_scopy(N,src,incX,dst,incY)			cblas_scopy(N,src,incX,dst,incY)
-#define r_ippsSet_32f(value,dst,N)					ippsSet_32f(value,dst,N )
-#define r_ippsSet_32s(value,dst,N)					ippsSet_32s(value,dst,N )
-#define DOT(N,X,Y)										cblas_sdot(N,X,1,Y,1)
 #define r_ippsAddC_32s_ISfs(val,X,N,scaleFactor)		ippsAddC_32s_ISfs(val,X,N,scaleFactor)  

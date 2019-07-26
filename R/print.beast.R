@@ -41,6 +41,7 @@ print.beast<-function (x,...)
   namesList=names(x);
   namesList[1]=paste("  ", namesList[1]);
   cat(namesList,sep="\n  ")
-  cat("\nCheck individual elements to see the model outputs (e.g, Type 'y$t' to see the fitted trend).\n")  
+  cat("\nCheck individual elements to see the model outputs (e.g, Type 'y$t' to see the fitted trend). ")  
+  cat("Or type 'plot(y)' to plot the model output.\n")  
   
 }

@@ -12,8 +12,8 @@
 #if defined(_WIN64)||defined (__MINGW64__) && defined(_WIN32) && !defined(__i386)  && !defined(__i686) && !defined(i386) && !defined(__i686)
 	#define WIN64_OS
 #endif
-	#define MYMAT_LIBRARY 1
-	#define MKL_LIBRARY   0
+	#define MYMAT_LIBRARY 0
+	#define MKL_LIBRARY   1
 	#define MATLAB_LIBRARY 0 
 	#define R_INTERFACE 1
 	#define M_INTERFACE 0
@@ -25,6 +25,10 @@
 		#undef   M_INTERFACE
 		#define R_INTERFACE 1
 		#define M_INTERFACE 0
+		#undef   MYMAT_LIBRARY
+	    #undef   MKL_LIBRARY
+		#define MYMAT_LIBRARY 1
+	    #define MKL_LIBRARY   0
     #endif
 	#define BASIS_METHODS 2
 	#define PTHREAD_INOUT 0

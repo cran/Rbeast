@@ -122,5 +122,5 @@ plot.beast<-function (x, index, ...) {
     #p<-subplot(p1,p2,p3,p4,shareX=TRUE, heights =c(0.25,0.2,0.24,0.2), nrows=4)
     #print(p)
   }
-  
+  return( invisible(NULL));
 }

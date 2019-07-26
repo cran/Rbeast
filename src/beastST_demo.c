@@ -5,12 +5,10 @@ DISABLE_MANY_WARNINGS
 #include <windows.h>               
 #include "intrin.h"                
 #endif
-#include <inttypes.h>
 #include <stdio.h>	               
 #include <string.h>	               
 #include <time.h>
 #include <math.h>
-#include <float.h>
 #include "abc_001_config.h"
 #include "abc_mem.h"              
 #include "abc_common.h"           
@@ -22,6 +20,9 @@ DISABLE_MANY_WARNINGS
 #elif MKLRAND_LIBRARY==1
 #include "abc_rand_mkl.h"
 VSLStreamStatePtr stream;  
+#endif
+#ifdef __MACH__
+#include <mach/mach_time.h>
 #endif
 static F32PTR GlobalMEMBuf_1st=NULL;
 static F32PTR GlobalMEMBuf_2nd=NULL;
@@ -208,8 +209,10 @@ static uint64_t elapsedTime;
 #if defined(MSVC_COMPILER)
 static LARGE_INTEGER t1,t2;
 static LARGE_INTEGER Frequency;
-#else
+#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
 static struct timespec t1,t2;
+#elif defined(__MACH__)
+static uint64_t t1,t2;
 #endif
 #include "demo.h" 
 #undef NULL_RET
@@ -560,14 +563,13 @@ DWORD WINAPI beastST_demo(__in LPVOID lpParameter)
 #if defined(MSVC_COMPILER)
 	QueryPerformanceFrequency(&Frequency); 
 #endif
-#if	defined(MSVC_COMPILER) 
+#if	defined(MSVC_COMPILER)
 	if (opt.seed==0) 	opt.seed=GetTickCount64();
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
+#elif (defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)) && ! (defined(__APPLE__)||defined(__MACH__))
 	struct timespec tmpTimer;
 	clock_gettime(CLOCK_REALTIME,&tmpTimer);
 	if (opt.seed==0) 	opt.seed=tmpTimer.tv_sec * 1000000000LL+tmpTimer.tv_nsec;
-#elif defined(__MACH__)
-	#include <mach/mach_time.h>
+#elif defined(__MACH__) 
 	if (opt.seed==0) opt.seed=mach_absolute_time();
 #endif
 	r_vslNewStream(&stream,VSL_BRNG_MT19937,opt.seed);
@@ -578,7 +580,7 @@ DWORD WINAPI beastST_demo(__in LPVOID lpParameter)
 		elapsedTime=0;
 #if defined(MSVC_COMPILER)
 		QueryPerformanceCounter(&t1);
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
+#elif (defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER))  && ! (defined(__APPLE__)||defined(__MACH__))
 		clock_gettime(CLOCK_REALTIME,&t1);
 #endif
 		int32_t N=opt.N;
@@ -2201,7 +2203,7 @@ DWORD WINAPI beastST_demo(__in LPVOID lpParameter)
 #if defined(MSVC_COMPILER)
 		QueryPerformanceCounter(&t2);
 		elapsedTime=elapsedTime+(long long)((double)(t2.QuadPart - t1.QuadPart)* 1000.0/(double)Frequency.QuadPart);
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  && ! (defined(__APPLE__)||defined(__MACH__))
+#elif (defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER))  && ! (defined(__APPLE__)||defined(__MACH__))
 		clock_gettime(CLOCK_REALTIME,&t2);
 		elapsedTime=elapsedTime+(t2.tv_sec - t1.tv_sec) * 1000000000LL+(t2.tv_nsec - t1.tv_nsec);
 #endif
