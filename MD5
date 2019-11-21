@@ -1,6 +1,6 @@
-f2c621809509ffdc4e259c3cf50c0fdd *DESCRIPTION
+45387860835e71fec28dd105ae9e2680 *DESCRIPTION
 9d1261ff8189871096fe3574445a6c7a *NAMESPACE
-47fc9e7950b1842acb0ade06d43b3f89 *NEWS
+0c837f475bbf9715474e457f190340c4 *NEWS
 ed7a761b882aeee9668eca38e6744951 *R/beast.R
 c8428538be112221dada605d823693bb *R/plot.beast.R
 28b403efea1ee211f836b26d56f8aa47 *R/print.beast.R
@@ -10,7 +10,7 @@ daa275e66d6d1c52100536f670e637c5 *data/datalist
 d2952c014e30f41d587977e36f80d490 *data/modis_ohio.RData
 11a35fbe7649d23712c8ce7ee13bcb7e *data/simdata.RData
 560701516766886f47494ae86bb901c9 *man/avhrr_YellowStone.Rd
-54fe6755d0d1efcc6733a00047c4f1b9 *man/beast.Rd
+6205e85eaa05fc53b97b029e1701686e *man/beast.Rd
 c3fa3d549ada348445c308fe53983d2b *man/modis_ohio.Rd
 de497c5d0ac405f9fc08bf959c24bcb1 *man/plot.beast.Rd
 cd0be02900c81a7bb8e7aa2ed36a5352 *man/simdata.Rd

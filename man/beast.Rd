@@ -173,6 +173,6 @@ plot(out,2)
 
 }
 \references{
-Zhao K, Wulder M, Hu, T, Bright R, Wu Q, Qin H, Li Y, Toman E, Mallick B, Zhang X, and Brown M (2019).  Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm. Remote Sensing of Environment (accepted manuscript) 
+Zhao, K., Wulder, M.A., Hu, T., Bright, R., Wu, Q., Qin, H., Li, Y., Toman, E., Mallick, B., Zhang, X. and Brown, M., 2019. Detecting change-point, trend, and seasonality in satellite time series data to track abrupt changes and nonlinear dynamics: A Bayesian ensemble algorithm. Remote Sensing of Environment, 232, p.111181.
 }
 \keyword{misc}
