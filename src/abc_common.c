@@ -1,180 +1,157 @@
+#include <math.h>
+#include <string.h>
+#include "abc_000_warning.h"
 #include "abc_common.h"
-#include "math.h"
-#include "string.h"
-void transpose_inplace(rF32PTR m,int32_t w,int32_t h ) 
-{
-	int32_t start,next,i;
-	float tmp;
-	int32_t totalElement=w * h - 1;
-	for (start=0; start <=totalElement; start++) {
-		next=start;
-		i=0;
-		do {
-			i++;
-			next=(next%h) * w+next/h;
-		} while (next > start);
-		if (next < start||i==1) continue;
-		tmp=m[next=start];
-		do {
-			i=(next%h) * w+next/h;
-			m[next]=(i==start) ? tmp : m[i];
-			next=i;
-		} while (next > start);
-	}
-}
-void  fill_1_to_N(rF32PTR p,int N)
-{
-	for (rI32 i=1; i <=N; i++) *p++=(float)i;
-	p -=N;
-}
-int32_t strcicmp(char const * _restrict a,char const * _restrict b)
-{
+#include "abc_001_config.h"
+#include "abc_sort.h"
+#include "abc_vec.h" 
+#include "abc_blas_lapack_lib.h"
+void ToUpper(char* s) { for (int i=0; s[i] !='\0'; i++) 	s[i]=s[i] >='a' && s[i] <='z' ? s[i] - 32 : s[i]; }
+I32 strcicmp(char const * _restrict a,char const * _restrict b) {
 	for (;; a++,b++) {
-		rI32 d=((*a)|(uint8_t)32) - ((*b)|(uint8_t)32);
-		if (d !=0||!*a)
+		I32 d=((*a)|(U08)32) - ((*b)|(U08)32);
+		if (d !=0||!*a)	
 			return d;
 	}
 }
-float determine_period(rF32PTR data,int32_t N,float  omissionValue)
+F32 DeterminePeriod(F32PTR Y,I32 N)
 {
-	rF32PTR xData=(float *)r_malloc(sizeof(float)*N * 4);
-	float delta=1.f/N;
-	float curValue=0.f;
-	for (register int32_t i=0; i < N; i++)
-	{
-		float tmp;
-		*(xData+i)=1.0;
-		*(xData+N+i)=curValue;
-		tmp=curValue;
-		tmp=tmp*curValue;
-		*(xData+N+N+i)=tmp;
-		tmp=tmp*curValue;
-		*(xData+N+N+N+i)=tmp;
-		curValue=curValue+delta;
-	}
-	uint8_t * _restrict isNA=(uint8_t * ) r_malloc(sizeof(char)*N);
-	memset(isNA,0,sizeof(char)*N);
-	rF32PTR y=data;
-	for (register int32_t i=0; i < N; i++,y++)
-	{
-		if (*y !=*y||fabs(*y - omissionValue) < 1e-5)
-		{
-			isNA[i]=1;
-			*(xData+i)=0.f;
-			*(xData+N+i)=0.f;
-			*(xData+N+N+i)=0.f;
-			*(xData+N+N+N+i)=0.f;
-			*y=0.f;
+	F32PTR TMP=(F32PTR)malloc(sizeof(F32)*N * 6);
+	F32PTR X=TMP;        
+	F32PTR Yfit=TMP+N*4;    
+	U08PTR isNA=(U08PTR)(Yfit+N);   
+	F32    delta=1.f/N;
+	f32_fill_val(1.0,X,N);        
+	f32_seq(X+N,0.0,delta,N);  
+	memcpy( X+2*N,X+N,sizeof(F32) * N); f32_pow_vec_inplace(X+2 * N,2,N);
+	memcpy( X+3*N,X+N,sizeof(F32) * N); f32_pow_vec_inplace(X+3 * N,3,N);
+	memset(isNA,0,sizeof(char)*N); 
+	for ( I32 i=0; i < N; i++) 	{
+		if (Y[i] !=Y[i]  ) 		{
+			isNA[i]=1L;
+			X[i]=0.f;
+			X[N+i]=0.f;
+			X[N+N+i]=0.f;
+			X[N+N+N+i]=0.f;
+			Y[i]=0.f;
 		}
 	}
-	rF32PTR XtX=(float *)r_malloc(sizeof(float)* 4 * 4);
-	rF32PTR XtY=(float *)r_malloc(sizeof(float)* 4);
-	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,4,4,N,1.0f,xData,N,xData,N,0,XtX,4);
-	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',4,XtX,4);
-	r_cblas_sgemv(CblasColMajor,CblasTrans,N,4,1.f,xData,N,data,1L,0.f,XtY,1L);
-	r_LAPACKE_spotrs(LAPACK_COL_MAJOR,'U',4,1,XtX,4,XtY,4);
-	rF32PTR yFit=(float *)r_malloc(sizeof(float)* N);
-	r_cblas_sgemv(CblasColMajor,CblasNoTrans,N,4,1.f,xData,N,XtY,1L,0.f,yFit,1L);
-	r_ippsSub_32f_I(yFit,data,N);
-	r_free(yFit);
-	r_free(XtY);
-	r_free(XtX);
-	r_free(xData);
-	int32_t M=(int)ceil(N/2);
-	rF32PTR ans=(float *)r_malloc(sizeof(float)*M);
-	for (register int32_t i=1; i <=M; i++)
 	{
-		int32_t len=N - i;
-		int32_t start=i+1;
-		float XY=0,XX=0,YY=0;
-		float MX=0,MY=0;
-		int32_t NUM=0;
-		for (int32_t j=1; j <=len; j++)
-		{
-			int32_t Ix=j - 1;
-			int32_t Iy=start+(j - 1) - 1;
-			if ((isNA[Ix]+isNA[Iy])==0)
-			{
-				NUM++;
-				float x=data[Ix];
-				float y=data[Iy];
-				MX=MX+x;				MY=MY+y;
-				XY=XY+x*y; 				XX=XX+x*x;
-				YY=YY+y*y;
+		F32 XtX_tmp[16];
+		F32 B[4];		
+		linear_regression(Y,X,N,N,4L,B,Yfit,Y,XtX_tmp);
+	}
+	I32    M=(int)   ceil(N/2);
+	F32PTR ans=TMP;       
+	for (I32 i=1; i <=M; i++){
+		I32 nLength=N - i;
+		I32 start=i+1;
+		F32 sumXY=0,sumXX=0,sumYY=0,sumX=0,sumY=0;
+		I32 nValidNum=0;
+		for (I32 j=1; j <=nLength; j++)		{
+			I32 Ix=j - 1;
+			I32 Iy=start+(j - 1) - 1;
+			if ( (isNA[Ix]+isNA[Iy])==0)	{
+				nValidNum++;
+				F32 x=Y[Ix];
+				F32 y=Y[Iy];
+				sumX+=x;	
+				sumY+=y;
+				sumXY+=x*y; 				
+				sumXX+=x*x;
+				sumYY+=y*y;
 			}
 		}
-		MX=MX/(float)NUM;
-		MY=MY/(float)NUM;
-		ans[i - 1]=(XY/NUM - MX*MY)/sqrtf((XX/N - MX*MX)*(YY/N - MY*MY));
+		F32 MX=sumX/(F32)nValidNum;
+		F32 MY=sumY/(F32)nValidNum;
+		ans[i - 1]=(sumXY/nValidNum - MX*MY)/sqrtf((sumXX/N - MX*MX)*(sumYY/N - MY*MY));
 	}
+	U08PTR isPeak=isNA;
+	I32PTR INDEX=(I32PTR)(TMP+M); 
 	memset(isNA,0,M);
-	I32PTR index=(int32_t *)r_malloc(sizeof(int32_t)*M);
-	size_t  totalLMnum=0;
-	for (register int32_t i=2; i <=(M - 1); i++)
-	{
-		if (ans[(i)-1] > ans[(i - 1) - 1] && ans[(i)-1] > ans[(i+1) - 1])
-		{
-			isNA[i - 1]=1;
-			index[totalLMnum++]=i;
+	I32  numPeaks=0;
+	for ( I32 i=2; i <=(M - 1); i++)	{
+		if (ans[(i)-1] > ans[(i - 1) - 1] && ans[(i)-1] > ans[(i+1) - 1]) {
+			isPeak[i - 1]=1;
+			INDEX[numPeaks++]=i;
 		}
 	}
-	int32_t period=0;
-	if (totalLMnum !=0)
-	{
-		for (int32_t curIdx=1; curIdx <=max(1,(int)floorf(totalLMnum/3.f)); curIdx++)
-		{
-			period=index[curIdx - 1];
-			int32_t  goodTimes=0;
-			int32_t  numOfPeriod=(int)floorf((float)(M - 1)/period);
-			for (int32_t i=1; i <=numOfPeriod; i++)
-			{
-				if (isNA[period*i - 1]==1||isNA[period*i+1 - 1]==1||isNA[period*i - 1 - 1]==1)
-				{
-					goodTimes++;
-				}
+	I32 period=-1L;	 
+	if (numPeaks !=0) 	{
+		for (I32 pID=1; pID <=max(1,(int)floorf(numPeaks/3.f)); pID++)	{
+			period=INDEX[pID - 1];			
+			I32  NumOfPeriod=(int)floorf((F32)(M - 1)/period);
+			I32  goodTimes=0;
+			for (I32 i=1; i <=NumOfPeriod; i++)	{			 
+				I32 segLength=period * i;
+				goodTimes+=isPeak[segLength - 1]||isPeak[segLength+1 - 1]||isPeak[segLength-1 - 1];
 			}
-			if (goodTimes >=min(3,numOfPeriod))
-			{
+			if (goodTimes >=min(3,NumOfPeriod))			{
 				break;
 			}
-			period=0;
+			period=-1L;
 		}
 	}
-	r_free(index);
-	r_free(ans);
-	r_free(isNA);
-	return (float)period;
+	free(TMP);
+	return (F32)period;
 }
-static float confidenceInterval(rF32PTR half,int32_t n,char leftOrRight);
-int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF32PTR cptCI,int32_t N,int32_t minSepDist,int32_t maxCptNumber)
+ static F32 confidenceInterval(F32PTR half,I32 n,char leftOrRight)
+{
+	F32 sum=f32_sum(half,n);
+	if (leftOrRight=='R') {		
+		F32 cumSum=0;		
+		I32 j=0;
+		for (; j < n; j++)	{
+			cumSum+=half[j];
+			if ( cumSum/sum >=0.95f) break;
+		}
+		F32 J=j+1.f;
+		return J - (cumSum - 0.95f*sum)/half[j];
+	} 
+	if (leftOrRight=='L')
+	{		
+		F32 cumSum=0;		
+		I32 j=n-1;
+		for (; j >=0; j--) 	{
+			cumSum+=half[j];
+			if (cumSum/sum >=0.95f) break;
+		}
+		F32 J=(F32)(n-j);
+		F32 delta=J - (cumSum - 0.95f*sum)/half[j];
+		return delta;
+	}
+	return -999;
+}
+static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI,I32 N,I32 minSepDist,I32 maxCptNumber)
 {
 	if (maxCptNumber==0)	{return maxCptNumber;}
-	int32_t w=(int32_t) round((minSepDist - 1)/2);
-	int32_t w2=w * 2+1;
+	I32 w=(I32) round((minSepDist - 1)/2);
+	w=w >=0 ? w : 0;
+	I32 w2=w * 2+1;
 	r_ippsSet_32f(0,mem,N);			
-	I32PTR cpfromSum_Pos=(int32_t*) mem+N;
-	F32PTR cpfromSum_Val=(float *)mem+N * 2;
-	I32PTR cpfromProb_Pos=(int32_t *) mem+N * 3;
-	F32PTR cpfromProb_Val=(float *)mem+N * 4;
-	for (int32_t i=-w; i <=w; i++)
+	I32PTR cpfromSum_Pos=(I32PTR)mem+N;
+	F32PTR cpfromSum_Val=(F32PTR)mem+N * 2;
+	I32PTR cpfromProb_Pos=(I32PTR) mem+N * 3;
+	F32PTR cpfromProb_Val=(F32PTR)mem+N * 4;
+	for (I32 i=-w; i <=w; i++)
 	{
-		int32_t len=i > 0 ? i : -i;
-		int32_t startIdx_mem=i <=0 ? 0 : i;
-		int32_t startIdx_prob=i <=0 ? -i : 0;
+		I32 len=i > 0 ? i : -i;
+		I32 startIdx_mem=i <=0 ? 0 : i;
+		I32 startIdx_prob=i <=0 ? -i : 0;
 		r_ippsAdd_32f_I(prob+startIdx_prob,mem+startIdx_mem,N - len);
 	}
-	int32_t  UPPERIDX=N - w;
-	int32_t  cptNumber=0;
-	for (int32_t i=w; i < UPPERIDX; i++)
+	I32  UPPERIDX=N - w;
+	I32  numCpt=0;
+	for (I32 i=w; i < UPPERIDX; i++)
 	{
 		if (mem[i] < threshold) continue;
 		bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
 		bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
 		if (!(isLargeThanNearestNeighor && isLargeThanNearestTwoNeighors)) continue;
-		int32_t		upperIdx_1=i+w;
-		int32_t		maxIdx=-999;
-		float		maxVal=-999;
-		for (int32_t j=i - w; j <=upperIdx_1; j++)
+		I32		upperIdx_1=i+w;
+		I32		maxIdx=-999;
+		F32		maxVal=-999;
+		for (I32 j=i - w; j <=upperIdx_1; j++)
 		{
 			if ((prob[j] > prob[j - 1] && prob[j] >=prob[j+1])||(prob[j] >=prob[j - 1] && prob[j] > prob[j+1]))
 			{
@@ -182,63 +159,63 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
 			}			
 		}		
 		if ( maxVal < 0.f	)	continue;
-		int32_t diff_btw_twoNeighbors=maxIdx-cpfromProb_Pos[cptNumber - 1]; 
-		if ((cptNumber==0)||diff_btw_twoNeighbors >=w2||diff_btw_twoNeighbors <=-w2)
+		I32 diff_btw_twoNeighbors=maxIdx-cpfromProb_Pos[numCpt - 1]; 
+		if ((numCpt==0)||diff_btw_twoNeighbors >=w2||diff_btw_twoNeighbors <=-w2)
 		{
-			cpfromSum_Pos[cptNumber]=i;
-			cpfromSum_Val[cptNumber]=mem[i];
-			cpfromProb_Pos[cptNumber]=maxIdx;
-			cpfromProb_Val[cptNumber]=maxVal;
-			cptNumber++;
+			cpfromSum_Pos[numCpt]=i;
+			cpfromSum_Val[numCpt]=mem[i];
+			cpfromProb_Pos[numCpt]=maxIdx;
+			cpfromProb_Val[numCpt]=maxVal;
+			numCpt++;
 			continue;
 		}
 		else
 		{
-			if (maxVal >=cpfromProb_Val[cptNumber - 1])
+			if (maxVal >=cpfromProb_Val[numCpt - 1])
 			{
-				cpfromSum_Pos[cptNumber - 1]=i;
-				cpfromSum_Val[cptNumber - 1]=mem[i];
-				cpfromProb_Pos[cptNumber - 1]=maxIdx;
-				cpfromProb_Val[cptNumber - 1]=maxVal;
+				cpfromSum_Pos[numCpt - 1]=i;
+				cpfromSum_Val[numCpt - 1]=mem[i];
+				cpfromProb_Pos[numCpt - 1]=maxIdx;
+				cpfromProb_Val[numCpt - 1]=maxVal;
 				continue;
 			}
 		}		
 	}
-	if (cptNumber==0) { return cptNumber; }
-	quickSortD(cpfromProb_Val,cpfromProb_Pos,0,cptNumber - 1);
-	cptNumber=min(cptNumber,maxCptNumber);
-	r_cblas_scopy(cptNumber,(float *)cpfromProb_Pos,1,(float *) cpt,1);
-	I32PTR index=(int32_t *) mem;
-	float *cpt_float=mem+N;
-	for (int32_t i=0; i < cptNumber; i++)
+	if (numCpt==0) { return numCpt; }
+	QuickSortD(cpfromProb_Val,cpfromProb_Pos,0,numCpt - 1);
+	numCpt=min(numCpt,maxCptNumber);
+	r_cblas_scopy(numCpt,(F32PTR)cpfromProb_Pos,1,(F32PTR) cpt,1);
+	I32PTR INDEX=(I32PTR) mem;
+	F32PTR CPT_float=mem+N;
+	for (I32 i=0; i < numCpt; i++)
 	{
-		*index++=i;
-		*cpt_float++=(float)cpt[i];
+		*INDEX++=i;
+		*CPT_float++=(F32)cpt[i];
 	}
-	index=index - cptNumber;
-	cpt_float=cpt_float - cptNumber;	
-	quickSortA(cpt_float,index,0,cptNumber - 1);
-	for (int32_t i=0; i < cptNumber; i++)
+	INDEX=INDEX - numCpt;
+	CPT_float=CPT_float - numCpt;	
+	QuickSortA(CPT_float,INDEX,0,numCpt - 1);
+	for (I32 i=0; i < numCpt; i++)
 	{
 		cptCI[i]=-9999.f;
-		cptCI[cptNumber+i]=-9999.f;
+		cptCI[numCpt+i]=-9999.f;
 	}
-	float delta;
-	delta=confidenceInterval(prob,((int32_t) cpt_float[0]-0+1),'L');
+	F32 delta;
+	delta=confidenceInterval(prob,((I32) CPT_float[0]-0+1),'L');
 	cptCI[0]=delta;
-	delta=confidenceInterval(prob+(int32_t)cpt_float[cptNumber - 1],(N - (int32_t)cpt_float[cptNumber - 1]+1),'R');
-	cptCI[cptNumber+cptNumber - 1]=delta;
-	if (cptNumber==1) {
-		cptCI[0]=cpt_float[0] - cptCI[0];
-		cptCI[1]=cpt_float[0]+cptCI[1];
-		return cptNumber; 
+	delta=confidenceInterval(prob+(I32)CPT_float[numCpt - 1],(N - (I32)CPT_float[numCpt - 1]+1),'R');
+	cptCI[numCpt+numCpt - 1]=delta;
+	if (numCpt==1) {
+		cptCI[0]=CPT_float[0] - cptCI[0];
+		cptCI[1]=CPT_float[0]+cptCI[1];
+		return numCpt; 
 	}
-	for (int32_t i=0; i < (cptNumber-1); i++)
+	for (I32 i=0; i < (numCpt-1); i++)
 	{ 
-		float del1,del2,del;
-		del1=cptCI[cptNumber+i] > 0 ? cptCI[cptNumber+i] : cptCI[i];
-		del2=cptCI[i+1] > 0 ? cptCI[i+1] : ((cptCI[cptNumber+i+1] > 0) ? cptCI[cptNumber+i+1] : -9999.f);
-    	del=cpt_float[i+1] - cpt_float[i];
+		F32 del1,del2,del;
+		del1=cptCI[numCpt+i] > 0 ? cptCI[numCpt+i] : cptCI[i];
+		del2=cptCI[i+1] > 0 ? cptCI[i+1] : ((cptCI[numCpt+i+1] > 0) ? cptCI[numCpt+i+1] : -9999.f);
+    	del=CPT_float[i+1] - CPT_float[i];
 		if (del2 <=0)
 		{
 				del1=del1 * 2.f;
@@ -247,9 +224,9 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
 		{
 			del=del*del1/(del1+del2);
 		}
-		delta=confidenceInterval(prob+(int32_t)cpt_float[i],(int32_t) ceil(del),'R');
-		cptCI[cptNumber+i]=delta;
-		del=cpt_float[i+1] - cpt_float[i];
+		delta=confidenceInterval(prob+(I32)CPT_float[i],(I32) ceil(del),'R');
+		cptCI[numCpt+i]=delta;
+		del=CPT_float[i+1] - CPT_float[i];
 		if (del2 <=0)
 		{
 			delta=del - delta * 2;
@@ -260,289 +237,156 @@ int32_t find_changepoint1(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF
 			del2=del2 * 2.f;
 			del=(del2 >=del) ? del/2 : del2;
 		}
-		int32_t len=(int32_t)ceil(del);
-		delta=confidenceInterval(prob+(int32_t)cpt_float[i+1]-(len-1),len,'L');
+		I32 len=(I32)ceil(del);
+		delta=confidenceInterval(prob+(I32)CPT_float[i+1]-(len-1),len,'L');
 		cptCI[i+1]=delta;
 	}
-	float *temp=mem+2 * N;
-	r_cblas_scopy(2*cptNumber,cptCI,1,temp,1);
-	for (int32_t i=0; i < cptNumber; i++)
+	F32PTR temp=mem+2 * N;
+	r_cblas_scopy(2*numCpt,cptCI,1,temp,1);
+	for (I32 i=0; i < numCpt; i++)
 	{
-		int32_t idx  ;
-		idx=index[i];
-		cptCI[idx]=cpt_float[i] - temp[i];
-		cptCI[cptNumber+idx]=cpt_float[i]+temp[cptNumber+i];
+		I32 idx  ;
+		idx=INDEX[i];
+		cptCI[idx]=CPT_float[i] - temp[i];
+		cptCI[numCpt+idx]=CPT_float[i]+temp[numCpt+i];
 	}
-	return cptNumber;
+	return numCpt;
 }
-static float confidenceInterval( rF32PTR half,int32_t n,char leftOrRight)
-{
-	float delta;
-	float sum,inv_sum,cumSum;
-	r_ippsSum_32f(      half,n,&sum,ippAlgHintAccurate);
-	inv_sum=1.f/sum;
-	int32_t j;
-	cumSum=0;	
-	if (leftOrRight=='R')
-	{
-		for (j=0; j < n; j++)
-		{
-			cumSum=cumSum+half[j];
-			if (cumSum *inv_sum >=0.95) break;
-		}
-		float J=j+1.f;
-		delta=J - (cumSum - 0.95f*sum)/half[j];	
-	}
-	else
-	{
-		for (j=n-1; j >=0; j--)
-		{
-			cumSum=cumSum+half[j];
-			if (cumSum*inv_sum  >=0.95) break;
-		}
-		float J=(float)(n-j);
-		delta=J - (cumSum - 0.95f*sum)/half[j];
-	}
-	return delta;
-}
-int32_t find_changepoint(rF32PTR prob,rF32PTR mem,float threshold,I32PTR cpt,rF32PTR cptCI,int32_t N,int32_t minSepDist,int32_t maxCptNumber)
+ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI,I32 N,I32 minSepDist,I32 maxCptNumber)
 {
 	if (maxCptNumber==0)	{ return maxCptNumber; }
-	int32_t w0=minSepDist/2;
-	int32_t w1=minSepDist - w0;
 	r_ippsSet_32f(0,mem,N);
-	I32PTR cpfromSum_Pos=(int32_t *) mem+N;
-	F32PTR cpfromSum_Val=(float *) mem+N * 2;
-	I32PTR cpfromProb_Pos=(int32_t *) mem+N * 3;
-	F32PTR cpfromProb_Val=(float *)mem+N * 4;
-	for (int32_t i=-w1; i <=w0; i++)
-	{
-		int32_t len=i > 0 ? i : -i;
-		int32_t startIdx_mem=i <=0 ? 0 : i;
-		int32_t startIdx_prob=i <=0 ? -i : 0;
-		r_ippsAdd_32f_I(prob+startIdx_prob,mem+startIdx_mem,N - len);
-	}	
-	int32_t  UPPERIDX=N - (minSepDist+1);
-	int32_t  cptNumber=0;
-	for (int32_t i=(minSepDist+1); i < UPPERIDX; i++)
+	I32PTR cpfromSum_Pos=(I32PTR) mem+N;
+	F32PTR cpfromSum_Val=(F32PTR) mem+N * 2;
+	I32PTR cpfromProb_Pos=(I32PTR) mem+N * 3;
+	F32PTR cpfromProb_Val=(F32PTR) mem+N * 4;
+	I32 w0=minSepDist/2;   
+	I32 w1=minSepDist - w0;  
+	f32_sumfilter(prob,mem,N,minSepDist);
+	I32  LOWERIDX=(minSepDist+1);
+	I32  UPPERIDX=N - (minSepDist+1);
+	I32  numCpt=0;
+	for (I32 i=LOWERIDX; i < UPPERIDX; i++)
 	{
 		if (mem[i] < threshold) continue;
 		bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
 		bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
-		if (!(isLargeThanNearestNeighor && isLargeThanNearestTwoNeighors)) continue;
-		int32_t		UPPERIDX_1=i+w1;
-		int32_t		maxIdx=-999;
-		float		maxVal=-999;
-		for (int32_t j=i - w0; j <=UPPERIDX_1; j++)
-		{
-			if ((prob[j] > prob[j - 1] && prob[j] >=prob[j+1])||(prob[j] >=prob[j - 1] && prob[j] > prob[j+1]))
-			{
-				if (prob[j] > maxVal) 	maxIdx=j,maxVal=prob[j];
+		if ( isLargeThanNearestNeighor==0||isLargeThanNearestTwoNeighors==0 ) continue;
+		I32		UPPERIDX_1=i+w1;
+		I32		maxIdx=-9999;
+		F32		maxVal=-9999.f;
+		for (I32 j=i - w0; j <=UPPERIDX_1; j++) 	{
+			if ((prob[j] > prob[j - 1] && prob[j] >=prob[j+1])||(prob[j] >=prob[j - 1] && prob[j] > prob[j+1]))			{
+				if (prob[j] > maxVal) {
+					maxIdx=j; maxVal=prob[j];
+				}				
 			}
 		}
 		if (maxVal < 0.f)	continue;
-		int32_t diff_btw_twoNeighbors=maxIdx - cpfromProb_Pos[cptNumber - 1];
-		if ((cptNumber==0)||diff_btw_twoNeighbors > minSepDist||diff_btw_twoNeighbors < -minSepDist)
-		{
-			cpfromSum_Pos[cptNumber]=i;
-			cpfromSum_Val[cptNumber]=mem[i];
-			cpfromProb_Pos[cptNumber]=maxIdx;
-			cpfromProb_Val[cptNumber]=maxVal;
-			cptNumber++;
+		I32 dist_to_prevCpt=maxIdx - cpfromProb_Pos[numCpt - 1];
+		if ((numCpt==0)||dist_to_prevCpt > minSepDist||dist_to_prevCpt < -minSepDist)	{
+			cpfromSum_Pos[numCpt]=i;
+			cpfromSum_Val[numCpt]=mem[i];
+			cpfromProb_Pos[numCpt]=maxIdx;
+			cpfromProb_Val[numCpt]=maxVal;
+			numCpt++;
 			continue;
-		}
-		else
-		{
-			if (maxVal >=cpfromProb_Val[cptNumber - 1])
-			{
-				cpfromSum_Pos[cptNumber - 1]=i;
-				cpfromSum_Val[cptNumber - 1]=mem[i];
-				cpfromProb_Pos[cptNumber - 1]=maxIdx;
-				cpfromProb_Val[cptNumber - 1]=maxVal;
+		} else	{  
+			if (maxVal >=cpfromProb_Val[numCpt - 1]){
+				cpfromSum_Pos[numCpt - 1]=i;
+				cpfromSum_Val[numCpt - 1]=mem[i];
+				cpfromProb_Pos[numCpt - 1]=maxIdx;
+				cpfromProb_Val[numCpt - 1]=maxVal;
 				continue;
 			}
 		}
 	}
-	if (cptNumber==0) { return cptNumber; }
-	quickSortD(cpfromSum_Val,cpfromProb_Pos,0,cptNumber - 1);
-	cptNumber=min(cptNumber,maxCptNumber);
-	r_cblas_scopy(cptNumber,(float *)cpfromProb_Pos,1,(float *) cpt,1);
-	I32PTR index=(int32_t * ) mem;
-	F32PTR cpt_float=(float	* ) mem+N;
-	for (int32_t i=0; i < cptNumber; i++)
-	{
-		*index++=i;
-		*cpt_float++=(float)cpt[i];
+	if (numCpt==0) { return numCpt; }
+	QuickSortD(cpfromSum_Val,cpfromProb_Pos,0,numCpt - 1);
+	numCpt=min(numCpt,maxCptNumber);
+	f32_copy( (F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);	
+	I32PTR INDEX_timeToProbAmp=(I32 *)mem ;
+	F32PTR cpt_f32=(F32 *)mem+N;	
+	for (I32 i=0; i < numCpt; i++) {		
+		cpt_f32[i]=(F32)cpt[i];
+		INDEX_timeToProbAmp[i]=i;
 	}
-	index=index - cptNumber;
-	cpt_float=cpt_float - cptNumber;
-	quickSortA(cpt_float,index,0,cptNumber - 1);
-	for (int32_t i=0; i < cptNumber; i++)
+	QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32_fill_val(-9999.f,cptCI,2*numCpt);
+	F32PTR tmpSeg=(F32*) mem+3 * N;
+	I32PTR nullSeg=(I32*) mem+4 * N;  
+	for (I32 i=0; i < numCpt; i++)
 	{
-		cptCI[i]=-9999.f;
-		cptCI[cptNumber+i]=-9999.f;
-	}
-	float	delta;
-	F32PTR tmpSeg=(float	* )  mem+3 * N;
-	I32PTR nullSeg=(int32_t	*) mem+4 * N;
-	for (int32_t i=0; i < cptNumber; i++)
-	{
-		int32_t startIdx,endIdx;
-		endIdx=(int32_t) cpt_float[i];
-		startIdx=i==0 ? 0 : (int32_t) cpt_float[i-1];
+		I32 startIdx,endIdx,len;
+		endIdx=(I32) cpt_f32[i];
+		startIdx=i==0 ? 0 : (I32) cpt_f32[i-1];
 		startIdx=(startIdx+endIdx)/2;
-		int32_t len=endIdx - startIdx+1;
-		r_cblas_scopy(len,prob+startIdx,1,tmpSeg,1);
-		quickSortA(tmpSeg,nullSeg,0,len - 1);
-		delta=confidenceInterval(tmpSeg,len,'L');
-		cptCI[i]=delta;
-		startIdx=(int32_t) cpt_float[i];
-		endIdx=i==(cptNumber - 1) ? (N - 1) : (int32_t) cpt_float[i+1];
+		len=endIdx-startIdx+1;		
+		f32_copy(prob+startIdx,tmpSeg,len);		
+		QuickSortA(tmpSeg,nullSeg,0,len - 1); 
+		cptCI[i]=confidenceInterval(tmpSeg,len,'L');
+		startIdx=(I32)cpt_f32[i];
+		endIdx=i==(numCpt - 1) ? (N - 1) : (I32)cpt_f32[i+1];
 		endIdx=(startIdx+endIdx)/2;
 	    len=endIdx - startIdx+1;
-		r_cblas_scopy(len,prob+startIdx,1,tmpSeg,1);
-		quickSortD(tmpSeg,nullSeg,0,len - 1);
-		delta=confidenceInterval(tmpSeg,len,'R');		
-		cptCI[cptNumber+i]=delta;
+		f32_copy(prob+startIdx,tmpSeg,len);		
+		QuickSortD(tmpSeg,nullSeg,0,len - 1); 
+		cptCI[numCpt+i]=confidenceInterval(tmpSeg,len,'R');
+ 	}
+	F32PTR cptCI_backup=mem+3*N;
+	f32_copy(cptCI,cptCI_backup,2 * numCpt);
+	F32PTR cpt_summedProb=mem;
+	for (I32 i=0; i < numCpt; i++)	{
+		I32 idx=INDEX_timeToProbAmp[i];
+		cptCI[idx]=cpt_f32[i] - cptCI_backup[i];
+		cptCI[numCpt+idx]=cpt_f32[i]+cptCI_backup[numCpt+i];
+		cpt_summedProb[i]=cpfromSum_Val[i]>1 ? 1.f : cpfromSum_Val[i];
 	}
-	float *temp=mem+2 * N;
-	r_cblas_scopy(2 * cptNumber,cptCI,1,temp,1);
-	for (int32_t i=0; i < cptNumber; i++)
-	{
-		int32_t idx;
-		idx=index[i];
-		cptCI[idx]=cpt_float[i] - temp[i];
-		cptCI[cptNumber+idx]=cpt_float[i]+temp[cptNumber+i];
+	return numCpt;
+}
+void WriteF32ArraryToStrideMEM(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset,DATA_TYPE dataType) 
+{
+	if ( dataType==DATA_FLOAT  )	{	  
+		f32_to_strided_f32(src,dst,N,stride,dstOffset);
 	}
-	return cptNumber;
-}
-static INLINE void swapValue(rF32PTR a,rF32PTR b)
-{
-	rF32 t=*a;
-	*a=*b;
-	*b=t;
-}
-static INLINE void swapIndex(I32PTR a,I32PTR b)
-{
-	rI32 t=*a;
-	*a=*b;
-	*b=t;
-}
-int32_t partitionD(rF32PTR arr,I32PTR index,int32_t low,int32_t high)
-{
-	rF32 pivot=arr[high];    
-	rI32 i=(low - 1);  
-	for (rI32 j=low; j <=high - 1; j++)
-	{
-		if (arr[j] > pivot)
-		{
-			i++;    
-			swapValue(&arr[i],&arr[j]);
-			swapIndex(&index[i],&index[j]);
-		}
-	}
-	swapValue(&arr[i+1],&arr[high]);
-	swapIndex(&index[i+1],&index[high]);
-	return (i+1);
-}
-void quickSortD(rF32PTR arr,I32PTR index,int32_t low,int32_t high)
-{
-	if (low < high)
-	{
-		int32_t pi=partitionD(arr,index,low,high);
-		quickSortD(arr,index,low,pi - 1);
-		quickSortD(arr,index,pi+1,high);
+	else if (dataType==DATA_DOUBLE) {
+		f32_to_strided_f64(src,dst,N,stride,dstOffset);
 	}
 }
-int partitionA(rF32PTR arr,I32PTR index,int32_t low,int32_t high)
+void CopyStrideMEMToF32Arr(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDataType)
 {
-	float pivot=arr[high];    
-	int32_t i=(low - 1);  
-	for (int32_t j=low; j <=high - 1; j++)
-	{
-		if (arr[j] <=pivot)
-		{
-			i++;    
-			swapValue(&arr[i],&arr[j]);
-			swapIndex(&index[i],&index[j]);
-		}
+	if      (srcDataType==DATA_FLOAT) 	{
+		f32_from_strided_f32(dst,src,N,srcStride,srcOffset);
+	}  
+	else if (srcDataType==DATA_DOUBLE){
+		f32_from_strided_f64(dst,src,N,srcStride,srcOffset);
+	}  
+	else if (srcDataType==DATA_INT32)	{
+		f32_from_strided_i32(dst,src,N,srcStride,srcOffset);
+	}  
+	else if (srcDataType==DATA_INT16)	{
+		f32_from_strided_i16(dst,src,N,srcStride,srcOffset);
+	}  
+}
+#if defined(WIN64_OS)||defined(WIN32_OS) 
+	#include "float.h"
+	#if defined(MSVC_COMPILER)
+	void EnableFloatExcetion() {
+		unsigned int _oldState;
+		errno_t err=_controlfp_s(&_oldState,EM_OVERFLOW|EM_UNDERFLOW|EM_ZERODIVIDE|EM_DENORMAL|EM_INVALID,MCW_EM);
 	}
-	swapValue(&arr[i+1],&arr[high]);
-	swapIndex(&index[i+1],&index[high]);
-	return (i+1);
-}
-void quickSortA(rF32PTR arr,I32PTR index,int32_t low,int32_t high)
-{
-	if (low < high)
-	{
-		int32_t pi=partitionA(arr,index,low,high);
-		quickSortA(arr,index,low,pi - 1);
-		quickSortA(arr,index,pi+1,high);
+	#elif defined(GCC_COMPILER)
+void EnableFloatExcetion() {
+		unsigned int _oldState;
+		errno_t err=_controlfp_s(&_oldState,_EM_OVERFLOW|_EM_UNDERFLOW|_EM_ZERODIVIDE|_EM_DENORMAL|_EM_INVALID,_MCW_EM);
 	}
+	#endif
+#else
+	#include "fenv.h" 
+void EnableFloatExcetion() {
+	#if defined(LINUX_OS) 
+	feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW); 
+	#endif
 }
-float fastlog1(float x)
-{
-	register union { float f; uint32_t i; } vx={ x };
-	register union{ uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-	vx.f=(float)vx.i* 1.1920928955078125e-7f*0.69314718f;
-	vx.f=vx.f - 124.22551499f*0.69314718f
-		- 1.498030302f*0.69314718f * mx.f
-		- 1.72587999f*0.69314718f/(0.3520887068f+mx.f);
-	return vx.f;
-}
-float fastlog2(float x)
-{
-	register union { float f; uint32_t i; } vx={ x };
-	register union{ uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-	vx.f=(float) ( (double)vx.i* (double)(1.1920928955078125e-7f*0.69314718f) );
-	vx.f=vx.f - 124.2098722217282f*0.69314718f
-		- 1.502704726439149f*0.69314718f * mx.f
-		- 1.746553042329640f*0.69314718f/(0.356745518976678f+mx.f);
-	return vx.f;
-}
-float fastlog(float x)
-{
-	register union { float f; uint32_t i; } vx={ x };
-	register union { uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-	vx.f=(float)vx.i* (1.1920928955078125e-7f*0.69314718f);
-	vx.f=vx.f - 125.5233166734556f*0.69314718f+mx.f*(-0.413356886671142+mx.f*(-0.472721975352920+0.078018528401178*mx.f))*0.69314718f+
-		-0.787757784962750f*0.69314718f/(0.1781810261970705f+mx.f);
-	return vx.f;
-}
-float sum_log_diag(rF32PTR p,rI32 K)
-{
-	rF32 x=0;
-	for (rI32 i=0; i < K; i++)
-	{
-		register union { float f; uint32_t i; } vx={ *p };
-		register union{ uint32_t i; float f; } mx={ (vx.i & 0x007FFFFF)|0x3f000000 };
-		vx.f=(float)vx.i* (1.1920928955078125e-7f*0.69314718f);
-		vx.f=vx.f - 125.5233166734556f*0.69314718f+mx.f*(-0.413356886671142+mx.f*(-0.472721975352920+0.078018528401178*mx.f))*0.69314718f+
-			-0.787757784962750f*0.69314718f/(0.1781810261970705f+mx.f);
-		x+=vx.f;
-		p=p+K+1;
-	}
-	return x;
-}
-float fastexp(float x){
-	x=1.442695040f*x;
-	x=(x < -126) ? -126.0f : x;
-	register float z=x - (float)((int)x)+((x < 0) ? 1.0f : 0.0f);
-	register  union { uint32_t i; float f; } v;
-	v.i=(uint32_t)     (    8388608.f * (x+121.2740575f+27.7280233f/(4.84252568f - z) - 1.49012907f * z)          );
-	return v.f;
-}
-float fast_sqrt(float x)
-{
-	register union {
-		uint32_t i;
-		float   f;
-	} v;
-	v.f=x; 
-	v.i -=1 << 23; 
-	v.i >>=1; 
-	v.i+=1 << 29; 
-	v.f=(v.f+x/v.f);
-	v.f=(v.f*0.25f+x/v.f);
-	return v.f;
-}
+#endif
+#include "abc_000_warning.h"

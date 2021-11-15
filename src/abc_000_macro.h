@@ -1,5 +1,23 @@
-
 #pragma once
+#define R_INTERFACE     1
+#define M_INTERFACE     0
+#define MYMAT_LIBRARY   1
+#define MKL_LIBRARY     0
+#define MATLAB_LIBRARY  0 
+#define PCGRAND_LIBRARY 1
+#define MKLRAND_LIBRARY 0
+#ifdef R_RELEASE
+		#undef   R_INTERFACE
+		#undef   M_INTERFACE
+		#define  R_INTERFACE 1
+		#define  M_INTERFACE 0
+		#undef   MYMAT_LIBRARY
+	    #undef   MKL_LIBRARY
+		#define MYMAT_LIBRARY 1
+	    #define MKL_LIBRARY   0
+	   #define PCGRAND_LIBRARY 1
+       #define MKLRAND_LIBRARY 0
+#endif
 #ifdef _MSC_VER
 	#define MSVC_COMPILER
 #elif defined(__clang__)
@@ -11,46 +29,72 @@
 #endif
 #if defined(_WIN64)||defined (__MINGW64__) && defined(_WIN32) && !defined(__i386)  && !defined(__i686) && !defined(i386) && !defined(__i686)
 	#define WIN64_OS
+#elif defined(_WIN32) && !defined(_WIN64)
+	#define WIN32_OS
 #endif
-	#define MYMAT_LIBRARY 0
-	#define MKL_LIBRARY   1
-	#define MATLAB_LIBRARY 0 
-	#define R_INTERFACE 1
-	#define M_INTERFACE 0
-	#define MYRAND_LIBRARY  1
-	#define MKLRAND_LIBRARY 0
-	#define R_RELEASE   1
-	#if R_RELEASE==1
-		#undef   R_INTERFACE
-		#undef   M_INTERFACE
-		#define R_INTERFACE 1
-		#define M_INTERFACE 0
-		#undef   MYMAT_LIBRARY
-	    #undef   MKL_LIBRARY
-		#define MYMAT_LIBRARY 1
-	    #define MKL_LIBRARY   0
-    #endif
-	#define BASIS_METHODS 2
-	#define PTHREAD_INOUT 0
-	#define MY_DEBUG 0
-	#if MYMAT_LIBRARY==1
-		#define MYRAND_LIBRARY 1
-		#define MKLRAND_LIBRARY 0
+#if defined(__APPLE__ ) && defined (__MACH__) 
+	#define MAC_OS
+#endif
+#if defined(__linux__) 
+	#define LINUX_OS
+	#define _GNU_SOURCE 
+#endif
+#if (defined(unix)||defined(__unix__)||defined(__unix) ) && !defined(__APPLE__)
+	#define UNIX_OS
+	#define _GNU_SOURCE 
+#endif
+#if defined(sun) && defined(__sun) && defined(__SVR4) 
+	#define SOLARIS_OS
+#endif
+#if _WIN64||__amd64__||defined(__LP64__)||(defined(__x86_64__) &&    !defined(__ILP32__) )||defined(_M_X64)||defined(__ia64)||defined (_M_IA64)||defined(__aarch64__)||defined(__powerpc64__)
+	#define TARGET_64
+#else
+	#define TARGET_32
+#endif
+#if __GNUC__
+	#if __x86_64__||__ppc64__
+		#define TARGET_64
+	#else
+		#define TARGET_32
 	#endif
-	#if defined(MSVC_COMPILER)
+#endif
+#if defined(TARGET_32) && defined (MSVC_COMPILER)
+	#define _CRT_SECURE_NO_WARNINGS
+	#pragma warning (disable: 4703) 
+#endif
+#if MYMAT_LIBRARY==1
+		#define PCGRAND_LIBRARY 1
+		#define MKLRAND_LIBRARY 0
+#endif
+#if defined(MSVC_COMPILER)
 		#define INLINE    __inline
 		#define _restrict __restrict
-	#elif defined(SOLARIS_COMPILER) 
+        #define UNUSED_DECORATOR 
+#elif defined(SOLARIS_COMPILER) 
 		#define INLINE     inline 
 		#define _restrict _Restrict 
-	#elif defined(GCC_COMPILER)||defined(CLANG_COMPILER)
+        #define UNUSED_DECORATOR 
+#elif defined(GCC_COMPILER)||defined(CLANG_COMPILER)
 		#define INLINE     inline
 		#define _restrict __restrict__		
-	#endif
-	#define max(a,b)    (((a) > (b)) ? (a) : (b))
-	#define min(a,b)    (((a) < (b)) ? (a) : (b))
-	#define mv(n,src,dest)	r_cblas_scopy( n,src,1L,dest,1L) 
-	#define cp(n,src,dest)    memcpy(dest,src,sizeof(float)*(n))
+        #define UNUSED_DECORATOR  __attribute__((unused))
+#endif
+#ifdef MSVC_COMPILER
+    # define ALIGN32_BEG __declspec(align(32))
+    # define ALIGN32_END 
+#else
+    # define ALIGN32_BEG
+    # define ALIGN32_END __attribute__((aligned(32)))
+#endif
+#define _in_
+#define _inout_
+#define _out_
+#define max(a,b)			(((a) > (b)) ? (a) : (b))
+#define min(a,b)			(((a) < (b)) ? (a) : (b))
+#define mv(n,src,dest)	r_cblas_scopy( n,src,1L,dest,1L) 
+#define cp(n,src,dest)    memcpy(dest,src,sizeof(F32)*(size_t)(n))
+#define SCPY(n,src,dest)  memcpy(dest,src,sizeof(F32)*(size_t)(n))
+#define FILL0(dest,n)       memset(dest,0L,sizeof(F32)*(size_t)(n))
 	#define DIAG_STR(s) #s
 	#define DIAG_JOINSTR(x,y) DIAG_STR(x ## y)
 	#ifdef MSVC_COMPILER
@@ -88,13 +132,33 @@
 	DISABLE_WARNING(maybe-uninitialized,maybe-uninitialized,NOT_USED)\
 	DISABLE_WARNING(pointer-to-int-cast,pointer-to-int-cast,NOT_USED)\
 	DISABLE_WARNING(misleading-indentation,NOT_USED,NOT_USED)\
-	DISABLE_WARNING(discarded-qualifiers,NOT_USED,NOT_USED)\
+	DISABLE_WARNING(discarded-qualifiers,discarded-qualifiers,NOT_USED)\
 	DISABLE_WARNING(int-to-pointer-cast,int-to-pointer-cast,NOT_USED)\
-	DISABLE_WARNING(unused-result,unused-result,NOT_USED)
+	DISABLE_WARNING(unused-result,unused-result,NOT_USED) \
+    DISABLE_WARNING(unused-const-variable,unused-const-variable,NOT_USED)\
+    DISABLE_WARNING(incompatible-pointer-types-discards-qualifiers,incompatible-pointer-types-discards-qualifiers,NOT_USED)\
+	DISABLE_WARNING(incompatible-pointer-types,incompatible-pointer-types,NOT_USED)\
+	DISABLE_WARNING(self-assign,self-assign,NOT_USED) \
+    DISABLE_WARNING(unused-value,unused-value,NOT_USED) \
+    DISABLE_WARNING(int-conversion,int-conversion,NOT_USED) \
+    DISABLE_WARNING(restrict,restrict,NOT_USED)\
+    DISABLE_WARNING(switch,switch,NOT_USED) \
+    DISABLE_WARNING(uninitialized,uninitialized,NOT_USED)\
+    DISABLE_WARNING(pedantic,pedantic,NOT_USED)
 	#define  ENABLE_MANY_WARNINGS   \
+    ENABLE_WARNING(pedantic,pedantic,NOT_USED)\
+    ENABLE_WARNING(uninitialized,uninitialized,NOT_USED)\
+    ENABLE_WARNING(switch,switch,NOT_USED)\
+    ENABLE_WARNING(restrict,restrict,NOT_USED)\
+    ENABLE_WARNING(int-conversion,int-conversion,NOT_USED) \
+    ENABLE_WARNING(unused-value,unused-value,NOT_USED) \
+	ENABLE_WARNING(self-assign,self-assign,NOT_USED) \
+	ENABLE_WARNING(incompatible-pointer-types,incompatible-pointer-types,NOT_USED) \
+	ENABLE_WARNING(incompatible-pointer-types-discards-qualifiers,incompatible-pointer-types-discards-qualifiers,NOT_USED)\
+    ENABLE_WARNING(unused-const-variable,unused-const-variable,NOT_USED)\
 	ENABLE_WARNING(unused-result,unused-result,NOT_USED)\
 	ENABLE_WARNING(int-to-pointer-cast,int-to-pointer-cast,NOT_USED)\
-	ENABLE_WARNING(discarded-qualifiers,NOT_USED,NOT_USED)\
+	ENABLE_WARNING(discarded-qualifiers,discarded-qualifiers,NOT_USED)\
 	ENABLE_WARNING(misleading-indentation,NOT_USED,NOT_USED)\
 	ENABLE_WARNING(pointer-to-int-cast,pointer-to-int-cast,NOT_USED)\
 	ENABLE_WARNING(maybe-uninitialized,maybe-uninitialized,NOT_USED)\
@@ -118,8 +182,26 @@
 	DISABLE_WARNING(xxxxxxx,unknown-warning-option,xxxxxxxxx) \
     DISABLE_WARNING(pointer-to-int-cast,pointer-to-int-cast,NOT_USED)\
 	DISABLE_WARNING(int-to-pointer-cast,int-to-pointer-cast,NOT_USED) \
-	DISABLE_WARNING(unused-result,unused-result,NOT_USED)
+	DISABLE_WARNING(unused-result,unused-result,NOT_USED)             \
+    DISABLE_WARNING(unused-const-variable,unused-const-variable,NOT_USED) \
+	DISABLE_WARNING(incompatible-pointer-types-discards-qualifiers,incompatible-pointer-types-discards-qualifiers,NOT_USED)\
+	DISABLE_WARNING(incompatible-pointer-types,incompatible-pointer-types,NOT_USED)\
+	DISABLE_WARNING(self-assign,self-assign,NOT_USED)  \
+    DISABLE_WARNING(unused-value,unused-value,NOT_USED) \
+    DISABLE_WARNING(int-conversion,int-conversion,NOT_USED) \
+    DISABLE_WARNING(switch,switch,NOT_USED) \
+    DISABLE_WARNING(uninitialized,uninitialized,NOT_USED)\
+   DISABLE_WARNING(pedantic,pedantic,NOT_USED)
 	#define  ENABLE_MANY_WARNINGS  \
+    ENABLE_WARNING(pedantic,pedantic,NOT_USED)\
+    ENABLE_WARNING(uninitialized,uninitialized,NOT_USED)\
+    ENABLE_WARNING(switch,switch,NOT_USED)\
+    ENABLE_WARNING(int-conversion,int-conversion,NOT_USED) \
+    ENABLE_WARNING(unused-value,unused-value,NOT_USED) \
+	ENABLE_WARNING(self-assign,self-assign,NOT_USED) \
+	ENABLE_WARNING(incompatible-pointer-types,incompatible-pointer-types,NOT_USED) \
+	ENABLE_WARNING(incompatible-pointer-types-discards-qualifiers,incompatible-pointer-types-discards-qualifiers,NOT_USED)\
+    ENABLE_WARNING(unused-const-variable,unused-const-variable,NOT_USED)\
 	ENABLE_WARNING(unused-result,unused-result,NOT_USED)\
 	ENABLE_WARNING(int-to-pointer-cast,int-to-pointer-cast,NOT_USED)\
 	ENABLE_WARNING(pointer-to-int-cast,pointer-to-int-cast,NOT_USED)\
@@ -135,8 +217,15 @@
 	#define  DISABLE_MANY_WARNINGS 
 	#define  ENABLE_MANY_WARNINGS 	
 #endif
-#if defined(GCC_COMPILER)||defined(CLANG_COMPILER) 
-	#define UNUSED_DECORATOR  __attribute__((unused))
+#ifdef _WIN32_WINNT
+#undef  _WIN32_WINNT
+#define _WIN32_WINNT 0x0601
+#endif
+#include <stdint.h>
+#if   INTPTR_MAX==INT32_MAX
+	#define TARGET_32
+#elif INTPTR_MAX==INT64_MAX
+	#define TARGET_64
 #else
-	#define UNUSED_DECORATOR 
+	#error "Environment not 32 or 64-bit."
 #endif

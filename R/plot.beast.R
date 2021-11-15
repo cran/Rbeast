@@ -1,126 +1,424 @@
-plot.beast<-function (x, index, ...) {
- #https://stackoverflow.com/questions/39670646/r-github-package-w-devtools-warning-unknown-macro-item
+
+plot.beast<-function(
+  x, 
+  index = 1,
+  vars = c('st','s','scp','sorder','t','tcp','torder','o','ocp','error'),  
+  col  = NULL, 
+  main ="BEAST decomposition and changepoint detection",
+  xlab ='Time',
+  ylab = NULL,
+  cex.main =1.2,
+  cex.lab  =1,
+  relative.heights=NULL,
+  interactive=FALSE,
+  ... ) 
+{
+  
+  if(interactive){  
+    plot.interactive(x, index)
+    invisible(NULL)
+  }
+  
+  #vars = c('st','s','scp','sorder','t','tcp','torder','error')  
+  #vars = c('st','s','scp','sorder','samp','t','tcp','torder', 'tslp','o','ocp','error'),  
+  #col  = NULL 
+  #main ="BEAST decomposition and changepoint detection"
+  #xlab ='Time'
+  #ylab = NULL
+  #cex.main =1.2
+  #cex.lab  =1
+  #relative.heights=NULL
+  #interactive=FALSE 
+  
+  vars     = tolower(vars)
+  vars_log = vars=='st'|vars=='s'|vars=='t'|vars=='scp'|vars=='tcp'|vars=='sorder'|vars=='torder'|vars=='error'|vars=='o'|vars=='ocp'|vars=='samp'|vars=='tslp';  
+  vars     = vars[vars_log]
+  
+  if (length(ylab)== length(vars_log)){  
+    ylab = ylab[vars_log]
+  } else{
+    ylab = vector(mode='character',length(vars))
+    ylab[vars=='st']='Y'
+    ylab[vars=='s']='season'
+    ylab[vars=='t']='trend'
+    ylab[vars=='o']='outlier'
+    ylab[vars=='scp']="Pr(scp)"
+    ylab[vars=='tcp']="Pr(tcp)"
+    ylab[vars=='ocp']="Pr(ocp)"
+    ylab[vars=='sorder']=expression("order"[S])
+    ylab[vars=='torder']=expression("order"[T])
+    ylab[vars=='samp']   ='amplitude'
+    ylab[vars=='tslp']   ='slope'
+    ylab[vars=='error']=("error")
+  }
+  if (length(col)== length(vars_log)){  
+    col = col[vars_log]
+  } else{
+    col = vector(mode='character',length(vars))
+    col[vars=='st']    ='#111111'
+    col[vars=='s']     ='red'
+    col[vars=='scp']   ='red'
+    col[vars=='sorder']='red'
+    col[vars=='samp']   ='red'
+    col[vars=='t']     ='green'
+    col[vars=='tcp']   ='green'
+    col[vars=='torder']='green'
+    col[vars=='tslp']  ='green'
+    col[vars=='o']     ='blue'
+    col[vars=='ocp']   ='blue'
+    col[vars=='error'] ='darkgray'
+  }
+  
+  heights=relative.heights
+  if (length(heights)== length(vars_log)){  
+    heights = heights[vars_log]
+  } else{
+    heights = (1:length(vars))
+    heights =heights-heights+1
+    heights[vars=='st']=.8
+    heights[vars=='s']= .8
+    heights[vars=='t']=.8
+    heights[vars=='o']=.8
+    heights[vars=='scp']=.5
+    heights[vars=='tcp']=.5
+    heights[vars=='ocp']=.5
+    heights[vars=='sorder']=.5
+    heights[vars=='torder']=.5
+    heights[vars=='samp']   =.4
+    heights[vars=='tslp']   =.4
+    heights[vars=='error']=.4
+  }
+  
+  hasSeason   =!is.null(x$season)
+  hasOutlier  =!is.null(x$outlier)
+  hasHarmonic =!is.null(x$season$order)
+  hasTOrder   =!is.null(x$trend$order)
+  hasData     =!is.null(x$data)
+  hasAmp      =!is.null(x$season$amp)
+  hasSlp      =!is.null(x$trend$slp)
+  
+  
+  idx =1:length(vars) > 0
+  if(!hasAmp)      {  idx   = idx & !(vars=='samp')}
+  if(!hasSlp)      {  idx   = idx & !(vars=='tslp')}
+  if(!hasSeason)   {  idx   = idx & !(vars=='st'|vars=='s'|vars=='sorder'|vars=='scp') }
+  if(!hasHarmonic) {  idx   = idx & !(vars=='sorder') }
+  if(!hasTOrder)   {  idx   = idx & !(vars=='torder') }
+  if(!hasOutlier)  {  idx   =  idx &!(vars=='o'|vars=='ocp') }
+  if(!hasData)     {  idx   =  idx &!(vars=='error') }
+  col         = col[idx]
+  vars        = vars[idx]
+  ylab        = ylab[idx]
+  heights     = heights[idx]
+  
+  nPlots=length(vars)
  
-  if(missing(index)) {index=1}
-  indx=index;
-  if (attributes(x)$algorithm=='beastTrend')
-   {
-   N=length(x$t)
-   x$s=x$t-x$t
-   x$sProb=x$tProb-x$tProb
-       x$sSD=x$tSD-x$tSD
-   }
+  
+  if(nPlots==0){
+    stop("No valid variable names speciffied int the 'vars' argument. Possible names include 'st','t','s','sorder','torder','scp','tcp','samp','tslp','o', 'ocp', and 'error'. ");
+  }
+  
+  #######################################################
+  #  Functions and variables to load the outputs
+  ########################################################
+  
+  if ( is.null( attributes(x)$tsextract ) ) {
+		x=tsextract(x,index)
+  }  
    
-  lm=0.1;  rm=0.02;  tm=0.1;  bm=0.1
-  mm=0.08;  wd=(1-tm-bm-mm)/2
-  wd1=wd*0.6;  wd2=wd*0.4
-  
-  N=length(x$s[,indx])
-  
-  #x11()
-  #===========================================================
-  y=x$s[,indx];  sD=x$sSD[,indx]; sD[is.nan(sD)]=0;   sD[is.na(sD)]=0
-  xx=c(1:N, seq(N, 1, by=-1) );   yy=c(y-sD, rev(y+sD))
-  
-  scp=x$scp[,indx];
-  scp=scp[!is.na(scp)]
-  scpNum=length(scp)
+  t     = x$time; 
+  data  = x$data
+  t2t   = c(t, rev(t))
+  N     = length(t)
+  CI    = 0
+  Y     = 0
+  SD    = 0
   
   
-  tcp=x$tcp[,indx];
-  tcp=tcp[!is.na(tcp)]
-  tcpNum=length(tcp)
+  Prob1  = 0;
+  Prob   = 0; 
+  Order  = 0
+  Slp    =0
+  SlpSD  =0
+  SlpSign=0
   
+  cp   =0        
+  cpCI =0        
+  ncp  =0        
+  ncpPr=0        
+  cpPr =0
+  cpChange=0
   
+  ":" = function(i,j){ if(i>j){return(NULL)} ;  seq(i,j) }
   
-  #--The seasonal compoent---#
-  par(plt=c(lm, 1-rm,1-tm-wd1,1-tm)  )
-  plot(xx,yy,type='n',ann=F, xaxt="n",yaxt="n")
-  rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "skyblue")
-  axis(1, labels=F, tcl=0.25)
-  axis(2, labels=T, padj=1.5, tcl=0.25)
-  title(ylab="Seasonal", mgp=c(1.2,0,0) )
+  Yts   = 0
+  YtsSD = 0
+  Yerr  = 0
   
-  polygon(xx,yy, col="#B4B4B4", border="#848484")
-  #par(new=TRUE)
-  points(1:N,y, type='l', col='red',xlab=NULL,lwd=2,ann=FALSE, bg='red')
-  
-  if (scpNum > 0)
-  {
-    for (i in 1:scpNum)
-    {
-      cpt=scp[i]
-      points(c(cpt,cpt),c(par("usr")[3],par("usr")[4])   , type='l', lty="dashed", col='grey10',xlab=NULL,lwd=2,ann=FALSE, bg='grey10')
-    }
+  get.Yts  = function(){
+    SD   = 0
+    sig2 = x$sig2[1]
+    if (is.null(x$season))  {
+      Yts  <<- x$trend$Y
+      SD   =  sqrt(x$trend$SD^2+sig2)
+    } else {
+      Yts   <<- x$trend$Y+x$season$Y
+      SD    = sqrt(x$trend$SD^2+x$trend$SD^2+sig2)
+      
+    } 
+    YtsSD <<- c(Yts-SD, rev(Yts+SD) )  
+    Yerr  <<- data-Yts
   }
+  
+  get.T      = function(){
+    Y  <<-x$trend$Y;
+    SD <<-c(Y-x$trend$SD,  rev(Y+x$trend$SD)); 
+	if ( !is.null(x$trend$CI) )		CI <<-c(x$trend$CI[,1], rev(x$trend$CI[,2])) 
+    else                        CI <<-SD
+    
+    Slp      <<- x$trend$slp
+    SlpSD    <<- c(Slp-x$trend$slpSD,  rev(Slp+x$trend$slpSD));         
+    SlpSign  <<- x$trend$slpSignPr
+    Order    <<- x$trend$order;
+    
+  }
+  
+  get.tcp    = function(){
+    cp      <<- x$trend$cp;         
+    cpCI    <<- x$trend$cpCI;  
+    ncp     <<- sum(!is.nan(cp))
+    ncpPr   <<- x$trend$ncpPr
+    cpPr    <<- x$trend$cpPr
+    cpChange<<- x$trend$cpAbruptChange
+    
+    Prob    <<- x$trend$cpOccPr;    
+    Prob1   <<- c(Prob,Prob-Prob)
+  }
+  
+  
+  ###########################################################
+  Amp   = 0
+  AmpSD = 0
+  get.S = function(){    
+    Y      <<-x$season$Y;
+    SD     <<-c(Y-x$season$SD,  rev(Y+x$season$SD)); 
+	  if ( !is.null(x$season$CI) )	CI <<-c(x$season$CI[,1], rev(x$season$CI[,2]))  
+    else                          CI <<-SD
 
+    Amp    <<-x$season$amp
+    AmpSD  <<-c(Amp-x$season$ampSD,  rev(Amp+x$season$ampSD));         
+    Order  <<-x$season$order;
+    
+  }
+  get.scp    = function(){
+    cp      <<-x$season$cp;         
+    cpCI    <<-x$season$cpCI;  
+    ncp     <<-sum(!is.nan(cp))
+    ncpPr   <<-x$season$ncpPr
+    cpPr    <<-x$season$cpPr
+    cpChange<<-x$season$cpAbruptChange
+    
+    Prob    <<-x$season$cpOccPr;    
+    Prob1   <<-c(Prob,Prob-Prob)
+  }
+  get.O      = function(){    
+    Y      <<-x$outlier$Y;
+    SD      <<-c(Y-x$outlier$SD,  rev(Y+x$outlier$SD)); 
+	if ( !is.null(x$outlier$CI) )	  CI <<-c(x$outlier$CI[,1], rev(x$outlier$CI[,2]))  
+    else                          CI <<-SD
+  }
+  get.ocp    = function(){
+    #cp   <<-x$season$cp;         
+    #cpCI <<-x$season$cpCI;  
+    #ncp <<-sum(!is.nan(cp))
+    #ncpPr<<-x$season$ncpPr
+    #cpPr <<-x$season$cpPr
+    Prob  <<-x$outlier$cpOccPr;    
+    Prob1 <<-c(Prob,Prob-Prob)
+  }
   
-  y=x$sProb[,indx]
-  par(plt=c(lm, 1-rm,1-tm-wd,1-tm-wd1), new=TRUE)
-  plot(1:N,y,type='n',ann=F, xaxt="n",yaxt="n")
-  rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "skyblue")
-  par(new=TRUE)
-  plot(1:N,y,xlab="",ylab="", type='l',col='black',lwd=2, xaxt="n", yaxt="n"  )
-  axis(1, labels=T, padj=-1.5, tcl=0.25)
-  axis(2, labels=T, padj=1.5,  tcl=0.25)
-  title(xlab="Time",ylab="Prob", mgp=c(1.2,1.2,0) )
   
-  #=========================================================== 
-  y=x$t[,indx];  sD=x$tSD[,indx]; sD[is.nan(sD)]=0;   sD[is.na(sD)]=0
-  xx=c(1:N, seq(N, 1, by=-1) );   yy=c(y-sD, rev(y+sD))
-  
-  par(plt=c(lm, 1-rm,1-tm-wd-mm-wd1,1-tm-wd-mm) , new=TRUE)
-  plot(xx,yy,type='n',ann=F, xaxt="n",yaxt="n")
-  rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "darkolivegreen3")
-  axis(1, labels=F, tcl=0.25)
-  axis(2, labels=T, padj=1.5, tcl=0.25)
-  title(ylab="Trend", mgp=c(1.2,0,0) )
-  polygon(xx,yy, col="#B4B4B4", border="#848484")
-  #par(new=TRUE)
-  points(1:N,y, type='l',col='red',xlab=NULL,lwd=2,ann=FALSE, bg='red')
-  
-  if (tcpNum > 0)
-  {
-    for (i in 1:tcpNum)
-    {
-     cpt=tcp[i]
-     points(c(cpt,cpt),c(par("usr")[3],par("usr")[4])   , type='l', lty="dashed", col='grey10',xlab=NULL,lwd=2,ann=FALSE, bg='grey10')
+  YSIDE = 2;
+  padj  = -1.2
+  tcl   = 0.2
+  plot.st=function(col=c(0.2,0.2,0.2), ylabel){
+    if (hasData){
+      Yall=c(YtsSD,data)
+      plot(   c(t[1],t[N]), c(min(Yall,na.rm = TRUE),max(Yall,na.rm = TRUE)),  type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
+    } else {
+      plot(   t2t, YtsSD,  type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');  
     }
+    
+    polygon(t2t, YtsSD,  col  = rgb(.5,0.5,0.5,.5), border = NA);
+    if (hasData){
+      points( t, data, type = 'p', col='#777777');  
+    }
+    points( t, Yts,  type = 'l', lwd=2,col=rgb(col[1],col[2],col[3]));
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  
+  plot.y =function(col=c(0,1,0), ylabel){
+    alpha=0.1
+    if (hasData && !hasSeason){
+      Yall=c(CI,data)
+      plot( c(t[1],t[N]), c(min(Yall,na.rm = TRUE),max(Yall,na.rm = TRUE)), type = 'n',ann=FALSE, xaxt='n', yaxt='n');
+    } else {
+      plot(   t2t, CI,   type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
+    }
+    
+    if (hasData && !hasSeason){
+      points(t,  data, type = 'p', col='#777777');
+    }
+    polygon(t2t, CI,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    points( t,   Y,    type = 'l',col=rgb(col[1],col[2],col[3] ) );
+    yext =par('usr')
+    for (i in 1 : ncp) {
+      points(c(cp[i], cp[i]), yext[3:4],type = 'l', lty = 'dashed', col = 'grey10',lwd =1, bg = 'grey10');
+    }
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  
+  plot.prob <- function( col=c(0,1,0), ylabel ){
+    alpha=0.2
+    plot( c(t2t[1],t2t), c(0.22,Prob1),type = 'n', ann=FALSE, xaxt='n', yaxt='n');
+    polygon(t2t, Prob1, col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    points( t,   Prob,  col  = rgb(col[1],col[2],col[3])  ,       lwd = 1,type = 'l' );
+    yext =par('usr')
+    for (i in 1:ncp) {
+      points(c(cp[i], cp[i]), yext[3:4],type = 'l', lty = 'dashed', col = 'grey10',lwd =1, bg = 'grey10');
+    }
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  
+  plot.order <- function( col=c(0,1,0), ylabel ){
+    
+    plot(  t,    Order,type = 'n', ann=FALSE, xaxt='n', yaxt='n');
+    points( t,   Order,  col  = rgb(col[1],col[2],col[3]) ,       lwd = 1,type = 'l' );
+    yext =par('usr')
+    for (i in 1 : ncp) {
+      points(c(cp[i], cp[i]), yext[3:4],type = 'l', lty = 'dashed', col = 'grey10',lwd =1, bg = 'grey10');
+    }
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  plot.amp =function(col=c(0,1,0), ylabel){
+    alpha=0.5
+    plot(   t, Amp,   type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
+    #polygon(t2t, AmpSD,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    points( t,   Amp,    type = 'l',col=rgb(col[1],col[2],col[3] ));
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  
+  plot.slp =function(col=c(0,1,0), ylabel){
+    alpha=0.5
+    plot(   t, Slp,   type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
+    #polygon(t2t, SlpSD,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    points( t,   Slp,    type = 'l',col=rgb(col[1],col[2],col[3] ));
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  plot.o =function(col=c(0,1,0), ylabel){
+    alpha=0.5
+    plot(   t2t, CI,   type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
+    #polygon(t2t, CI,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    #points( t,   Y,    type = 'l',col='#333333');
+    segments(t,t-t,t,Y, col= rgb(col[1],col[2],col[3]))
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  
+  plot.oprob <- function( col=c(0,1,0), ylabel ){
+    alpha=0.2
+    plot( c(t2t[1],t2t), c(0.22,Prob1),type = 'n', ann=FALSE, xaxt='n', yaxt='n');
+    # polygon(t2t, Prob1, col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    # points( t,   Prob,  col  = rgb(col[1],col[2],col[3])  ,       lwd = 1,type = 'l' );
+    segments(t,t-t,t,Prob, col= rgb(col[1],col[2],col[3]),lwd=1.5)
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
+  }
+  
+  plot.error=function(col=c(0.2,0.2,0.2), ylabel){
+    plot(   t,   Yerr,  type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
+    lines(t, t-t, col= rgb(col[1],col[2],col[3]))
+    segments(t,t-t,t,Yerr, col= rgb(col[1],col[2],col[3]))
+    axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
+    axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
+    YSIDE<<-(YSIDE==2)*4+(YSIDE==4)*2
   }
   
   
   
-  y=x$tProb[,indx]
-  par(plt=c(lm, 1-rm, bm,bm+wd2), new=TRUE)
-  plot(1:N,y,type='n',ann=F, xaxt="n",yaxt="n")
-  rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "darkolivegreen3")
-  par(new=TRUE)
-  plot(1:N,y,xlab="",ylab="", type='l',col='black',lwd=2, xaxt="n", yaxt="n"  )
-  axis(1, labels=T, padj=-1.5, tcl=0.25)
-  axis(2, labels=T, padj=1.5,  tcl=0.25)
-  title(xlab="Time",ylab="Prob", mgp=c(1.2,1.2,0) )
+  plot.new()
+  opar= par(c('oma','mar','fig'))
+  par(oma=c(0,0,0,0))
+  par(mar=c(0,2,0,2))
+  par(fig=c(0,1,0,1))
   
+  
+  lm= strheight('a',units='figure')*dev.size()[2]/dev.size()[1]*4.5
+  rm= strheight('a',units='figure')*dev.size()[2]/dev.size()[1]*2.3
+  bm= strheight('a',units='figure')*4.0
+  tm= strheight('a',units='figure')*4.0
+  
+  #######################################################
+  #  Create a subplot given the relative heights of the vertical plots
+  ########################################################
+  subplot <- function(i, heights){
+    Hmiddle  =1-tm-bm
+    h       = (heights/sum(heights))*Hmiddle
+    hcum    = cumsum(h)
+    plt     = c(lm, 1-rm, 1-tm-hcum[i], 1-tm-hcum[i]+h[i])
+    par(plt=plt,new=TRUE)
+  }
+  
+  
+  for (i in 1:length(vars)){
+    
+    ytitle = ylab[i]
+    var    = tolower(vars[i])
+    clr    = as.numeric(col2rgb( col[i]  ))/255
+    
+    subplot(i,heights )
+    
+    if (var=='st')    {  get.Yts();           plot.st(clr,    ytitle)  }
+    if (var=='s' )    {  get.S(); get.scp();  plot.y(clr,     ytitle)  }
+    if (var=='t' )    {  get.T(); get.tcp();  plot.y(clr,     ytitle)  }
+    if (var=='scp')   {  get.S(); get.scp();  plot.prob(clr,  ytitle) }
+    if (var=='tcp')   {  get.T(); get.tcp();  plot.prob(clr,  ytitle) }
+    if (var=='sorder'){  get.S(); get.scp();  plot.order(clr, ytitle)  }
+    if (var=='torder'){  get.T(); get.tcp();  plot.order(clr, ytitle)  }
+    if (var=='samp')     {  get.S();           plot.amp(clr, ytitle)  }
+    if (var=='tslp')   {  get.T();             plot.slp(clr, ytitle)  }    
+    if (var=='o')     {  get.O();             plot.o(clr, ytitle)  }
+    if (var=='ocp')   {  get.ocp();           plot.oprob(clr, ytitle)  }
+    if (var=='error'){   get.Yts();           plot.error(clr, ytitle)  }
+    
+    title(ylab = ytitle,cex=cex.lab, mgp = c(1.25, 1.25, 0));
+    
+    if(i==1){
+      mtext(main,line=.5,cex=cex.main,font=2)
+    }
 
-  #if (requireNamespace("plotly"))
-  {
-  
-   # require("")
-   # d=data.frame(x=1:N, s=x$s[,1],t=x$t[,1], s1=x$sCI[,1,1], sProb=x$sProb[,1], tProb=x$tProb[,1])
-   # ax <- list(   zeroline = FALSE,   showline = FALSE, showgrid=FALSE,  mirror = "ticks",
-   #               gridcolor = toRGB("gray50"),   gridwidth = 2,   zerolinecolor = toRGB("red"),
-   #               zerolinewidth = 1,   linecolor = toRGB("black"),   linewidth = 2)
+    if(i==nPlots){
+      axis(  1,   labels = TRUE, padj =padj, tcl =tcl,cex.axis=1);
+      title(xlab = xlab ,mgp = c(1.2, 1.2, 0));  
+    }
     
-   # p1 <- plot_ly(d, x = ~x, y = ~s, name = 'trace 0', type = 'scatter', mode = 'lines')  %>%
-    #  add_trace(x=~x, y=~s1, type='scatter', mode='lines', fill='tonexty', fillcolor='rgb(19,10,10)')
-    
-    #p2 <- plot_ly(d, x = ~x, y = ~sProb, name = 'trace 0',  fill="tozerox", type = 'scatter', mode = 'lines') 
-    #p3 <- plot_ly(d, x = ~x, y = ~t, name = 'trace 0', type = 'scatter', mode = 'lines') %>%
-    #  layout(xaxis=ax, yaxis=ax, plot_bgcolor='rgb(29,229,229)')
-    #p4 <- plot_ly(d, x = ~x, y = ~tProb, name = 'trace 0', type = 'scatter', fill="tozerox", mode = 'lines') %>%
-    #  layout(xaxis=ax, yaxis=ax, plot_bgcolor='rgb(129,229,29)')
-    
-    #p<-subplot(p1,p2,p3,p4,shareX=TRUE, heights =c(0.25,0.2,0.24,0.2), nrows=4)
-    #print(p)
   }
-  return( invisible(NULL));
+  
+  par(opar)
+  #text(mean(time) / 2.0, 'NO SEASONAL COMPONET.IGNORE THIS POLOT');
+  
 }

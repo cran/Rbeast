@@ -1,6 +1,7 @@
 #pragma once
+#include "abc_001_config.h"
 #define r_mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1)  \
-		mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1) 
+		  mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1) 
 #define r_ippsMaxIndx_32f				ippsMaxIndx_32f 
 #define r_ippsMinIndx_32f				ippsMinIndx_32f 
 #define r_ippsSumLn_32f					ippsSumLn_32f

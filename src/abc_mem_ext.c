@@ -1,35 +1,35 @@
-#include "abc_mem_ext.h"
-#include "abc_001_config.h"
 #include <stdlib.h>
 #include <string.h>
-#if M_INTERFACE==1
-	#define  r_malloc(x)	mxMalloc(x) 
-	#define  r_free(x)		mxFree(x)
-#elif R_INTERFACE==1
-	#define  r_malloc(x) Calloc(x,char)  
-	#define  r_free(x)   Free(x) 
-#endif
-static void* malloc_64(size_t N)	{
-	void * mem=malloc(N+64);
-	void * ptr=(void *)(((uintptr_t)mem+64) & ~(uintptr_t)0x3F);
+#include "abc_000_warning.h"
+#include "abc_mem_ext.h"
+#include "abc_001_config.h"
+#include "abc_ide_util.h" 
+static VOID_PTR  malloc_64(size_t N)	{
+	VOID_PTR  mem=malloc(N+64);
+	VOID_PTR  ptr=(VOID_PTR )(((uintptr_t)mem+64) & ~(uintptr_t)0x3F);
 	*((char *)((char*)ptr - 1))=(char)((char *)ptr - (char *)mem);
 	return ptr;
 }
-static  void  free_64(void * _restrict p)	{
+static  void  free_64(VOID_PTR  p)	{
 	char * _restrict porig=(char *)p;
 	porig=porig - *(porig - 1);
 	free(porig);
 }
-void mem_init_x(xMemPointers* _restrict self)
+void mem_init_x(xMemPointers* _restrict self,int printInfo)
 {
-	self->memPointer=(void **)malloc(sizeof(void *)*	self->maxNumOfPointers);  
-	self->mem64Aligned=(int8_t *)malloc(sizeof(int8_t)*self->maxNumOfPointers); 
+	self->alloc=mem_alloc_x;
+	self->free_all=mem_free_all_x,
+	self->maxNumOfPointers=250,
+	self->memNames=NULL,
+	self->printInfo=printInfo,
+	self->memPointer=(VOID_PTR *)malloc(sizeof(VOID_PTR )*	self->maxNumOfPointers);  
+	self->mem64Aligned=(I08PTR)malloc(sizeof(I08)*self->maxNumOfPointers); 
 	self->memNames=(char **)malloc(sizeof(char *)*self->maxNumOfPointers);
 	self->memNum=0;
 }
-void * mem_alloc_x(xMemPointers * _restrict self,int64_t sizeInByte,uint8_t alignment,char * name)
+VOID_PTR  mem_alloc_x(xMemPointers * _restrict self,I64 sizeInByte,U08 alignment,char * name)
 {
-	void * newPointer;
+	VOID_PTR  newPointer;
 	if (alignment==0)
 		newPointer=malloc(sizeInByte);
 	else
@@ -38,8 +38,8 @@ void * mem_alloc_x(xMemPointers * _restrict self,int64_t sizeInByte,uint8_t alig
 	self->mem64Aligned[self->memNum]=alignment;
 	self->memNames[self->memNum]=malloc(strlen(name)+1);
 	strcpy(self->memNames[self->memNum],name);
-	if (self->printInfo !=0)
-		r_printf("%d bytes of memory allocated for%s  \n",sizeInByte,self->memNames[self->memNum]);
+	if (self->printInfo )
+		r_printf("%#012x:%d bytes of MEM allocated for '%s' \n",newPointer,sizeInByte,self->memNames[self->memNum]);
 	self->memNum++;
 	return newPointer;
 }
@@ -51,8 +51,8 @@ void mem_free_all_x(xMemPointers * _restrict self)
 			free(self->memPointer[i]);
 		else
 			free_64(self->memPointer[i]);
-		if (self->printInfo !=0)
-			r_printf("Memory de-allocated for%s  \n",self->memNames[i]);
+		if (self->printInfo)
+			r_printf("%#012x: Memory de-allocated for '%s' \n",self->memPointer[i],self->memNames[i]);
 		free(self->memNames[i]);
 	}
 	if (self->memPointer !=NULL)
@@ -71,3 +71,4 @@ void mem_free_all_x(xMemPointers * _restrict self)
 		self->memNames=NULL;
 	}
 }
+#include "abc_000_warning.h"

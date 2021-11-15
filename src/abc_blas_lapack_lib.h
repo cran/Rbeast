@@ -6,5 +6,6 @@
 	#include "abc_blas_lapack_mkl.h"
 #endif
 #if (MYMAT_LIBRARY==1)||(MATLAB_LIBRARY==1)
-#define r_mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1) transpose_inplace(Matrix,N,numCISample )
+#define r_mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1) f32_transpose_inplace(Matrix,N,numCISample )
+#include "abc_vec.h" 
 #endif
