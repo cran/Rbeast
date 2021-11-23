@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <immintrin.h> 
 #include <stdio.h>
+#ifndef ARM64_OS
+	#include <immintrin.h> 
+#endif
 #include "abc_datatype.h"
 #include "abc_blas_lapack_lib.h"
 #include "abc_common.h"
@@ -32,7 +34,9 @@
 #include "abc_timer.h"
 #include "abc_rand.h"
 #include "math.h"
-#include "abc_math_avx.h"
+#ifndef ARM64_OS
+	#include "abc_math_avx.h"
+#endif
 #define IS_STRING_EQUAL(a,b)  (strcicmp(a,b)==0)
 #if R_INTERFACE==1 &&  defined(MSVC_COMPILER)
 	#include "R_ext\Parse.h"
@@ -40,25 +44,26 @@ char R_FUNC[]={ 10,10,112,108,111,116,46,98,101,97,115,116,118,52,32,60,45,32,10
 #endif
 static void SetupRoutinesByCPU() {
 	if (IS_CPU_INSTRUCTON_SET) return;
+	 r_printf("On the first run,check the CPU instruction set ... \n\n");
 	 struct cpu_x86 cpuinfo;
 	 detect_host(&cpuinfo);
 	 printinfo(&cpuinfo);
 	 i386_cpuid_caches();
-	 #if !defined(SOLARIS_COMPILER) && defined(TARGET_64)
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
 		 if (cpuinfo.HW_AVX512_F  && cpuinfo.HW_AVX512_BW && cpuinfo.HW_AVX512_DQ && cpuinfo.HW_AVX512_VL) {
 			 SetupVectorFunction_AVX512();
 			 SetupPCG_AVX512();
-			 r_printf("The AVX512-enabled library is used ...\n\n");
+			 r_printf("CPU checking result: the AVX512-enabled library is used ... \n\n");
 		 }
 		 else if (cpuinfo.HW_AVX &&cpuinfo.HW_AVX2 && cpuinfo.HW_FMA3) {
 			 SetupVectorFunction_AVX2();
 			 SetupPCG_AVX2();
-			 r_printf("The AVX2-enabled library is used ...\n\n");
+			 r_printf("CPU checking result: the AVX2-enabled library is used ...\n\n");
 		 }
 		 else {
 			 SetupVectorFunction_Generic();
 			 SetupPCG_GENERIC();
-			 r_printf("No AVX2/AVX512 is supported and the default library is used ...\n\n");
+			 r_printf("CPU checking result: No AVX2/AVX512 is supported and the default library is used ...\n\n");
 		 }
 	#else
 		 SetupVectorFunction_Generic();
@@ -105,10 +110,10 @@ void TestCode() {
 	}
 	I64 t2=toc();
 	for (int i=0; i < 40; i++) {
-		r_printf("%d%d|%d\n",c1[i],c2[i],c1[i] - c2[i]);
+		r_printf("%d %d|%d\n",c1[i],c2[i],c1[i] - c2[i]);
 	}
-	r_printf("\nMat%f,%f:%f\n",(F64)t1,(F64)t2,(F64)t1/t2);
-	r_printf("\nMat%f,%f:%f\n",(F64)t1,(F64)t2,(F64)t1/t2);
+	r_printf("\nMat %f,%f: %f\n",(F64)t1,(F64)t2,(F64)t1/t2);
+	r_printf("\nMat %f,%f: %f\n",(F64)t1,(F64)t2,(F64)t1/t2);
 	pcg_set_seed(333,0);
 	tic();
 	M=2000;
@@ -123,7 +128,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 		PROTECT(e=R_ParseVector(tmp,1,&status,R_NilValue));
 		UNPROTECT(2);
 	#endif
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64)
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
 		if (nrhs >=7) {
 			int avxOption=GetScalar(prhs[nrhs - 1]);
 			if (avxOption==1) {
@@ -194,6 +199,8 @@ void * mainFunction(void *prhs[],int nrhs) {
 		} else {			
 			memset(&option.extra,0,sizeof(option.extra));
 			option.extra.printOptions=1;
+			option.extra.dumpInputData=1;
+			option.extra.printProgressBar=1;
 			void* MR_Output_AllocMEM(BEAST2_OPTIONS_PTR  opt);
 			ANS=PROTECT(MR_Output_AllocMEM(&option)); nptr++;
 		}
@@ -268,13 +275,13 @@ void * mainFunction(void *prhs[],int nrhs) {
 				r_printf("\n");
 				free(BUF);
 			} else {
-				r_printf("\nRbeast: Waiting on%d threads...\n",NUM_THREADS);
+				r_printf("\nRbeast: Waiting on %d threads...\n",NUM_THREADS);
 			}
 			for (I32 i=0; i < NUM_THREADS; i++) {
 				pthread_join(thread_id[i],NULL);
 			}
 			if (IDE_USER_INTERRUPT==0)
-				r_printf("\nRbeast: Waited on%d threads. Done.\n",NUM_THREADS);
+				r_printf("\nRbeast: Waited on %d threads. Done.\n",NUM_THREADS);
 			else
 				r_printf("\nQuited unexpected upon the user's interruption.\n");
 			pthread_mutex_destroy(&mutex);
@@ -328,15 +335,19 @@ SEXP DllExport rexFunction(SEXP rList,SEXP dummy)
 	return ans !=NULL ? ans : R_NilValue;
 }
 #define CALLDEF(name,n) {#name,(DL_FUNC) &name,n}
-#if defined(WIN64_OS) 
-#endif
+#if (defined(WIN64_OS)||defined(WIN32_OS)) 
+	SEXP TetrisSetTimer(SEXP action,SEXP seconds,SEXP envior);
+	static const R_CallMethodDef CallEntries[]={
+		CALLDEF(rexFunction,2),
+		CALLDEF(TetrisSetTimer,3),
+		{ NULL,NULL,0 }
+	};
+#else
 static const R_CallMethodDef CallEntries[]={
-	CALLDEF(rexFunction,2),
-#if R_RELEASE==3
-	CALLDEF(rexFunction,2),
+				CALLDEF(rexFunction,2),
+				{ NULL,NULL,0 }
+			};
 #endif
-	{ NULL,NULL,0 }
-};
 void  R_init_Rbeast(DllInfo *dll)
 {
 	R_registerRoutines(dll,NULL,CallEntries,NULL,NULL);

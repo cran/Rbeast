@@ -271,7 +271,7 @@
 } %value
  
 \seealso{
-  \code{\link[Rbeast]{beast.irreg}},   \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{minesweeper}} ,\code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{geeLandsat}} 
+  \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
 }
 
 \examples{
@@ -307,7 +307,11 @@ library(Rbeast)
 ######################################################################################
 # Nile is an annual river flow time series (i.e., no periodic variation). So, season 
 # is set to 'none' for trend-only analysis. Default values are used for other 
-# missing options; for example, the times assumed are 1:length(Nile).
+# missing options. Unlike the beast function, beast123 does NOT use the time attributes 
+# of a 'ts' object. For example, Nile is treated as a pure data number; its (start=1871,
+# end=1970, freq=1) attributes are ignored. The default times 1:length(Nile) are used 
+# instead. The true time info need to be specified by the metadata parameter, as shown
+# in the next example.
 \donttest{ 
  o = beast123(Nile,season='none')
  plot(o)

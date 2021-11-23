@@ -24,7 +24,15 @@ geeLandsat = function(lon=NA,lat=NA,radius=100, stat='mean',timeout=700){
   
   options(timeout=timeout)
   
-  con = url(addr,'rb')
+  #con = url(addr,'rb')
+  tic=Sys.time()
+  con=NULL
+  while (is.null(con)  && as.numeric(Sys.time()-tic) < timeout ){
+		tryCatch(   suppressWarnings( {con=url(addr,'rb')} ),
+              error=function(e){con=NULL; print("Timeout: try again ...");print(e)} 
+			);  
+  }
+
   #open(con)
   #https://stackoverflow.com/questions/26584227/how-can-i-read-float-data-from-a-binary-file-using-r
   nElem=readBin(con,'double',1,size=4)

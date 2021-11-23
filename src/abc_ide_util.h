@@ -66,7 +66,7 @@ extern void ConsumeInterruptSignal();
 static INLINE int IsRinterface() {
 	#if    R_INTERFACE==1
 		return 1;
-	#elif  M_INTERFACE==1
+	#else
 		return 0;
 	#endif
 }

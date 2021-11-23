@@ -26,7 +26,7 @@
    }
  
 \seealso{
-  \code{\link[Rbeast]{beast.irreg}},   \code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}} ,\code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{geeLandsat}} 
+ \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
 } 
 \examples{
 \donttest{

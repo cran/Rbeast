@@ -41,6 +41,8 @@
 				\item  If \code{y} is quasi-regular (e.g., multiple years of daily data spanning across leap years: 365 points in some years, and 366 in others), also use the \code{\link[Rbeast]{beast.irreg}} function instead.
 				
 				\item  If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
+				
+				\item  If \code{y} is an object of class 'ts', its time attributes (i.e.,start, end, frequency) will be used to specify \code{start},\code{detlta},and \code{freq}: their original values, if explicitly supplied to \code{beast}, will be overwritten. If \code{frequency}=1, \code{season='none'} is assumed regardless of its input value; if \code{frequency}>1 and if \code{season='none'} is specified by the user, 'none' will be replaced by 'harnomic'.
             }  
   }
   
@@ -209,7 +211,7 @@
  
  
 \seealso{
-  \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}} ,\code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{geeLandsat}} 
+  \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
 }
 
  
@@ -218,7 +220,6 @@
 library(Rbeast)
 
 \donttest{
-
 ######################################################################################
 # Yellowstone is a half-monthly satellite time series of 774 NDVI(vegetation greeness) 
 # observations starting from July 1-15,1981(i.e., start=c(1981,7,7)) at a Yellowstone
@@ -230,17 +231,16 @@ library(Rbeast)
  data(Yellowstone)
  plot(Yellowstone)
 
-
 #################################Example 1############################################
-# Yellowstone is a pure vector without time attributes. Below, no extra argument is 
-# supplied so default values are used and the time is 1:774 (i.e.,start=1, deltat=1). 
-# 'freq' is missing so will be guessed via via auto-correlation. Use of auto-correlation
-# to compute the period of a cyclic time series is not always reliable, so it is
-#  suggested to always supply 'freq' directly, as in Example 2 and Example 3.
+# Yellowstone is not a object of class 'ts' but a pure vector without time attributes. 
+# Below, no extra argument is supplied so default values (i.e.,start=1, deltat=1) are 
+# used and the time is 1:774. 'freq' is missing and so is guessed via auto-correlation.
+# Use of auto-correlation to compute the period of a cyclic time series is not always 
+# reliable, so it is suggested to always supply 'freq' directly, as in Example 2 and
+# Example 3.
 
- out = beast(Yellowstone)
+ out = beast(Yellowstone)   # the times assumed to be 1:length(Yellowstone) by default
  plot(out)
-
 
 #################################Example 2############################################
 # The time info (e.g., start,delta,and freq) are explicitly provided. 'start' can be 
@@ -249,27 +249,27 @@ library(Rbeast)
 # (e.g., a sequence of data observed at evenly-spaced distaces along a transect or a 
 # elevation gradient)
 
- out=beast(Yellowstone, start = c(1981,7,7),          deltat=1/24, freq=24)
-#out=beast(Yellowstone, start = 1981.5137,            deltat=1/24, freq=24)  
-#out=beast(Yellowstone, start = as.Date('1981-7-7'),  deltat=1/24, freq=24)  
+ o=beast(Yellowstone, start = c(1981,7,7),          deltat=1/24, freq=24)
+#o=beast(Yellowstone, start = 1981.5137,            deltat=1/24, freq=24)  
+#o=beast(Yellowstone, start = as.Date('1981-7-7'),  deltat=1/24, freq=24)  
 
- print(out)                           # out is a R LIST object with many fields
- plot(out)                            # plot many variables 
- plot(out, vars=c('st','s','t'))      # plot the Y, seasonal, and trend components only
- plot(out, vars=c('s','scp','samp','t','tcp','tslp'))# plot some selected variables in 
-                                                     # 'out'. Type "?plot.beast" to see 
+ print(o)                           # o is a R LIST object with many fields
+ plot(o)                            # plot many variables 
+ plot(o, vars=c('st','s','t'))      # plot the Y, seasonal, and trend components only
+ plot(o, vars=c('s','scp','samp','t','tcp','tslp'))# plot some selected variables in 
+                                                   # 'o'. Type "?plot.beast" to see 
                                                      # more about vars
- plot(out, vars=c('s','t'),col=c('red','blue') ) # specify colors of selected subplots
+ plot(o, vars=c('s','t'),col=c('red','blue') ) # specify colors of selected subplots
 
- plot(out, interactive=TRUE)          # manually choose which variables to plot
-  
- plot(out$time, out$trend$Y,type='l') # directly plot selected variable: the fitted trend
- plot(out$time, out$trend$cpOccPr[,1])# directly plot output: trend chgpt occurrence prob
- plot(out$time, out$season$order[,1]) # directly plot output: avg harmonic order
+ plot(o$time, o$season$Y,type='l') # directly plot output: the fitted season
+ plot(o$time, o$season$cpOccPr[,1])# directly plot output: season chgpt  prob
+ plot(o$time, o$trend$Y,type='l') # directly plot output: the fitted trend
+ plot(o$time, o$trend$cpOccPr[,1])# directly plot output: trend chgpt occurrence prob
+ plot(o$time, o$season$order[,1]) # directly plot output: avg harmonic order
  
+ plot(o, interactive=TRUE)          # manually choose which variables to plot
+
 }
- 
-
 
 \donttest{
 
@@ -316,31 +316,46 @@ library(Rbeast)
  beast(Yellowstone, freq=24, gui=TRUE)
 }
 
-#################################XXXXXXXXX############################################
-# Apply beast to trend-only data. 'Nile' is the annual river flow of the river
-# Nile at Aswan since 1871.  
-
+######################################################################################
+# Apply beast to trend-only data. 'Nile' is the ANNUAL river flow of the river
+# Nile at Aswan since 1871. It is a 'ts' object; its time attributes (start=1871, 
+# end=1970,frequency=1) are used to replace the user-supplied start,deltat, and freq, 
+# if any. 
+\donttest{
  data(Nile)  
- plot(Nile)
- attributes(Nile) # a ts object with time attributes (i.e., tsp)
+ plot(Nile)     
+ attributes(Nile) # a ts object with time attributes (i.e., tsp=(start,end,freq)
  
+ o=beast(Nile)              # start=1871, delta=1, and freq=1 taken from Nile itself
+ plot(o)
+ 
+ o=beast(Nile,              # the same as above. The user-supplied values are igored
+         start=2011,        # bcz Nile has its own time attributes. Its frequency tag
+         freq=24,           # is 1, so season='none'/trend-only is assumed instead of
+         season='harmonic') # the supplied 'harmonic'
+ 
+} 
  \donttest{
  
 #################################Example 5############################################
-# Nile is treated only as a pure data vector by beast, ignoring the time attribute 
-# (e.g., tsp=(start,end, freq)). The first run below is WRONG bcz Nile was assumed
-# to have a peridic component and beast gets a best estiamte of freq=6. To fit a trend-
-# only model, season='none' has to be explicilty specified, as in the 2nd & 3rd funs.
-#
+# NileVec is  a pure data vector. The first run below is WRONG bcz NileVec was assumed
+# to have a perodic component by default and beast gets a best estimate of freq=6 while 
+# the true value is freq=1. To fit a trend-only model, season='none' has to be explicilty
+# specified, as in the 2nd & 3rd funs.
 
- o=beast(Nile)               # ERROR: By default, beast assumes season='harnomic'
+ NileVec = as.vector(Nile) # NileVec is not a ts obj but a pure numeric data vector
+ o = beast(NileVec)        # ERROR: No time attributes available to interpret NileVec. 
+                           # By default, beast assumes season='harmonic', start=1,
+                           # and deltat=1. 'freq' is guessed to be 6 (WRONG).    
  plot(o)          
 							  
- o=beast(Nile,season='none')  # Only data vector used not the 'tsp' time attributes
-                              # so the default time is the indices '1:length(Nile)'.  
- o=beast(Nile,start=1871, deltat=1,season='none') # The time attributes has to be 
-                                                  # given explicilty thru start and 
-                                                  # deltat (or freq for cyclic cmpnt).
+ o=beast(NileVec,season='none') # Use season='none' for trend-only analysis; the default
+                                # time is the indices '1:length(NileVec)'. 
+								
+ o=beast(Nile,                  # The true time attributes, if needed, has to be given 
+         start  = 1871,         # explicilty thru start and deltat (or freq if there is
+         deltat = 1,            # a  cyclic cmpnt). 
+         season = 'none')                                                
  plot(o)
 }
 
@@ -356,17 +371,35 @@ library(Rbeast)
  badIdx      = sample( 1:length(co2), 50) # Get a set of random indices
  co2[badIdx] = NA                         # Insert some data gaps   
 
- out=beast(co2) # Only the data vector used not the 'tsp' time attributes, so the default
-                # time is the indices '1:length(co2)'. If the true time needed, it has 
-                # to be given explicilty via 'start','deltat', and 'freq', as follows.
- out=beast(co2,start=c(1959,1,15),deltat=1/12, freq=12) 
+ out=beast(co2) # co2 is a ts object and its 'tsp' time attributes are used to get the
+                # true time info. No need to specify 'start','deltat', & freq explicity.
+				
+ out=beast(co2,                 # the supplied time/freq values will be ignored bcz
+           start=c(1959,1,15),  # co2 is a ts object; the correct freq = 12 will be 
+           deltat=1/12,         # used
+           freq=365)  
  print(out)
  plot(out)
 } 
 
 
-
 #################################Example 7############################################
+# Apply beast to time seris-like sequence data: the unit of sequences is not 
+# necessarily time.
+ 
+\donttest{
+  data(CNAchrom11) # DNC copy number alterations in Chromesome 11 for cell line GM05296
+                   # The data is orderd by genomic position (not time), and the values
+                   # are the log2-based intensity ratio of copy numbers between the sample
+                   # the reference. A value of zero means no gain or loss in copy number.
+  o = beast(CNAchrom11,season='none') # season is a misnomer here bcz the data has nothing
+                                      # to do with time. Regardless, we fit only a trend.
+  plot(o)									  
+ 
+} 
+
+
+#################################Example 8############################################
 # Apply beast to time seris-like data: the unit of sequences is not necessarily time.
  
 \donttest{
@@ -384,13 +417,13 @@ library(Rbeast)
 } 
 
  
-#################################Example 6############################################
+#################################Example 9############################################
 # Another example from the tsdl data library
  
 
 \donttest{
   # Number of monthly births in New York from Jan 1946 to Dec 1959
-  # If the data link becomes invalid, install the time series data libray instead
+  # If the data link becomes invalid, install the time series data package instead
   # install.packages("devtools")
   # devtools::install_github("FinYang/tsdl")
   # kings = tsdl::tsdl[[534]]
@@ -403,7 +436,51 @@ library(Rbeast)
   out    = beast(births,start=c(1946,1,15), deltat=1/12, freq=12 )  
   plot(out)  
   
-} 
+}
+
+
+#################################Example10############################################
+# The old API interface of beast is still made available but not recommended. It is 
+# kept mainly to ensure the working of the sample code on Page 475 in the text
+# Ecological Metods by Drs. Southwood and Henderson.
+
+\donttest{
+  # The interface as shown here will be deprecated and not recommended.
+  beast(Yellowstone, 24)  #24 is the freq: number of datapoints per period
+  
+   
+  # Specify the model or MCMC parameters through opt as in Rbeast v0.2
+  opt=list()             #Create an empty list to append individual model parameters
+  opt$period=24          #Period of the cyclic component (i.e.,freq in the new version)
+  opt$minSeasonOrder=2   #Min harmonic order allowed in fitting season component
+  opt$maxSeasonOrder=8   #Max harmonic order allowed in fititing season component
+  opt$minTrendOrder=0    #Min polynomial order allowed to fit trend (0 for constant)
+  opt$maxTrendOrder=1    #Max polynomial order allowed to fit trend (1 for linear term)
+  opt$minSepDist_Season=20#Min seperation time btw neighboring season changepoints 
+  opt$minSepDist_Trend=20 #Min seperation time btw neighboring trend  changepoints
+  opt$maxKnotNum_Season=4 #Max number of season changepoints allowed 
+  opt$maxKnotNum_Trend=10 #Max number of trend changepoints allowed  
+  opt$omittedValue=NA    #A customized value to indicate bad/missing values in the time 
+                          #series, in additon to those NA or NaN values.
+  					
+  # The following parameters used to configure the reverisible-jump MCMC (RJMCC) sampler
+  opt$chainNumber=2       #Number of parallel MCMC chains 
+  opt$sample=1000         #Number of samples to be collected per chain
+  opt$thinningFactor=3    #A factor to thin chains  
+  opt$burnin=500          #Number of burn-in samples discarded at the start 
+  opt$maxMoveStepSize=30  #For the move proposal, the max window allowed in jumping from 
+                           #the current changepoint
+  opt$resamplingSeasonOrderProb=0.2 #The probability of selecting a re-sampling proposal 
+                                    #(e.g., resample seasonal harmonic order)
+  opt$resamplingTrendOrderProb=0.2  #The probability of selecting a re-sampling proposal 
+                                    #(e.g., resample trend polynomial order)
+								   
+  opt$seed=65654    #A seed for the random generator: If seed=0,random numbers differ
+                    #for different BEAST runs. Setting seed to a chosen non-zero integer 
+                    #will allow reproducing the same result for different BEAST runs.
+ 
+  beast(Yellowstone, opt)  
+}
 }
 \references{
 \enumerate{

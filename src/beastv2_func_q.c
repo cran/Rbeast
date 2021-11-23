@@ -42,7 +42,7 @@ void BEAST2_EvaluateModel(
 	for (I32 basisID=0; basisID < NUMBASIS; basisID++) {
 		BEAST2_BASIS_PTR basis=b+basisID;
 		if (basis->type !=OUTLIERID) {
-			int         NUM_SEG=basis->numKnot+1;
+			int         NUM_SEG=basis->nKnot+1;
 			TKNOT_PTR   KNOT=basis->KNOT;
 			TORDER_PTR  ORDER=basis->ORDER;
 			BEAST2_BASESEG seg;
@@ -55,7 +55,7 @@ void BEAST2_EvaluateModel(
 				K+=k;
 			}
 		} 	else	{
-			int         numOfSeg=basis->numKnot;
+			int         numOfSeg=basis->nKnot;
 			TKNOT_PTR   knotList=basis->KNOT;
 			BEAST2_BASESEG seg;
 			seg.ORDER1=seg.ORDER2=0; 
@@ -119,7 +119,7 @@ I32  GetInfoBandList(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Klastcol) {
 		BEAST2_BASIS_PTR b=model->b+basisID;
 		if (b->type !=OUTLIERID)
 		{
-			I32 numSeg=b->numKnot+1;
+			I32 numSeg=b->nKnot+1;
 			for (int j=0; j < numSeg; j++) {
 				I32 Kbase=b->Kbase;
 				if (Klastcol >=(Kbase+b->ks[j])) {
@@ -136,7 +136,7 @@ I32  GetInfoBandList(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Klastcol) {
 		}
 		else
 		{
-			I32 numSeg=b->numKnot;
+			I32 numSeg=b->nKnot;
 			for (int j=0; j < numSeg; j++) {
 				I32 Kbase=b->Kbase;
 				if (Klastcol >=(Kbase+b->ks[j])) {
@@ -161,7 +161,7 @@ I32  GetInfoBandList_post(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Kstart
 		BEAST2_BASIS_PTR b=model->b+basisID;
 		if (b->type !=OUTLIERID)
 		{
-			for (int j=0; j < b->numKnot+1; j++) {
+			for (int j=0; j < b->nKnot+1; j++) {
 				I32  Kbase=b->Kbase;
 				if (Kstartcol <=(Kbase+b->ke[j])) {
 					info->R1=b->KNOT[j - 1];
@@ -174,7 +174,7 @@ I32  GetInfoBandList_post(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Kstart
 		}
 		else
 		{
-			for (int j=0; j < b->numKnot; j++) {
+			for (int j=0; j < b->nKnot; j++) {
 				I32  Kbase=b->Kbase;
 				if (Kstartcol <=(Kbase+b->ke[j])) {
 					info->R1=b->KNOT[j];
@@ -277,7 +277,7 @@ void MR_EvaluateModel(
 	for (I32 basisID=0; basisID < NUMBASIS; basisID++) {
 		BEAST2_BASIS_PTR basis=b+basisID;
 		if (basis->type !=OUTLIERID) {
-			int         NUM_SEG=basis->numKnot+1;
+			int         NUM_SEG=basis->nKnot+1;
 			TKNOT_PTR   KNOT=basis->KNOT;
 			TORDER_PTR  ORDER=basis->ORDER;
 			BEAST2_BASESEG seg;
@@ -290,7 +290,7 @@ void MR_EvaluateModel(
 				K+=k;
 			}
 		} 	else	{
-			int         numOfSeg=basis->numKnot;
+			int         numOfSeg=basis->nKnot;
 			TKNOT_PTR   knotList=basis->KNOT;
 			BEAST2_BASESEG seg;
 			seg.ORDER1=seg.ORDER2=0; 

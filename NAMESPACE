@@ -13,6 +13,7 @@ export(beast123)
 export(geeLandsat)
 export(tsextract)
 export(minesweeper)
+export(tetris)
 S3method(print,beast)
 S3method(plot, beast)
  

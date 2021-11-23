@@ -7,7 +7,7 @@ static void DD_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis)
 	TKNOT_PTR  KNOT=basis->KNOT;
 	I16PTR     KS=basis->ks;
 	I16PTR     KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                  
 	for (I32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
@@ -23,7 +23,7 @@ static void VV_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis)
 	TORDER_PTR ORDER=basis->ORDER;
 	I16PTR     KS=basis->ks;
 	I16PTR     KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                  
 	for (I32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
@@ -40,7 +40,7 @@ static void SS_CalcBasisKsKeK_prec012(BEAST2_BASIS_PTR  basis)
 	TORDER_PTR ORDER=basis->ORDER;
 	I16PTR     KS=basis->ks;
 	I16PTR     KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                  
 	for (rI32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
@@ -58,7 +58,7 @@ static void TT_CalcBasisKsKeK_prec012(BEAST2_BASIS_PTR  basis)
 	TORDER_PTR ORDER=basis->ORDER;
 	I16PTR KS=basis->ks;
 	I16PTR KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                            
 	for (I32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
@@ -76,7 +76,7 @@ static void OO_CalcBasisKsKeK_prec012(BEAST2_BASIS_PTR  basis)
 	TORDER_PTR ORDER=basis->ORDER;
 	I16PTR KS=basis->ks;
 	I16PTR KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot; 
+	int NUM_OF_SEG=basis->nKnot; 
 	int kCounter=1L;                            
 	for (rI32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
@@ -91,7 +91,7 @@ static void SS_CalcBasisKsKeK_prec3(BEAST2_BASIS_PTR  basis)
 	TORDER_PTR ORDER=basis->ORDER;
 	I16PTR     KS=basis->ks;
 	I16PTR     KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                  
 	for (rI32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
@@ -112,7 +112,7 @@ static void TT_CalcBasisKsKeK_prec3(BEAST2_BASIS_PTR  basis)
 	TORDER_PTR ORDER=basis->ORDER;
 	I16PTR KS=basis->ks;
 	I16PTR KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                            
 	for (I32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
@@ -131,7 +131,7 @@ static void OO_CalcBasisKsKeK_prec3(BEAST2_BASIS_PTR  basis)
 	TORDER_PTR ORDER=basis->ORDER;
 	I16PTR KS=basis->ks;
 	I16PTR KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot; 
+	int NUM_OF_SEG=basis->nKnot; 
 	int kCounter=1L;                            
 	for (rI32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;

@@ -273,7 +273,7 @@ I32  i08_find_nth_onebyte_binvec_v2(U08PTR binvec,I32 N,I32 numOneBytes,U32 rnd)
 	nth=(rnd%numOneBytes)+1;
 	I2++;
 	if (I2%100==0) {
-		r_printf("%d%d\n",I1,I2);
+		r_printf("%d %d\n",I1,I2);
 	}
 	I32 nthPos;
 	I32 count=0;

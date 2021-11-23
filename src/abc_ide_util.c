@@ -12,11 +12,10 @@ void printProgress(F32 pct,I32 width,char * buf,I32 firstTimeRun)
 	static I32  cnt=1;
 	cnt++;
 	cnt=cnt==4 ? 0 : cnt;
+	width=max(width,35); 
 	memset(buf,'*',width); 
 	I32  len=0;
 	buf[len++]=spinnerChar[cnt];
-	
-	
 	char prefix[]="Progress:";
 	I32 strLen=sizeof(prefix)-1L; 
 	memcpy(buf+len,prefix,strLen);
@@ -24,121 +23,87 @@ void printProgress(F32 pct,I32 width,char * buf,I32 firstTimeRun)
 	sprintf(buf+len,"%5.1f%% done",pct * 100);
 	len+=5+1+5;
 	buf[len++]='[';
-
-
-	I32 finishedLen = round((width - len - 1)*pct);
-	memset(buf + len, '=', finishedLen);
-	len += finishedLen;
-	buf[len++] = '>';
-	//memset(buf + len, ' ', width-len);
-	buf[width - 1] = ']';
-	buf[width] = 0;
-
+	I32 finishedLen=round((width - len - 1)*pct);
+	memset(buf+len,'=',finishedLen);
+	len+=finishedLen;
+	buf[len++]='>';
+	buf[width - 1]=']';
+	buf[width]=0;
 #if R_INTERFACE==1
-	Rprintf("\r%s", buf);
-
-	//R doesnto allow io operationrs from external libraries
-	//fflush(stdout);
+	Rprintf("\r%s",buf);
 #elif M_INTERFACE==1
-	if (firstTimeRun == 1)
+	if (firstTimeRun==1)
 	{
 		r_printf("\r\n");
-		r_printf("%s", buf);
+		r_printf("%s",buf);
 		matlab_IOflush();
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
 	}
 	else
 	{
-		char * back = buf + width + 5;
-		memset(back, '\b', width + 2);
-		back[width + 2] = 0;
-
+		char * back=buf+width+5;
+		memset(back,'\b',width+2);
+		back[width+2]=0;
 		r_printf(back);
-		r_printf("%s\r\n", buf);
-		matlab_IOflush();
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
-
-	}
-
-
-#endif		
-}
- void printProgress2(F32 pct, F64 time, I32 width, char * buf, I32 firstTimeRun)
-{//https:// stackoverflow.com/questions/2685435/cooler-ascii-spinners
-	
-	static char spinnerChar[] = "|/-\\";
-	static int  count         = 1;
-	count = (++count) == 4 ? 0 : count;
-
-	memset(buf, '*', width); // space = 20
-
-	I32  len = 0;
-	buf[len++] = (pct<1.0) ? spinnerChar[count]: ' ';
-
-	sprintf(buf + len, "%5.1f%%", pct * 100);
-	len += 5 + 1;
-
-	char prefix[] = "done";
-	I32 strLen = sizeof(prefix)-1L; // the last byte is a Zero
-	memcpy(buf + len, prefix, strLen);
-	len += strLen;
-
-	F64 SecsPerDay = 3600 * 24;
-	I32 days = time / SecsPerDay;
-	F64 tmp = time - days *SecsPerDay;
-	I32 hrs = tmp / 3600;
-	tmp = (tmp - hrs * 3600);
-	I32 mins = tmp / 60;
-	tmp = tmp - mins * 60;
-	I32 secs = tmp;
-	days = days >= 99 ? 99 : days;
-
-	if (time > SecsPerDay)
-		sprintf(buf + len, "<Remaining%02dday%02dhrs%02dmin>", days, hrs, mins);
-	else
-		sprintf(buf + len, "<Remaining%02dhrs%02dmin%02dsec>", hrs, mins, secs);
-	len += 26;
-
-	buf[len++] = '[';
-
-	I32 finishedLen = round((width - len - 1)*pct);
-	memset(buf + len, '=', finishedLen);
-	len += finishedLen;
-	buf[len++] = '>';
-	//memset(buf + len, ' ', width-len);
-	buf[width - 1] = ']';
-	buf[width] = 0;
-
-#if R_INTERFACE==1
-	r_printf("\r%s", buf);
-	//R doesnto allow io operationrs from external libraries
-	//fflush(stdout);
-#elif M_INTERFACE==1
-
-	if (firstTimeRun == 1)
-	{
-		r_printf("\r\n");
-		r_printf("%s", buf);
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
-		matlab_IOflush();
-	}
-	else {
-		char * back = buf + width + 5;
-		memset(back, '\b', width + 2);
-		back[width + 2] = 0;
-
-		r_printf(back);
-		r_printf("%s\r\n", buf);
-		//mexEvalString("drawnow");
-		//mexCallMATLAB(0, NULL, 0, NULL, "drawnow");
+		r_printf("%s\r\n",buf);
 		matlab_IOflush();
 	}
 #endif	
 }
-
+void printProgress2(F32 pct,F64 time,I32 width,char * buf,I32 firstTimeRun)
+{
+	static char spinnerChar[]="|/-\\";
+	static int  count=1;
+	count=(++count)==4 ? 0 : count;
+	width=max(width,40); 
+	memset(buf,'*',width); 
+	I32  len=0;
+	buf[len++]=(pct<1.0) ? spinnerChar[count]: ' ';
+	sprintf(buf+len,"%5.1f%%",pct * 100);
+	len+=5+1;
+	char prefix[]="done";
+	I32 strLen=sizeof(prefix)-1L; 
+	memcpy(buf+len,prefix,strLen);
+	len+=strLen;
+	F64 SecsPerDay=3600 * 24;
+	I32 days=time/SecsPerDay;
+	F64 tmp=time - days *SecsPerDay;
+	I32 hrs=tmp/3600;
+	tmp=(tmp - hrs * 3600);
+	I32 mins=tmp/60;
+	tmp=tmp - mins * 60;
+	I32 secs=tmp;
+	days=days >=99 ? 99 : days;
+	if (time > SecsPerDay)
+		sprintf(buf+len,"<Remaining%02dday%02dhrs%02dmin>",days,hrs,mins);
+	else
+		sprintf(buf+len,"<Remaining%02dhrs%02dmin%02dsec>",hrs,mins,secs);
+	len+=26;
+	buf[len++]='[';
+	I32 finishedLen=round((width - len - 1)*pct);
+	memset(buf+len,'=',finishedLen);
+	len+=finishedLen;
+	buf[len++]='>';
+	buf[width - 1]=']';
+	buf[width]=0;
+#if R_INTERFACE==1
+	r_printf("\r%s",buf);
+#elif M_INTERFACE==1
+	if (firstTimeRun==1)
+	{
+		r_printf("\r\n");
+		r_printf("%s",buf);
+		matlab_IOflush();
+	}
+	else {
+		char * back=buf+width+5;
+		memset(back,'\b',width+2);
+		back[width+2]=0;
+		r_printf(back);
+		r_printf("%s\r\n",buf);
+		matlab_IOflush();
+	}
+#endif	
+}
 void RemoveField(FIELD_ITEM *fieldList,int nfields,char * fieldName)
 {
 	for (I64 i=0; i < nfields; i++){
@@ -584,7 +549,7 @@ int IsChar(void* ptr)    {
 		return mxIsChar(ptr)||mxIsClass(ptr,"string");
 	}
 }
-int IsClass(void* ptr,char* class) { return 0 }
+int IsClass(void* ptr,char* class) { return 0; }
 int IsStruct(void* ptr)  { return mxIsStruct(ptr); }
 int IsCell(void* ptr)    { return mxIsCell(ptr); }
 int IsNumeric(void* ptr) { return mxIsNumeric(ptr); }

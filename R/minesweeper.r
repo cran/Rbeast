@@ -1,6 +1,22 @@
-dpi = NA
+ 
+# When loaded, the namespace asNamespace('Rbeast') of the package is locked.
+# The global varaiables in the package can't be modified using <<-. So
+# Solution: 
+#1.unlockBinding('dpi',envir=asNamespace('Rbeast'))
+#2.Create a package environment
+#https://stackoverflow.com/questions/34254716/how-to-define-hidden-global-variables-inside-r-packages
+#https://stackoverflow.com/questions/34254716/how-to-define-hidden-global-variables-inside-r-packages
+#https://stackoverflow.com/questions/28246952/global-variable-in-a-package-which-approach-is-more-recommended
 
-get.devfun = function(dev) {
+pkgEnv     = new.env(parent=emptyenv())
+pkgEnv$dpi = NA
+
+#get('dpi', envir=pkgEnv)
+#assign('dpi',22,envir=pkgEnv)
+
+
+##################################################################
+get.devfun   = function(dev) {
     dev <- if (exists(dev, asNamespace("grDevices")))  
       get(dev, asNamespace("grDevices"))
     else if (exists(dev, .GlobalEnv)) 
@@ -8,15 +24,9 @@ get.devfun = function(dev) {
 	else 
 	  NA
 }
-devfun.exist = function (dev) {
-   dev=get.devfun(dev)
-   if (is.function(dev)) {
-	return(TRUE)
-   } else {
-   return(FALSE)
-   }
+devfun.exist = function (dev) {   
+   is.function(get.devfun(dev)) 
 }
-
 new.interactiveWindow = function(width, height) {
 
   oldDev =  getOption('device')
@@ -64,9 +74,11 @@ new.interactiveWindow = function(width, height) {
   options(device=oldDev)
 
 }
-
+##################################################################
 get.dpi = function(){
-# set the global vaiabe dpi  
+# set the global vaiabe dpi
+  dpi = pkgEnv$dpi
+  
   if( !is.na(dpi) ) {
 	return (dpi)
   }
@@ -101,10 +113,11 @@ get.dpi = function(){
    # https://github.com/statnet/ndtv/blob/master/ndtv/R/export.movie.R
    # https://github.com/cran/dynatopmodel/blob/0d7d074b022452f925c8de4271d4a843882ac84c/R/disp_util.r
    
-  new.interactiveWindow(width=2,height=2)
+  new.interactiveWindow(width=5,height=5)
   
   wsize = dev.size('px');
-  dpi   <<- wsize[1]/2
+  dpi   =  wsize[1]/5
+  pkgEnv$dpi = dpi
   dev.off()
   
   return (dpi)
@@ -116,17 +129,12 @@ get.dpi = function(){
 
 
 
-
-
 #prepare the curIrcle pattern for the bomb icon
 circleX = cos( seq(1,50)/50 *2*3.1415935  );
 circleY = sin( seq(1,50)/50 *2*3.1415935 );
-ny  = 0
-nx  = 0
-
 
 ####################################################################
-plotij.close <- function(I,J, w)  {
+plotij.close <- function(nx,ny,I,J, w)  {
   
   I=I-1;
   J=J-1;
@@ -147,7 +155,7 @@ plotij.close <- function(I,J, w)  {
 	}  
 }
 
-plotij.open <- function(i,j, w)  {
+plotij.open <- function(nx,ny,i,j, w)  {
   i=i-1;
   j=j-1;
   r=0.1*w;
@@ -155,7 +163,7 @@ plotij.open <- function(i,j, w)  {
              c(ny*w-j*w ,ny*w-(j+1)*w ,ny*w-(j+1)*w  ,ny*w-j*w ),
              col='#BBBBBB',border='#777777' )    
 }
-plotij.bomb <- function(i,j, w)  {
+plotij.bomb <- function(nx,ny,i,j, w)  {
   i=i-1;
   j=j-1;
   r=0.1*w;
@@ -168,7 +176,7 @@ plotij.bomb <- function(i,j, w)  {
   lines(  c( ((i+1)-0.5)*w+w/3, ((i+1)-0.5)*w+w/3 +w/12  ) , c( (ny-(j+1)+0.5)*w + w/3, (ny-(j+1)+0.5)*w + w/3 -w/12 ) )    
 }
 
-plotij.flag <- function(i,j, w)  {
+plotij.flag <- function(nx,ny,i,j, w)  {
   i=i-1;
   j=j-1;
   r=0.1*w;
@@ -197,7 +205,7 @@ plotij.flag <- function(i,j, w)  {
     xc = (i+0.5)*w 
     polygon( c( xc-e  ,xc -e, xc+e, xc+e  ),  c( yc, yc-f,yc-f,yc ),   col='#000000',border=NA )    
 }
-plotij.bombing <-function(i,j, w)  {
+plotij.bombing <-function(nx,ny,i,j, w)  {
   i=i-1;
   j=j-1;
   r=0.1*w;
@@ -210,7 +218,7 @@ plotij.bombing <-function(i,j, w)  {
   lines(  c( ((i+1)-0.5)*w+w/3, ((i+1)-0.5)*w+w/3 +w/12 ) , c( (ny-(j+1)+0.5)*w + w/3,(ny-(j+1)+0.5)*w + w/3 -w/12 ) )
 }
 
-plotij.down <-function(i,j, w)  {  
+plotij.down <-function(nx,ny,i,j, w)  {  
 	i=i-1;
 	j=j-1;
 	r=0.1*w;
@@ -264,7 +272,7 @@ plot.field <-function(nx,ny, yExtra, w){
     polygon( c(x0, x0, x0+r, x0+r, x1-r, x1 ), c(y1 ,y0,  y0+r, y1 -r,y1 -r, y1 ),col='#999999',border=NA )   #upper
     polygon( c(x0 ,x1, x1,  x1-r,x1-r,x0+r ),  c(y0 ,y0, y1, y1-r, y0+r,y0+r),   col='#F8F8F8',border=NA )     #bottom
 
-	plotij.close(1:nx,1:ny, w )  
+	plotij.close(nx,ny,1:nx,1:ny, w )  
 			
    # The bottom box	
 	r  = 0.15;
@@ -323,14 +331,14 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
   width =ifelse(width<=0, 25, width)
   prob  =ifelse(prob<=0, 0.1, prob)
   prob  =ifelse(prob>1,  0.7, prob)
-  ny  <<- height
-  nx  <<- width  
+  ny  <- height
+  nx  <- width  
   prob =  1-prob;
   
   
   #set the grid size & should be always kept 1 
   w   =   1;
-  dpi <<- get.dpi() 
+  dpi <- get.dpi() 
   
   #use dpi to creat a window with a width of about 600 pixels  
   gridsize = 25
@@ -457,7 +465,7 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
     curJ      <<- ceiling((ny*w-y)/w);    
     curButton <<-button;
     if (left[curJ,curI] == 0 & button[1] !=1)     { 
-      plotij.down(curI,curJ,w)
+      plotij.down(nx,ny,curI,curJ,w)
     }
     
     return(NULL)
@@ -524,11 +532,11 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
     if (i!=curI |j !=curJ ){
       if (left[curJ,curI] ==0)  { 
         
-        plotij.close(curI,curJ,w)
+        plotij.close(nx,ny, curI,curJ,w)
         if (right[curJ,curI] ==0)
-           plotij.close(curI,curJ,w)
+           plotij.close(nx,ny, curI,curJ,w)
         else if (right[curJ,curI] ==1)
-           plotij.flag(curI,curJ,w)
+           plotij.flag(nx,ny, curI,curJ,w)
         
       }
       invisible(return(NULL))
@@ -537,14 +545,14 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
     if (button[1]==0) {
       #####################
       if (right[j,i]==1 ) {
-        plotij.flag(i,j,w)
+        plotij.flag(nx,ny,i,j,w)
         invisible(return(NULL))
       }
       
       if ( left[j,i]==0 ) { # a never-touched grid
         if (img[j,i]==0)    # a safe try
         {
-          plotij.open( i,j,w); 
+          plotij.open( nx,ny,i,j,w); 
           plotij.number(i,j,w)
           left[j,i] <<-1;
           
@@ -561,9 +569,9 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
           for ( n in 1:length(idx) )
           {      
             #cat('aa ', rowlist[n],collist[n], '\n')
-            plotij.bomb(collist[n],rowlist[n],w)
+            plotij.bomb(nx,ny,collist[n],rowlist[n],w)
           }
-          plotij.bombing(i,j,w)
+          plotij.bombing(nx,ny,i,j,w)
           
           taskFailure <<- 1;
           
@@ -580,7 +588,7 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
       {
         if (right[j,i]==0) # not flagged yet
         {
-          plotij.flag(i,j,w)
+          plotij.flag(nx,ny,i,j,w)
           right[j,i]<<-1;
           ###GAME Passed
           if( all(img==right))
@@ -596,7 +604,7 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
         }
         else # already flaged
         {          
-          plotij.close(i,j,w)
+          plotij.close(nx,ny,i,j,w)
           right[j,i]<<-0;
           
 		  count=sum(img)-sum(right)
@@ -635,7 +643,7 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
         
         if (right[curJ,curI] ==0)
         {
-          plotij.open(curI,curJ,w) 
+          plotij.open(nx,ny,curI,curJ,w) 
 		  plotij.number(curI,curJ,w)	      
           left[curJ,curI]<<-1;       
         }
@@ -667,7 +675,7 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
           if (curJ < 1 | curJ > ny | curI <1 | curI > nx) {next}
           
           if (right[curJ,curI] == 0)           {
-            plotij.open(curI,curJ,w);
+            plotij.open(nx,ny,curI,curJ,w);
 			plotij.number(curI,curJ,w)			
             left[curJ,curI] <<-1;       
           }

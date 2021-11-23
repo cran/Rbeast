@@ -3,23 +3,24 @@
 #include "abc_datatype.h"   
 #include "abc_ide_util.h"
 #ifndef SOLARIS_COMPILER
-#if M_INTERFACE==1
-	#define NULL_RET 
-#elif R_INTERFACE==1
-	#define NULL_RET R_NilValue
+#if R_INTERFACE==1 
 	#ifdef beta
 		#undef beta  
 	#endif
 #endif
 #define _IN_ 
 #define _OUT_
-#define MAX_RAND_NUM	5000L
-#define MAX_NUM_BASIS  3
+#define MAX_RAND_NUM	  5000L
+#define MAX_NUM_BASIS     3
+#define MIN_PREC_VALUE    0.001
+#define MIN_SIG2_VALUE    0.001
+#define MIN_ALPHA2_VALUE  0.0001
+#define PROB_SAMPLE_EXTREME_VECTOR 0.5
 #define SEASONID   0
 #define TRENDID    1
 #define OUTLIERID  2 
 #define DUMMYID    3
-#define SVDID       4
+#define SVDID      4
 #define A(xxx)     BEAST2_##xxx
 typedef U32 TKNOT,*_restrict TKNOT_PTR;
 typedef U08 TORDER,*_restrict TORDER_PTR;
@@ -29,15 +30,15 @@ typedef U08 TORDER,*_restrict TORDER_PTR;
 #define rTORDER      register  TORDER
 typedef struct BEAST2_METADATA {
 	VOID_PTR rawInput;
-	VOID_PTR rawTimeVec;
-	char     cmpntString[8];
-	I08		 isMetaStruct;
-	I08		 isRegularOrdered;	
-	I08      hasSeasonCmpnt;
-	I08      hasOutlierCmpnt;
+	VOID_PTR rawTimeVec;	
 	I08      detrend;
 	I08      deseasonalize;
 	I08		 nrhs;
+	I08		 isMetaStruct;
+	I08		 isRegularOrdered;	
+	I08      seasonForm;
+	I08      hasSeasonCmpnt;	
+	I08      hasOutlierCmpnt;	
 	I08    whichDimIsTime;
 	F32    period;
 	F32    missingValue;
@@ -50,14 +51,15 @@ typedef struct BEAST2_HyperPar {
 	F32 alpha_1,alpha_2,del_1,del_2;
 } BEAST2_HyperPar,* _restrict BEAST2_HyperPar_PTR;
 typedef struct BEAST2_PRIOR {
-	I08				basisType[MAX_NUM_BASIS];			
-	I08				numBasis;
-	U08				seasonBasisFuncType;
-	U08				trendBasisFuncType;
-	U08				outlierBasisFuncType;
-	U08				modelPriorType;
-	PRECPRIOR_TYPE  precPriorType;
-	U08   seasonMinOrder,seasonMaxOrder,trendMinOrder,trendMaxOrder;
+	I08	  basisType[MAX_NUM_BASIS];			
+	I08	  numBasis;
+	U08	  seasonBasisFuncType;
+	U08	  trendBasisFuncType;
+	U08	  outlierBasisFuncType;
+	U08	  modelPriorType;
+	U08   precPriorType;
+	U08   seasonMinOrder,seasonMaxOrder;
+    U08   trendMinOrder,trendMaxOrder;
 	I16   trendMinSepDist,seasonMinSepDist;
 	U16   trendMinKnotNum,seasonMinKnotNum;
 	U16   trendMaxKnotNum,seasonMaxKnotNum;
@@ -111,14 +113,14 @@ typedef struct BEAST2_IO {
 	BEAST2_METADATA	meta;
 	BEAST2_TIME		T;
 	VOID_PTR		*pdata;
-	DATA_TYPE		dataType;
+	DATA_TYPE		*dtype;
 	I08				ndim;
 	I32				dims[3];
 	I32				numOfPixels;
 	I32				N,q; 
 	struct {
 		BEAST2_RESULT* result;
-		DATA_TYPE      dataType;
+		DATA_TYPE      dtype;
 		U08            whichDimIsTime;
 	} out;
 } BEAST2_IO,* _restrict BEAST2_IO_PTR;
@@ -196,14 +198,14 @@ typedef struct CORESULT {
 	F32PTR x,xSD;
 } CORESULT,* _restrict CORESULT_PTR;
 typedef struct BEAST2_RNDSTREAM {
+	F32PTR  rndgamma;
 	U32PTR  rnd32;
 	U16PTR  rnd16;
-	U08PTR  rnd08;
-	F32PTR  rndgamma;
+	U08PTR  rnd08;	
 } BEAST2_RNDSTREAM,* _restrict BEAST2_RANDSEEDPTR;
 struct BEAST2_BASIS;
 struct BEAST2_MODEL;
-typedef struct BEAST2_BASIS* _restrict BEAST2_BASIS_PTR;
+typedef struct BEAST2_BASIS  * _restrict BEAST2_BASIS_PTR;
 typedef struct BEAST2_MODEL BEAST2_MODEL,* _restrict BEAST2_MODEL_PTR;
 typedef struct PROPOSE_STRUCT {	
 	I32PTR             samples;	
@@ -219,17 +221,17 @@ typedef struct PROPOSE_STRUCT {
 typedef struct BEAST2_BASESEG {
 	I32 R1,R2,K; 
 	union {
-		struct {I16 ORDER1,ORDER2;};
-		I32     outlierKnot; 
-	};	
+		struct {I16 ORDER1,ORDER2;}; 
+		I32     outlierKnot;          
+	};	                              
 } BEAST2_BASESEG,* _restrict BEAST2_BASESEG_PTR;
 typedef struct _NEWTERM {
 	BEAST2_BASESEG  SEG[2];
 	union {
-		TKNOT          newKnot;
-		struct {TORDER oldOrder,newOrder;};
+		TKNOT          newKnot;                
+		struct {TORDER oldOrder,newOrder;};   
 	};
-	I16 numKnot_prop;
+	I16 nKnot_new;
 	I16 newIdx;
 	union {
 		I16 k1;
@@ -238,7 +240,7 @@ typedef struct _NEWTERM {
 	};	
 	I16 k2_old,k2_new;
 	U08 numSeg;
-	I08 flagMoveType;
+	I08 jumpType;
 } NEWTERM,* _restrict NEWTERM_PTR;
 typedef struct DUMMY_CONS { F32PTR TERMS; F32PTR SQRT_N_div_n; I32 period; }          DUMMY_CONST;
 typedef struct SVD_CONS {  F32PTR TERMS; F32PTR SQR_CSUM;}          SVD_CONST;
@@ -280,11 +282,11 @@ typedef struct BEAST2_BASIS {
 	TORDER_PTR	ORDER;  
 	I16PTR     ks,ke;
 	U08PTR     termType;
-	U08PTR     goodvec;
+	U08PTR08   goodvec;
 	I16      nPrec;
 	I16      offsetPrec;
 	I32      goodNum;
-	I16      numKnot;
+	I16      nKnot;
 	I16      K,Kbase;
 	U08      type;
 } BEAST2_BASIS,* _restrict BEAST2_BASIS_PTR;
@@ -306,8 +308,8 @@ typedef struct BEAST2_MODEL {
 		F32	    sig2;
 		F32PTR  SIG2; 
 	};
-	I08PTR extremePosVec;
-	F32PTR deviation;
+	I08PTR08 extremePosVec;
+	F32PTR   deviation;
 	F32PTR avgDeviation;  
 	I32    extremPosNum;
 	F32    baseSig;
@@ -330,12 +332,6 @@ typedef struct {
 	I32              minSepDist;
 	BEAST2_YINFO_PTR yInfo;
 } KNOT2BINVEC,* _restrict KNOT2BINVEC_PTR;
-typedef struct MemPointers MemPointers;
-extern void print_error(int code,MemPointers* MEM);
-#define PROB_SAMPLE_EXTREME_VECTOR 0.5
 #elif defined(SOLARIS_COMPILER)
 #include "beastv2_header_solaris.h"
 #endif
-#define MIN_PREC_VALUE 0.001
-#define MIN_SIG2_VALUE    0.001
-#define MIN_ALPHA2_VALUE  0.0001

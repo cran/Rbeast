@@ -4,11 +4,11 @@
 #include "beastv2_header.h"
 #include "abc_vec.h"   
 #include "abc_blas_lapack_lib.h" 
-static int DSVT(U08PTR good,I32 N,TKNOT_PTR KNOT,I64 numKnot,KNOT2BINVEC * info)
+static int DSVT(U08PTR good,I32 N,TKNOT_PTR KNOT,I64 nKnot,KNOT2BINVEC * info)
 {
 	I32 minSepDist=info->minSepDist;
 	memset(good,1,N);
-	for (int i=1; i <=numKnot; i++) {
+	for (int i=1; i <=nKnot; i++) {
 		r_ippsSet_8u(0L,good+(KNOT[i-1] - minSepDist) - 1,2 * minSepDist+1);
 	}
 	r_ippsSet_8u(0,good,minSepDist+1);
@@ -17,7 +17,7 @@ static int DSVT(U08PTR good,I32 N,TKNOT_PTR KNOT,I64 numKnot,KNOT2BINVEC * info)
 	I32  goodNum=i08_sum_binvec(good,Npad16);
 	return goodNum;
 }
-static int OO(U08PTR good,I32 N,TKNOT_PTR KNOT,I64 numKnot,KNOT2BINVEC* info)
+static int OO(U08PTR good,I32 N,TKNOT_PTR KNOT,I64 nKnot,KNOT2BINVEC* info)
 {
 	I32    nMissing=info->yInfo->nMissing;
 	I32PTR rowsMissing=info->yInfo->rowsMissing;
@@ -26,7 +26,7 @@ static int OO(U08PTR good,I32 N,TKNOT_PTR KNOT,I64 numKnot,KNOT2BINVEC* info)
 		I32 idx=rowsMissing[i];
 		good[idx - 1]=0;
 	}
-	for (int i=0; i < numKnot; i++) {
+	for (int i=0; i < nKnot; i++) {
 		I32 idx=KNOT[i];
 		good[idx - 1]=0;
 	}
@@ -43,10 +43,10 @@ void CvtKnotsToBinVec(BEAST2_BASIS_PTR b,I32 NUMBASIS,I32 N,BEAST2_YINFO_PTR yIn
 			case SEASONID: 
 			case SVDID:
 			case TRENDID: 
-				b[i].goodNum=DSVT(b[i].goodvec,N,b[i].KNOT,b[i].numKnot,&info);
+				b[i].goodNum=DSVT(b[i].goodvec,N,b[i].KNOT,b[i].nKnot,&info);
 				break;
 			case OUTLIERID: 
-				b[i].goodNum=OO(b[i].goodvec,N,b[i].KNOT,b[i].numKnot,&info);
+				b[i].goodNum=OO(b[i].goodvec,N,b[i].KNOT,b[i].nKnot,&info);
 				break;
 		}
 	}

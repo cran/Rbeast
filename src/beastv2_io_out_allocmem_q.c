@@ -185,13 +185,13 @@ static void __RemoveFieldsGivenFlags_Outlier(A(OPTIONS_PTR)  opt,FIELD_ITEM * fi
 static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	const A(IO_PTR)      io=&opt->io;
 	const A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE  dataType=io->out.dataType; 
+	DATA_TYPE  dtype=io->out.dtype; 
 	const int   N=io->N;
 	const int   M=io->numOfPixels;	
 	const int   mxKnotNum=opt->prior.trendMaxKnotNum;
 	#define NUMARGS(...)                 (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 	#define NARGS(...)                   (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-	#define _(name,...)                 {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->t##name }
+	#define _(name,...)                 {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->t##name }
 	#define _1(name,...)                _(name,__VA_ARGS__)  
 	#define _2(name1,name2,...)         _(name1,__VA_ARGS__),_(name2,__VA_ARGS__)   
 	#define _3(n1,n2,n3,...)            _2(n1,n2,__VA_ARGS__),_(n3,__VA_ARGS__)  
@@ -281,13 +281,13 @@ static void* __BEAST2_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 {
 	const A(IO_PTR)      io=&opt->io;
 	const A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE   dataType=io->out.dataType; 
+	DATA_TYPE   dtype=io->out.dtype; 
 	const int   N=io->N;
 	const int   M=io->numOfPixels;	
 	const int   mxKnotNum=opt->prior.seasonMaxKnotNum;
 #define NUMARGS(...)                (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 #define NARGS(...)                  (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-#define _(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->s##name }
+#define _(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->s##name }
 #define _1(name,...)               _(name,__VA_ARGS__)  
 #define _2(name1,name2,...)         _(name1,__VA_ARGS__),_(name2,__VA_ARGS__)   
 #define _3(n1,n2,n3,...)            _2(n1,n2,__VA_ARGS__),_(n3,__VA_ARGS__)  
@@ -366,13 +366,13 @@ static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 {
 	const A(IO_PTR)      io=&opt->io;
 	const A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE   dataType=io->out.dataType; 
+	DATA_TYPE   dtype=io->out.dtype; 
 	const int   N=io->N;
 	const int   M=io->numOfPixels;	
 	const int   mxKnotNum=opt->prior.outlierMaxKnotNum;	
 #define NUMARGS(...)                (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 #define NARGS(...)                  (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-#define _(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->o##name }
+#define _(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->o##name }
 #define _1(name,...)               _(name,__VA_ARGS__)  
 #define _2(name1,name2,...)         _(name1,__VA_ARGS__),_(name2,__VA_ARGS__)   
 #define _3(n1,n2,n3,...)            _2(n1,n2,__VA_ARGS__),_(n3,__VA_ARGS__)  
@@ -451,10 +451,10 @@ void*  BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)
 	memset(opt->io.out.result,0,sizeof(BEAST2_RESULT) * opt->io.q);
 	const A(IO_PTR)      io=&opt->io;
 	const A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE  dataType=io->out.dataType; 
+	DATA_TYPE  dtype=io->out.dtype; 
 #define NUMARGS(...)                (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 #define NARGS(...)                  (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-#define _(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->tY##name }
+#define _(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->tY##name }
 #define _1(name,...)               _(name,__VA_ARGS__)  
 	I08 hasSeasonCmpnt=opt->prior.basisType[0]==SEASONID||opt->prior.basisType[0]==DUMMYID||opt->prior.basisType[0]==SVDID;
 	I08 hasDummyCmpnt=opt->prior.basisType[0]==DUMMYID;
@@ -483,16 +483,16 @@ void*  BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)
 	const  int  q=io->q;
 	const  int  Nq=N * q;
 	FIELD_ITEM  fieldList[ ]={
-		{"time",dataType,2,{N,1,},&mat->time},
-		{"data",dataType,-1,{-1,-1,},&mat->data}, 
-		{"marg_lik",dataType,2,{ROW,COL,},&mat->marg_lik},
+		{"time",dtype,2,{N,1,},&mat->time},
+		{"data",dtype,-1,{-1,-1,},&mat->data}, 
+		{"marg_lik",dtype,2,{ROW,COL,},&mat->marg_lik},
 		#ifdef __DEBUG__
-        {"R2",dataType,2,{(N+7)/8 * 8,300,},&mat->R2},
-		{"RMSE",dataType,2,{(N+7)/8 * 8,300,},&mat->RMSE},
+        {"R2",dtype,2,{(N+7)/8 * 8,300,},&mat->R2},
+		{"RMSE",dtype,2,{(N+7)/8 * 8,300,},&mat->RMSE},
 	    #endif
-		{"R2",dataType,2,{ROW,COL,},&mat->R2},
-		{"RMSE",dataType,2,{ROW,COL,},&mat->RMSE},
-	    {"sig2",dataType,2,{ROW,COL,},&mat->sig2},
+		{"R2",dtype,2,{ROW,COL,},&mat->R2},
+		{"RMSE",dtype,2,{ROW,COL,},&mat->RMSE},
+	    {"sig2",dtype,2,{ROW,COL,},&mat->sig2},
 		{"trend",DATA_STRUCT,0,{0,},(void**)trend},
 		{"season",DATA_STRUCT,0,{0,},(void**)season},
 		{"outlier",DATA_STRUCT,0,{0,},(void**)outlier},
@@ -530,7 +530,7 @@ void*  BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)
 	AddIntegerAttribute(out,"hasOutlier",hasOutlierCmpnt);	
 	AddIntegerAttribute(out,"whichOutputDimIsTime",opt->io.out.whichDimIsTime);
 	f32_seq(mat->time,io->meta.startTime,io->meta.deltaTime,N);
-	if (dataType==DATA_DOUBLE)  f32_to_f64_inplace(mat->time,N);	
+	if (dtype==DATA_DOUBLE)  f32_to_f64_inplace(mat->time,N);	
 	UNPROTECT(nprt);
 	return out;
 	#undef NUMARGS
@@ -558,7 +558,7 @@ void BEAST2_Result_AllocMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,MemPointer
 	*result=(BEAST2_RESULT){0,}; 
 	result->time=NULL; 
 	if (opt->extra.dumpInputData) {
-		result->data=MEM->alloc(MEM,sizeof(F32) * N,0);
+		result->data=MEM->alloc(MEM,sizeof(F32) * Nq,0);
 	}
 	result->marg_lik=MEM->alloc(MEM,sizeof(F32) * 1,0);
 	result->sig2=MEM->alloc(MEM,sizeof(F32) * q*q,0);
@@ -839,25 +839,26 @@ static INLINE I32 __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist,I32 N,I32 
 		flist[i].type=DATA_STRUCT;
 		flist[i].ptr=out;
 	}
+	 UNPROTECT(nptr_dummy); 
 	 return nptr;
 }
 static void* __MR_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	const A(IO_PTR)      io=&opt->io;
 	const A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE  dataType=io->out.dataType; 
+	DATA_TYPE  dtype=io->out.dtype; 
 	const int   N=io->N;
 	const int   M=io->numOfPixels;	
 	const int   mxKnotNum=opt->prior.trendMaxKnotNum;
 	#define NUMARGS(...)                (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 	#define NARGS(...)                  (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-	#define _(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->t##name,0 }
+	#define _(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->t##name,0 }
 	#define _1(name,...)               _(name,__VA_ARGS__)  
 	#define _2(name1,name2,...)         _(name1,__VA_ARGS__),_(name2,__VA_ARGS__)   
 	#define _3(n1,n2,n3,...)            _2(n1,n2,__VA_ARGS__),_(n3,__VA_ARGS__)  
 	#define _4(n1,n2,n3,n4,...)         _3(n1,n2,n3,__VA_ARGS__),_(n4,__VA_ARGS__)  
 	#define _5(n1,n2,n3,n4,n5,...)      _4(n1,n2,n3,n4,__VA_ARGS__),_(n5,__VA_ARGS__)  
 	#define _6(n1,n2,n3,n4,n5,n6,...)   _5(n1,n2,n3,n4,n5,__VA_ARGS__),_(n6,__VA_ARGS__)  
-	#define _q(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->t##name,1 }
+	#define _q(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->t##name,1 }
 	#define _q1(name,...)               _q(name,__VA_ARGS__)  
 	#define _q2(name1,name2,...)         _q(name1,__VA_ARGS__),_q(name2,__VA_ARGS__)   
 	#define _q3(n1,n2,n3,...)            _q2(n1,n2,__VA_ARGS__),_q(n3,__VA_ARGS__)  
@@ -956,20 +957,20 @@ static void* __MR_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 {
 	const A(IO_PTR)      io=&opt->io;
 	const A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE   dataType=io->out.dataType; 
+	DATA_TYPE   dtype=io->out.dtype; 
 	const int   N=io->N;
 	const int   M=io->numOfPixels;	
 	const int   mxKnotNum=opt->prior.seasonMaxKnotNum;
 	#define NUMARGS(...)                 (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 	#define NARGS(...)                   (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-	#define _(name,...)                 {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->s##name }
+	#define _(name,...)                 {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->s##name }
 	#define _1(name,...)                _(name,__VA_ARGS__)  
 	#define _2(name1,name2,...)         _(name1,__VA_ARGS__),_(name2,__VA_ARGS__)   
 	#define _3(n1,n2,n3,...)            _2(n1,n2,__VA_ARGS__),_(n3,__VA_ARGS__)  
 	#define _4(n1,n2,n3,n4,...)         _3(n1,n2,n3,__VA_ARGS__),_(n4,__VA_ARGS__)  
 	#define _5(n1,n2,n3,n4,n5,...)      _4(n1,n2,n3,n4,__VA_ARGS__),_(n5,__VA_ARGS__)  
 	#define _6(n1,n2,n3,n4,n5,n6,...)   _5(n1,n2,n3,n4,n5,__VA_ARGS__),_(n6,__VA_ARGS__)  
-	#define _q(name,...)                 {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->s##name,1 }
+	#define _q(name,...)                 {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->s##name,1 }
 	#define _q1(name,...)                _q(name,__VA_ARGS__)  
 	#define _q2(name1,name2,...)         _q(name1,__VA_ARGS__),_q(name2,__VA_ARGS__)   
 	#define _q3(n1,n2,n3,...)            _q2(n1,n2,__VA_ARGS__),_q(n3,__VA_ARGS__)  
@@ -1057,20 +1058,20 @@ static void* __MR_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 {
 	const A(IO_PTR)      io=&opt->io;
 	const A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE   dataType=io->out.dataType; 
+	DATA_TYPE   dtype=io->out.dtype; 
 	const int   N=io->N;
 	const int   M=io->numOfPixels;	
 	const int   mxKnotNum=opt->prior.outlierMaxKnotNum;	
 	#define NUMARGS(...)                (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 	#define NARGS(...)                  (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-	#define _(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->o##name }
+	#define _(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->o##name }
 	#define _1(name,...)               _(name,__VA_ARGS__)  
 	#define _2(name1,name2,...)         _(name1,__VA_ARGS__),_(name2,__VA_ARGS__)   
 	#define _3(n1,n2,n3,...)            _2(n1,n2,__VA_ARGS__),_(n3,__VA_ARGS__)  
 	#define _4(n1,n2,n3,n4,...)         _3(n1,n2,n3,__VA_ARGS__),_(n4,__VA_ARGS__)  
 	#define _5(n1,n2,n3,n4,n5,...)      _4(n1,n2,n3,n4,__VA_ARGS__),_(n5,__VA_ARGS__)  
 	#define _6(n1,n2,n3,n4,n5,n6,...)   _5(n1,n2,n3,n4,n5,__VA_ARGS__),_(n6,__VA_ARGS__)  
-	#define _q(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->o##name,1 }
+	#define _q(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->o##name,1 }
 	#define _q1(name,...)                _q(name,__VA_ARGS__)  
 	#define _q2(name1,name2,...)         _q(name1,__VA_ARGS__),_q(name2,__VA_ARGS__)   
 	#define _q3(n1,n2,n3,...)            _q2(n1,n2,__VA_ARGS__),_q(n3,__VA_ARGS__)  
@@ -1157,10 +1158,10 @@ void *  MR_Output_AllocMEM(BEAST2_OPTIONS_PTR  opt)
 	memset(opt->io.out.result,0,sizeof(BEAST2_RESULT) * opt->io.q);
 	const     A(IO_PTR)      io=&opt->io;
 	const     A(RESULT_PTR)  mat=io->out.result;
-	DATA_TYPE  dataType=io->out.dataType; 
+	DATA_TYPE  dtype=io->out.dtype; 
 	#define NUMARGS(...)                (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 	#define NARGS(...)                  (sizeof((int[]){0,##__VA_ARGS__})/sizeof(int)-1)
-	#define _(name,...)                {#name,dataType,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->tY##name }
+	#define _(name,...)                {#name,dtype,NUMARGS(__VA_ARGS__),{__VA_ARGS__},(void ** )&mat->tY##name }
 	#define _1(name,...)               _(name,__VA_ARGS__)  
 	I08 hasSeasonCmpnt=opt->prior.basisType[0]==SEASONID||opt->prior.basisType[0]==DUMMYID||opt->prior.basisType[0]==SVDID;
 	I08 hasTrendCmpnt=1;
@@ -1188,17 +1189,17 @@ void *  MR_Output_AllocMEM(BEAST2_OPTIONS_PTR  opt)
 	const  int  q=io->q;
 	const  int  Nq=N * q;
     FIELD_ITEM  fieldList[ ]={
-		{"time",dataType,2,{N,1,},&mat->time},
-		{"data",dataType,-1,{-1,-1,},&mat->data}, 
-		{"marg_lik",dataType,2,{ROW,COL,},&mat->marg_lik},
+		{"time",dtype,2,{N,1,},&mat->time},
+		{"data",dtype,-1,{-1,-1,},&mat->data,.extra=1}, 
+		{"marg_lik",dtype,2,{ROW,COL,},&mat->marg_lik },
 		#ifdef __DEBUG__
-        {"R2",dataType,2,{(N+7)/8 * 8,300,},&mat->R2},
-		{"RMSE",dataType,2,{(N+7)/8 * 8,300,},&mat->RMSE},
+        {"R2",dtype,2,{(N+7)/8 * 8,300,},&mat->R2},
+		{"RMSE",dtype,2,{(N+7)/8 * 8,300,},&mat->RMSE},
 	    #else
-		{"R2",dataType,2,{ROW,COL,},&mat->R2,.extra=1},
-		{"RMSE",dataType,2,{ROW,COL,},&mat->RMSE,.extra=1},
+		{"R2",dtype,2,{ROW,COL,},&mat->R2,.extra=1},
+		{"RMSE",dtype,2,{ROW,COL,},&mat->RMSE,.extra=1},
 		#endif
-	    {"sig2",dataType,4,{ROW,COL,q,q},&mat->sig2},
+	    {"sig2",dtype,4,{ROW,COL,q,q},&mat->sig2},
 		{"trend",DATA_STRUCT,0,{0,},(void**)trend},
 		{"season",DATA_STRUCT,0,{0,},(void**)season},
 		{"outlier",DATA_STRUCT,0,{0,},(void**)outlier},
@@ -1234,7 +1235,7 @@ void *  MR_Output_AllocMEM(BEAST2_OPTIONS_PTR  opt)
 	AddStringAttribute(out,"algorithm","beastv4");
 	AddIntegerAttribute(out,"whichOutputDimIsTime",opt->io.out.whichDimIsTime);
 	f32_seq(mat->time,io->meta.startTime,io->meta.deltaTime,N);
-	if (dataType==DATA_DOUBLE)  f32_to_f64_inplace(mat->time,N);	
+	if (dtype==DATA_DOUBLE)  f32_to_f64_inplace(mat->time,N);	
 	UNPROTECT(nprt);
 	return out;
 }

@@ -22,7 +22,7 @@
 \note{
    Use this function only to manually and interactively examine individual times series. If the purpose is to loop through \code{x}, the use of direct indexing is much faster. For example, if \code{x} is a beast object for a 300x200x1000 3D array (row x col x time), use x$trend$Y[20,40,] to get the fitted trend at the pixel of row 20 and col 40.}
 \seealso{
-  \code{\link[Rbeast]{beast.irreg}},   \code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}} ,\code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{geeLandsat}} 
+  \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
 } 
 \examples{
 \donttest{

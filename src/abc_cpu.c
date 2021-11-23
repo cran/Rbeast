@@ -87,7 +87,7 @@
         }
         #warning "No cpuid intrinsic defined for compiler: a placeholder created!"
     #endif
-#elif defined(__aarch64__)
+#elif defined(ARM64_OS)
         #define _XCR_XFEATURE_ENABLED_MASK  0
         void cpuid(int32_t out[4],int32_t eax,int32_t ecx) {
             out[0]=out[1]=out[2]=out[3]=0;
@@ -98,7 +98,6 @@
         int detect_OS_x64() {
             return 1;
         }
-        #warning "No cpuid intrinsic defined for ARM64: a placeholder created!"
 #else
 #   error "No cpuid intrinsic defined for processor architecture."
 #endif
@@ -152,17 +151,17 @@ void detect_host(struct cpu_x86 *cpu){
     r_printf("%d\n",nIds);
     if (nIds >=0x00000001){
         cpuid(info,0x00000001,0);
-        cpu->HW_MMX=(info[3] & ((int)1 << 23)) !=0;
-        cpu->HW_SSE=(info[3] & ((int)1 << 25)) !=0;
-        cpu->HW_SSE2=(info[3] & ((int)1 << 26)) !=0;
-        cpu->HW_SSE3=(info[2] & ((int)1 <<  0)) !=0;
-        cpu->HW_SSSE3=(info[2] & ((int)1 <<  9)) !=0;
-        cpu->HW_SSE41=(info[2] & ((int)1 << 19)) !=0;
-        cpu->HW_SSE42=(info[2] & ((int)1 << 20)) !=0;
-        cpu->HW_AES=(info[2] & ((int)1 << 25)) !=0;
-        cpu->HW_AVX=(info[2] & ((int)1 << 28)) !=0;
-        cpu->HW_FMA3=(info[2] & ((int)1 << 12)) !=0;
-        cpu->HW_RDRAND=(info[2] & ((int)1 << 30)) !=0;
+        cpu->HW_MMX=(info[3] & ((uint32_t)1 << 23)) !=0;
+        cpu->HW_SSE=(info[3] & ((uint32_t)1 << 25)) !=0;
+        cpu->HW_SSE2=(info[3] & ((uint32_t)1 << 26)) !=0;
+        cpu->HW_SSE3=(info[2] & ((uint32_t)1 <<  0)) !=0;
+        cpu->HW_SSSE3=(info[2] & ((uint32_t)1 <<  9)) !=0;
+        cpu->HW_SSE41=(info[2] & ((uint32_t)1 << 19)) !=0;
+        cpu->HW_SSE42=(info[2] & ((uint32_t)1 << 20)) !=0;
+        cpu->HW_AES=(info[2] & ((uint32_t)1 << 25)) !=0;
+        cpu->HW_AVX=(info[2] & ((uint32_t)1 << 28)) !=0;
+        cpu->HW_FMA3=(info[2] & ((uint32_t)1 << 12)) !=0;
+        cpu->HW_RDRAND=(info[2] & ((uint32_t)1 << 30)) !=0;
     }
     if (nIds >=0x00000007){
         cpuid(info,0x00000007,0);
@@ -179,7 +178,7 @@ void detect_host(struct cpu_x86 *cpu){
         cpu->HW_AVX512_CD=(info[1] & ((int)1 << 28)) !=0;
         cpu->HW_AVX512_PF=(info[1] & ((int)1 << 26)) !=0;
         cpu->HW_AVX512_ER=(info[1] & ((int)1 << 27)) !=0;
-        cpu->HW_AVX512_VL=(info[1] & ((int)1 << 31)) !=0;
+        cpu->HW_AVX512_VL=(info[1] & ((uint32_t)1 << 31)) !=0;
         cpu->HW_AVX512_BW=(info[1] & ((int)1 << 30)) !=0;
         cpu->HW_AVX512_DQ=(info[1] & ((int)1 << 17)) !=0;
         cpu->HW_AVX512_IFMA=(info[1] & ((int)1 << 21)) !=0;
@@ -282,7 +281,7 @@ void i386_cpuid_caches () {
         uint32_t eax,ebx,ecx,edx; 
         eax=4; 
         ecx=i; 
-        #if !defined(MSVC_COMPILER)
+        #if !defined(MSVC_COMPILER) && !defined(ARM64_OS)
             __asm__ (
                 "cpuid" 
                 : "+a" (eax) 
@@ -317,16 +316,16 @@ void i386_cpuid_caches () {
         unsigned int cache_ways_of_associativity=((ebx >>=10) & 0x3FF)+1;
         size_t cache_total_size=cache_ways_of_associativity * cache_physical_line_partitions * cache_coherency_line_size * cache_sets;
         r_printf(
-            "Cache ID%d:\n"
-            "- Level:%d\n"
-            "- Type:%s\n"
-            "- Sets:%d\n"
-            "- System Coherency Line Size:%d bytes\n"
-            "- Physical Line partitions:%d\n"
-            "- Ways of associativity:%d\n"
-            "- Total Size:%zu bytes (%zu kb)\n"
-            "- Is fully associative:%s\n"
-            "- Is Self Initializing:%s\n"
+            "Cache ID %d:\n"
+            "- Level: %d\n"
+            "- Type: %s\n"
+            "- Sets: %d\n"
+            "- System Coherency Line Size: %d bytes\n"
+            "- Physical Line partitions: %d\n"
+            "- Ways of associativity: %d\n"
+            "- Total Size: %zu bytes (%zu kb)\n"
+            "- Is fully associative: %s\n"
+            "- Is Self Initializing: %s\n"
             "\n"
             ,i
             ,cache_level

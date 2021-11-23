@@ -98,7 +98,7 @@ static INLINE void _CalcDevExtremPos(PROP_DATA_PTR info ) {
 static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR info)
 {	
 	I32					goodNum=basis->goodNum;
-	I16					numKnot=basis->numKnot;
+	I16					nKnot=basis->nKnot;
 	BEAST2_RANDSEEDPTR	PRND=info->pRND;
 	MOVETYPE flag;
 	{
@@ -110,24 +110,24 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		if (MINKNOTNUM !=MAXKNOTNUM) {
 				if (rnd < basis->propprob.birth) { 
 					flag=BIRTH;
-					if (numKnot >=MAXKNOTNUM||goodNum==0)	flag=MOVE;
-					if (Ktotal  >=MAX_K_StopAddingNewTerms  )  flag=(numKnot==0) ? BIRTH : MOVE;
+					if (nKnot >=MAXKNOTNUM||goodNum==0)	flag=MOVE;
+					if (Ktotal  >=MAX_K_StopAddingNewTerms  )  flag=(nKnot==0) ? BIRTH : MOVE;
 				}
 				else if (rnd < basis->propprob.move)   
-					flag=numKnot==0        ? BIRTH : MOVE;
+					flag=nKnot==0        ? BIRTH : MOVE;
 				else if (rnd < basis->propprob.death)  
-					flag=numKnot==MINKNOTNUM ? BIRTH : DEATH;
+					flag=nKnot==MINKNOTNUM ? BIRTH : DEATH;
 				else if (rnd <=basis->propprob.merge) { 
-					if (numKnot==MINKNOTNUM)
+					if (nKnot==MINKNOTNUM)
 						flag=BIRTH;
 					else {
-						if (numKnot >=2) flag=MERGE;
-						else  			  flag=numKnot==0 ? BIRTH : DEATH;
+						if (nKnot >=2) flag=MERGE;
+						else  			  flag=nKnot==0 ? BIRTH : DEATH;
 					}				
 				}
 				else {                                 
 					if (Ktotal < MAX_K_StopAddingNewTerms)	flag=ChORDER;
-					else                                    flag=(numKnot==MINKNOTNUM) ? BIRTH : MOVE;
+					else                                    flag=(nKnot==MINKNOTNUM) ? BIRTH : MOVE;
 				}
 		}
 		else
@@ -150,7 +150,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 	case BIRTH:
 	{
 		I32    Npad16=info->Npad16;		
-		U64PTR goodVec=basis->goodvec;
+		U64PTR goodVec=basis->goodvec; 
 		U64PTR tmpGoodVec;
 		I32    tmpGoodNum;
 		if ( *(PRND->rnd08)++< 255* PROB_SAMPLE_EXTREME_VECTOR ) {				             
@@ -182,24 +182,24 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->SEG[1].ORDER2=new->SEG[0].ORDER2=orderList[(newIdx)-1];
 		endIdx=newIdx;
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot+1;		
+		new->nKnot_new=nKnot+1;		
 		break;
 	}
 	case DEATH:
 	{
-		newIdx=RANDINT(1,(U16)numKnot,*(PRND->rnd16)++);       
+		newIdx=RANDINT(1,(U16)nKnot,*(PRND->rnd16)++);       
 		new->numSeg=1;
 		new->SEG[0].R1=knotList[(newIdx - 1) - 1];
 		new->SEG[0].R2=knotList[(newIdx+1) - 1] - 1L;
 		new->SEG[0].ORDER2=orderList[(newIdx+1L) - 1]; 
 		endIdx=newIdx+1L;
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot - 1;
+		new->nKnot_new=nKnot - 1;
 		break;
 	}
 	case MERGE:
 	{
-		newIdx=RANDINT(1,(U16)numKnot - 1,*(PRND->rnd16)++);  
+		newIdx=RANDINT(1,(U16)nKnot - 1,*(PRND->rnd16)++);  
 		I32  r1=knotList[(newIdx)-1];
 		I32  r2=knotList[(newIdx+1) - 1];
 		I32  count=(r2 - r1)+1L - 2L;
@@ -218,12 +218,12 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->SEG[1].ORDER2=orderList[newIdx+2L - 1L];
 		endIdx=newIdx+2L;
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot - 1;	 		
+		new->nKnot_new=nKnot - 1;	 		
 		break;
 	}
 	case MOVE: 
 	{
-		newIdx=RANDINT(1,(U16)numKnot,*(PRND->rnd16)++);  
+		newIdx=RANDINT(1,(U16)nKnot,*(PRND->rnd16)++);  
 		I32 oldKnot=knotList[newIdx - 1];
 		I32 r1=knotList[(newIdx - 1) - 1];
 		I32 r2=knotList[(newIdx+1) - 1];
@@ -248,19 +248,21 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->SEG[1].ORDER2=orderList[newIdx+1L - 1L];
 		endIdx=newIdx+1L;
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot;
+		new->nKnot_new=nKnot;
 		break;
 	}
 	case ChORDER:
 	{
-		newIdx=RANDINT(1,(U16)numKnot+1,*(PRND->rnd16)++);  
+		newIdx=RANDINT(1,(U16)nKnot+1,*(PRND->rnd16)++);  
 		I32 newOrder;
 		I32 oldOrder=orderList[newIdx - 1];
-		I32 minOrder=basis->prior.minOrder;
-		I32 maxOrder=basis->prior.maxOrder;
-		if      (oldOrder==minOrder)		newOrder=oldOrder+1;
-		else if (oldOrder==maxOrder)		newOrder=oldOrder - 1;
-		else           			            newOrder=*(*(I08**)&(PRND->rnd08))++> 0 ? oldOrder - 1 : oldOrder+1;
+		{
+			I32 minOrder=basis->prior.minOrder;
+			I32 maxOrder=basis->prior.maxOrder;
+			if (oldOrder==minOrder)		newOrder=oldOrder+1;
+			else if (oldOrder==maxOrder)	newOrder=oldOrder - 1;
+			else           			        newOrder=*(*(I08**)&(PRND->rnd08))++> 0 ? oldOrder - 1 : oldOrder+1;
+		}
 		new->newOrder=newOrder;
 		new->oldOrder=oldOrder;
 		new->SEG[0].R1=knotList[(newIdx - 1) - 1];
@@ -270,7 +272,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->numSeg=newOrder > oldOrder ? 1 : 0;
 		endIdx=newIdx;
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot;
+		new->nKnot_new=nKnot;
 		break;
 	}
 	}
@@ -281,7 +283,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 	I16PTR  KS_old=basis->ks;
 	I16PTR  KE_old=basis->ke;
 	if (flag !=ChORDER) {
-		new->k1=KS_old[(newIdx)-1];
+		new->k1_old=KS_old[(newIdx)-1];
 		new->k2_old=KE_old[(endIdx)-1];
 	}
 	else { 
@@ -294,7 +296,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 			new->k1_old=new->k2_old+1;       
 		} 
 	} 
-	new->flagMoveType=flag;
+	new->jumpType=flag;
 }
 static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
 	I32 N=info->N;
@@ -303,12 +305,12 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
 	I08PTR goodvec=(I08PTR) basis->goodvec; memset(goodvec,1,N);
 	for (int J=0; J < model->NUMBASIS; J++) {
 		TKNOT_PTR KNOT=model->b[J].KNOT;
-		I32       numKnot=model->b[J].numKnot;
+		I32       nKnot=model->b[J].nKnot;
 		if (model->b[J].type==OUTLIERID) {
-			for (int i=0; i < numKnot;++i) goodvec[KNOT[i] - 1]=0;		
+			for (int i=0; i < nKnot;++i) goodvec[KNOT[i] - 1]=0;		
 		} 
 		else {
-			for (int i=0; i < numKnot; i++) {
+			for (int i=0; i < nKnot; i++) {
 				I32 idx=KNOT[i] - 1;
 				goodvec[idx]=0;
 				goodvec[max(idx - 1,0)]=0;
@@ -342,9 +344,9 @@ static int __OO_NewIdx_MoveDeath(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
 	F32PTR deviation=model->deviation;
 	F32    minValue=1e30;
 	I32    minIdx=-1;
-	I32       numKnot=basis->numKnot;
+	I32       nKnot=basis->nKnot;
 	TKNOT_PTR KNOT=basis->KNOT;
-	for (int i=0; i < numKnot; i++) {
+	for (int i=0; i < nKnot; i++) {
 		I32 idx=KNOT[i] - 1;
 		F32 value=fabsf(deviation[idx]);
 		if (minValue > value) {
@@ -360,7 +362,7 @@ static int __OO_NewIdx_MoveDeath(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
 static void OO_Propose_0(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR info)
 {	
 	I32  goodNum=basis->goodNum; 
-	I16  numKnot=basis->numKnot;
+	I16  nKnot=basis->nKnot;
 	BEAST2_RANDSEEDPTR PRND=info->pRND;
 	MOVETYPE flag;
 	{
@@ -370,12 +372,12 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		U08  rnd=*(PRND->rnd08)++;
 		if (rnd < basis->propprob.birth) { 
 			flag=BIRTH;
-			if (numKnot >=MAXKNOTNUM )	           flag=MOVE;			
-			if (Ktotal > MAX_K_StopAddingNewTerms) flag=(numKnot==0) ? BIRTH : MOVE;			
+			if (nKnot >=MAXKNOTNUM )	           flag=MOVE;			
+			if (Ktotal > MAX_K_StopAddingNewTerms) flag=(nKnot==0) ? BIRTH : MOVE;			
 		} else if (rnd < basis->propprob.move)   
-			flag=numKnot==0 ? BIRTH : MOVE;		
+			flag=nKnot==0 ? BIRTH : MOVE;		
 		else 
-			flag=numKnot==0 ? BIRTH : DEATH;
+			flag=nKnot==0 ? BIRTH : DEATH;
 	}  
 	I32              samples=info->samples[0];	
 	if (samples > 0) { 
@@ -394,7 +396,7 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->SEG[0].R2=new->newKnot;
 		new->SEG[0].outlierKnot=new->newKnot; 
 		new->newIdx=-9999;            
-		new->numKnot_prop=numKnot+1;
+		new->nKnot_new=nKnot+1;
 		break;
 	}
 	case DEATH:
@@ -403,7 +405,7 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->newKnot=knotList[newIdx - 1];
 		new->numSeg=0;
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot - 1;
+		new->nKnot_new=nKnot - 1;
 		break;
 	}
 	case MOVE: 
@@ -415,15 +417,15 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->SEG[0].R2=new->newKnot;
 		new->SEG[0].outlierKnot=new->newKnot; 
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot;
+		new->nKnot_new=nKnot;
 		break;
 	}
 	}
 	I16PTR  KS_old=basis->ks;
 	I16PTR  KE_old=basis->ke;
 	if (flag==BIRTH) {
-		I32 numKnot=basis->numKnot;
-		new->k2_old=KE_old[numKnot - 1];
+		I32 nKnot=basis->nKnot;
+		new->k2_old=KE_old[nKnot - 1];
 		new->k1_old=new->k2_old+1;
 	}
 	else if (flag==DEATH) {
@@ -434,12 +436,12 @@ static void OO_Propose_0(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->k2_old=KE_old[newIdx - 1];
 		new->k1_old=KS_old[newIdx - 1];
 	}
-	new->flagMoveType=flag;
+	new->jumpType=flag;
 }
 static void OO_Propose_1(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR info)
 {	
 	I32  goodNum=basis->goodNum; 
-	I16  numKnot=basis->numKnot;
+	I16  nKnot=basis->nKnot;
 	BEAST2_RANDSEEDPTR PRND=info->pRND;
 	MOVETYPE flag;
 	{
@@ -449,12 +451,12 @@ static void OO_Propose_1(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		U08  rnd=*(PRND->rnd08)++;
 		if (rnd < basis->propprob.birth) { 
 			flag=BIRTH;
-			if (numKnot >=MAXKNOTNUM )	           flag=MOVE;			
-			if (Ktotal > MAX_K_StopAddingNewTerms) flag=(numKnot==0) ? BIRTH : MOVE;			
+			if (nKnot >=MAXKNOTNUM )	           flag=MOVE;			
+			if (Ktotal > MAX_K_StopAddingNewTerms) flag=(nKnot==0) ? BIRTH : MOVE;			
 		} else if (rnd < basis->propprob.move)   
-			flag=numKnot==0 ? BIRTH : MOVE;		
+			flag=nKnot==0 ? BIRTH : MOVE;		
 		else 
-			flag=numKnot==0 ? BIRTH : DEATH;
+			flag=nKnot==0 ? BIRTH : DEATH;
 	}  
 	I32              samples=info->samples[0];	
 	if (samples > 0) { 
@@ -474,7 +476,7 @@ static void OO_Propose_1(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->SEG[0].R2=info->N; 
 		new->SEG[0].outlierKnot=new->newKnot; 
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot+1;
+		new->nKnot_new=nKnot+1;
 		break;
 	}
 	case DEATH:
@@ -483,7 +485,7 @@ static void OO_Propose_1(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->newKnot=knotList[newIdx - 1];
 		new->numSeg=0;
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot - 1;
+		new->nKnot_new=nKnot - 1;
 		break;
 	}
 	case MOVE: 
@@ -495,26 +497,26 @@ static void OO_Propose_1(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->SEG[0].R2=info->N; 
 		new->SEG[0].outlierKnot=new->newKnot; 
 		new->newIdx=newIdx;
-		new->numKnot_prop=numKnot;
+		new->nKnot_new=nKnot;
 		break;
 	}
 	}
 	I16PTR  KS_old=basis->ks;
 	I16PTR  KE_old=basis->ke;
 	if (flag==BIRTH) {
-		I32 numKnot=basis->numKnot;
-		new->k2_old=KE_old[numKnot - 1];
-		new->k1=new->k2_old+1;
+		I32 nKnot=basis->nKnot;
+		new->k2_old=KE_old[nKnot - 1];
+		new->k1_old=new->k2_old+1;
 	}
 	else if (flag==DEATH) {
 		new->k2_old=KE_old[newIdx - 1];
-		new->k1=KS_old[newIdx - 1];
+		new->k1_old=KS_old[newIdx - 1];
 	}
 	else if (flag==MOVE) {
 		new->k2_old=KE_old[newIdx - 1];
-		new->k1=KS_old[newIdx - 1];
+		new->k1_old=KS_old[newIdx - 1];
 	}
-	new->flagMoveType=flag;
+	new->jumpType=flag;
 }
 void * Get_Propose(I08 id,BEAST2_OPTIONS_PTR opt) {
 	switch (id) {

@@ -1,25 +1,23 @@
-\name{Yellowstone}
-\alias{Yellowstone}
+\name{CNAchrom11}
+\alias{CNAchrom11}
+\alias{CNAchrom11}
 \docType{data}
-\title{30 years' AVHRR NDVI data at a Yellostone site}
+\title{DNA copy number alteration data in array-based CGH data for Chromesome 11}
 \description{
-  \code{Yellowstone} is a vector comprising 30 years' AVHRR NDVI data at a Yellostone site
+  \code{CNAchrom11} is a vector of the log2 intensity ratios for cell line GM03576 for Chromosome 11, obtained from Snijders et al. (2001).
 }
 \usage{
-    data(Yellowstone)
+    data(CNAchrom11)
 }
 \source{
-Rbeast v0.9.1
+ Snijders et al. (2001), Assembly of microarrays for genome-wide measurement of DNA copy number, Nature Genetics, 29, 263-264 (http://www.nature.com/ng/journal/v29/n3/full/ng754.html).
 }
  
 \examples{
-library(Rbeast)
-data(Yellowstone)
-plot(Yellowstone,type='l')
-\donttest{
-result=beast(Yellowstone)
-plot(result)
-}
+
+ library(Rbeast)
+ data(CNAchrom11)  
+ 
 }
 \keyword{misc}
 
@@ -31,4 +29,3 @@ plot(result)
 }
 
 }
-

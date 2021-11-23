@@ -34,6 +34,7 @@
 			\itemize{
 				\item  If \code{y} is regular (i.e., evenly-spaced in time), use the \code{\link[Rbeast]{beast}}function instead.
 				\item  If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
+ 
             }  
   }
 
@@ -205,7 +206,7 @@
 } %value
  
 \seealso{
-  \code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}} ,\code{\link[Rbeast]{beast}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{geeLandsat}}  
+  \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
 }
 
  

@@ -11,7 +11,8 @@
 	"  ?beast       - for a single regular time series (ts)\n",
 	"  ?beast.irreg - for a single irregular time series\n",
 	"  ?beast123    - for one, multiple, or 3D array of regular/irregular ts\n",
-	"  ?minesweeper - a poor man\'s implementation of the minesweeper game\n"
+	"  ?minesweeper - a poor man\'s implementation of the minesweeper game\n",
+	"  ?tetris      - a poor man\'s implementation of the tetris game (Windows only)\n"
 	)
   }
    
@@ -20,9 +21,8 @@
 
 .onLoad <- function(libname, pkgname) {
    #library.dynam("beast", pkgname, libname )
-   utils::data(simdata, package=pkgname,         envir=parent.env(environment())) 
+   #utils::data(simdata, package=pkgname,         envir=parent.env(environment())) 
    #utils::data(modis_ohio, package=pkgname,      envir=parent.env(environment())) 
-   #utils::data(simAnnualData01, package=pkgname,    envir=parent.env(environment())) 
 }
 
 .onUnload <- function(libpath) {

@@ -10,7 +10,7 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,
 	U08PTR  goodVec=basis->goodvec;
 	I32       MINSEP=basis->prior.minSepDist;
 	TKNOT_PTR knotList=basis->KNOT;
-	MOVETYPE flag=new->flagMoveType;
+	MOVETYPE flag=new->jumpType;
 	if (flag==BIRTH) 
 		r_ippsSet_8u(0,goodVec+(newKnot - MINSEP) - 1,2 * MINSEP+1);	
 	else if (flag==DEATH) {
@@ -55,44 +55,44 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,
 			memcpy((T*)dst+(newIdx+1) - 1,(T*)dst+(newIdx+2) - 1,sizeof(T)* (n - (newIdx+2L)+1L));
 #define DoNothing(dst,n,T) ;
 	TORDER_PTR orderList=basis->ORDER; 	
-    I32        numKnot=basis->numKnot;
+    I32        nKnot=basis->nKnot;
 	switch (flag)
 	{
 	case BIRTH: {
-		InsertNewElem(knotList,numKnot+1L,newIdx,newKnot,TKNOT);
-		RepeatElem(orderList,numKnot+1,newIdx,TORDER);  
+		InsertNewElem(knotList,nKnot+1L,newIdx,newKnot,TKNOT);
+		RepeatElem(orderList,nKnot+1,newIdx,TORDER);  
 		break;
 	}
 	case DEATH: {
-		DeleteElem(knotList,numKnot+1,newIdx,TKNOT);
-		DeleteElem(orderList,numKnot+1,newIdx,TORDER);   
+		DeleteElem(knotList,nKnot+1,newIdx,TKNOT);
+		DeleteElem(orderList,nKnot+1,newIdx,TORDER);   
 		break;
 	}
 	case MERGE: {
-		MergeTwoElemWithNewValue(knotList,numKnot+1L,newIdx,newKnot,TKNOT);
-		DeleteElem(orderList,numKnot+1,newIdx+1,TORDER);  
+		MergeTwoElemWithNewValue(knotList,nKnot+1L,newIdx,newKnot,TKNOT);
+		DeleteElem(orderList,nKnot+1,newIdx+1,TORDER);  
 		break;
 	}
 	case MOVE: 
 	{
-		ReplaceElem(knotList,numKnot+1,newIdx,newKnot,TKNOT)
-		DoNothing(orderList,numKnot+1,TORDER);        
+		ReplaceElem(knotList,nKnot+1,newIdx,newKnot,TKNOT)
+		DoNothing(orderList,nKnot+1,TORDER);        
 		break;
 	}
 	case ChORDER:
 	{
-		DoNothing(knotList,numKnot+1,TKNOT);
-		ReplaceElem(orderList,numKnot+1,newIdx,new->newOrder,TORDER);  
+		DoNothing(knotList,nKnot+1,TKNOT);
+		ReplaceElem(orderList,nKnot+1,newIdx,new->newOrder,TORDER);  
 		break;
 	}
 	}
-	basis->numKnot=new->numKnot_prop;
+	basis->nKnot=new->nKnot_new;
 }
 static void OO_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 Npad16_not_used)
 {
 	rI32     newKnot=new->newKnot;
 	rU08PTR  goodVec=basis->goodvec;
-	MOVETYPE flag=new->flagMoveType;
+	MOVETYPE flag=new->jumpType;
 	if (flag==BIRTH) {
 		goodVec[newKnot - 1]=0;
 		basis->goodNum--;
@@ -108,26 +108,26 @@ static void OO_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I3
 		goodVec[newKnot - 1]=0;
 	}
 	TKNOT_PTR knotList=basis->KNOT;
-	I32       numKnot=basis->numKnot;
+	I32       nKnot=basis->nKnot;
 	switch (flag)
 	{
 	case BIRTH: {
-		knotList[numKnot+1 - 1]=newKnot;
+		knotList[nKnot+1 - 1]=newKnot;
 		break;
 	}
 	case DEATH: {
 		I32 newIdx=new->newIdx;
-		DeleteElem(knotList,numKnot,newIdx,TKNOT);
+		DeleteElem(knotList,nKnot,newIdx,TKNOT);
 		break;
 	}
 	case MOVE: 
 	{
 		I32 newIdx=new->newIdx;
-		ReplaceElem(knotList,numKnot,newIdx,newKnot,TKNOT)
+		ReplaceElem(knotList,nKnot,newIdx,newKnot,TKNOT)
 			break;
 	}
 	}
-	basis->numKnot=new->numKnot_prop;
+	basis->nKnot=new->nKnot_new;
 }
 void* Get_UpdateGoodVec(I08 id) {
 	if      (id==SEASONID)    return DSVT_UpdateGoodVecForNewTerm;

@@ -181,7 +181,7 @@ void UpdateXtXPrec_nTermsPerGrp_prec3(BEAST2_MODEL_PTR model,BEAST2_BASIS_PTR ba
 		}
 	}
 	else if (basis->type==OUTLIERID) {
-		numTerms[0]=NEW.numKnot_prop;
+		numTerms[0]=NEW.nKnot_new;
 	}
 #undef  NEW
 }

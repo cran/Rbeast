@@ -14,10 +14,10 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,I32 * MAX_COL) {
 	#define MODEL (*model)
+     #define MAX_NUM_NEW_SEG 2
 	I32 MXNCOL_PERSEG1=MODEL.sid >=0 ? (MODEL.b[MODEL.sid].prior.maxOrder)*2L : -999;  	
 	I32 MXNCOL_PERSEG2=MODEL.tid >=0 ? (MODEL.b[MODEL.tid].prior.maxOrder+1L) : -999;    
 	I32 MXNCOL_PERSEG3=MODEL.did >=0 ? opt->io.meta.period : -999;                       
-	#define MAX_NUM_NEW_SEG 2
 	I32 MAXNUMCOL_Xnewterm=max3(MXNCOL_PERSEG1,MXNCOL_PERSEG2,MXNCOL_PERSEG3) * MAX_NUM_NEW_SEG;
 	I32 MAX_TOTAL_SEGNUM=0;
 	for (int i=0; i < MODEL.NUMBASIS; i++)	MAX_TOTAL_SEGNUM+=(MODEL.b[i].prior.maxKnotNum+1);

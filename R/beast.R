@@ -1,5 +1,5 @@
 beast <- function(  y,                        
-				  start  = 1, deltat = 1, 
+				    start  = 1, deltat = 1, 
 					season = c('harmonic','dummy','none'),
 					freq   = NA,                  
 					scp.minmax=c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
@@ -19,21 +19,40 @@ beast <- function(  y,
   #detrend = FALSE; deseasonalize=FALSE
   #mcmc.seed=0;  mcmc.burin=200; mcmc.chains=3; mcmc.thin=5; mcmc.samples=8000
   #gui=FALSE
+  season=match.arg(season)
   
   if ( !hasArg("y") || is.list(y) )  {
     stop("Something is wrong with the input 'y'. Make sure that y is a vector")
-    invisible(return(NULL))
+    invisible(return(NULL))         
   }  
   if ( is.matrix(y) )  {
-    dims=dim(y);
+    dims=dim(y)
 	if (dims[1]>1 && dims[2]>1) {	
 		stop("If there are multiple time series to process (e.g., stacked images), pls use the beast123() function. Type ?beast123 for more information!")
 		invisible(return(NULL))
 	}	
 	y=as.vector(y);
   }  
+   
   c=class(y); 
-  if ( sum(c=='ts')>0 || sum(c=='zoo')>0 || sum(c=='xts')>0 )  {    
+  if (  sum(c=='ts')>0 ){
+      tsp   =attributes(y)$tsp
+	  start =tsp[1]
+	  end   =tsp[2]
+	  deltat=(end-start)/(length(y)-1)
+	  freq=tsp[3]
+	  if (  freq==1 && season!='none'){
+	   warning("The input is a object of class ts with a frequency of 1 (trend-only data), season='none' is used instead.");
+	   season='none'
+	  }
+	  else if (  freq >1 && season=='none'){
+	   s=sprintf("The input is a object of class ts with a frequency of %d (with a periodic component), season='harmonic' is used instead.", freq)
+  	   warning(s);
+	   season='harmonic'
+	  }
+  }
+  if (sum(c=='zoo')>0 || sum(c=='xts')>0 )  {  
+        warning("The input is a object of class 'zoo' or 'xts'. Its time attributes are not ignored, and only the data vector is used.");  
     	y=as.vector(y);
   }  
   if (length(y)==1) {
@@ -41,7 +60,46 @@ beast <- function(  y,
 	invisible(return(NULL))
   }
 
- season=match.arg(season)
+#################################################################################
+#################################################################################
+  syscall = sys.call()
+  if( length(syscall)==3 ) {
+       call3    = syscall[[3]]
+       arg2     = eval(call3,envir = parent.frame())
+	   argname2 = names(syscall)[[3]]
+	   if( is.null(argname2) ){ argname2=''}
+       if (is.numeric(arg2) && length(arg2)==1 && argname2=='') {
+          s=sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,freq=%d)\n', arg2);   warning(s);
+		  freq=arg2;
+          invisible( return( beast.old(y,freq) )  )
+       }
+     
+       if (is.list(arg2)) {
+          
+          
+          valname2 = deparse(syscall[[3]])
+          if (  argname2 == '' && valname2 =='opt' )     {
+              s=sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,opt)\n');  warning(s);
+			  opt=arg2;
+			  invisible( return( beast.old(y,opt) )  )
+          } else if (argname2 == 'option' )    {
+              s  =sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,option=)\n');  warning(s);
+			  opt=arg2;
+			  invisible( return( beast.old(y,option=opt) )  )
+          }
+        } 
+        
+     }
+   # eval(substitute(alist(...)))
+   # substitute(alist(...))
+   # ...names()
+   # ...length()
+   # ...1
+ #################################################################################
+#################################################################################  
+
+
+
  # tmplist=list(...)
 #......Start of displaying 'MetaData' ......
    metadata = list()
@@ -111,14 +169,10 @@ beast <- function(  y,
    #extra$numParThreads        = 0
  
  
- funstr=ifelse(!gui,"beastv4","beastv4demo")
- 
- ANS=.Call(  BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   
-		   
- invisible(return(ANS))
-    
+ funstr = ifelse(!gui,"beastv4","beastv4demo") 
+ ANS    = .Call(  BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
+ invisible(return(ANS))    
 }
-
 
 meanfilter <- function(x,n=5){filter(x,rep(1,n), sides=2)}
 

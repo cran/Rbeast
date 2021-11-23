@@ -333,7 +333,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam) 
 					   F32 x=(max(950 - pos,0));
 					   x=x*x*x*x;
 					   gData.sleepInterval=1e-9 * x;
-					   wsprintf(str,"%d%d",pos,gData.sleepInterval);
+					   wsprintf(str,"%d %d",pos,gData.sleepInterval);
 	}
 		break;
 	case WM_COMMAND:
@@ -473,9 +473,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam) 
 			char str[100];
 			wsprintf(str,"Chain #%d is finished\r\n",gData.curChainNumber);
 			LoggerInsert(str);
-			sprintf(str,"Mean number of scp is%8.2f\r\n",gData.sN);
+			sprintf(str,"Mean number of scp is %8.2f\r\n",gData.sN);
 			LoggerInsert(str);
-			sprintf(str,"Mean number of tcp is%8.2f\r\n",gData.tN);
+			sprintf(str,"Mean number of tcp is %8.2f\r\n",gData.tN);
 			LoggerInsert(str);
 		}
 		LeaveCriticalSection(&gData.cs);

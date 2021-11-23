@@ -344,12 +344,12 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 	}
 	return numCpt;
 }
-void WriteF32ArraryToStrideMEM(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset,DATA_TYPE dataType) 
+void WriteF32ArraryToStrideMEM(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset,DATA_TYPE dtype) 
 {
-	if ( dataType==DATA_FLOAT  )	{	  
+	if ( dtype==DATA_FLOAT  )	{	  
 		f32_to_strided_f32(src,dst,N,stride,dstOffset);
 	}
-	else if (dataType==DATA_DOUBLE) {
+	else if (dtype==DATA_DOUBLE) {
 		f32_to_strided_f64(src,dst,N,stride,dstOffset);
 	}
 }

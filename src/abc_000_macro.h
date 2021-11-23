@@ -1,6 +1,6 @@
 #pragma once
-#define R_INTERFACE     1
-#define M_INTERFACE     0
+#define R_INTERFACE    1
+#define M_INTERFACE    0
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
 #define MATLAB_LIBRARY  0 
@@ -57,6 +57,9 @@
 	#else
 		#define TARGET_32
 	#endif
+#endif
+#if defined(__aarch64__)
+    #define  ARM64_OS
 #endif
 #if defined(TARGET_32) && defined (MSVC_COMPILER)
 	#define _CRT_SECURE_NO_WARNINGS

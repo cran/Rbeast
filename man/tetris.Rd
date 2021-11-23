@@ -1,48 +1,50 @@
-\name{minesweeper}
+\name{tetris}
 \docType{methods}
-\alias{minesweeper}
- 
-\title{The Minesweeper game in R}
+\alias{tetris}
+\alias{Tetris}
+\title{The Tetris game in R}
 \description{
-   A poor man's implemenation of the minesweeper game in R. Yes, you are right: it has nothing to do with time series decomposistion, changepoint detection, and time series segmentation. Its only remote connetion to Rbeast is that this is a practice script I wrote to learn R graphics for implementing Rbeast.
+   A poor man's implemenation of the Tetris game in R. Yes, you are right again: it has nothing to do with time series decomposistion, changepoint detection, and time series segmentation. Its only remote connetion to Rbeast is that this is a practice script I wrote to learn R graphics for implementing Rbeast.
   }
 \usage{
-	minesweeper(height=15, width=12, prob=0.1) 
+	tetris(height=25, width=14, speed=0.6) 
 }
 \arguments{
   
   \item{height}{integer; number of rows of the mine grid along the vertical direction.}
   \item{width}{integer; number of columns of the mine grid along the horizontal direction.}
-  \item{prob}{ numeric; a fraction between 0 and 1 to specify the probabity of mine occurrence in the mine grid.}   
+  \item{speed}{ numeric; a time interval between 0.05 and 2 seconds, specifying how fast the tetriminos moves down. The smaller, the faster.}   
  
 }
 
 \value{
 	Instructions:
 		\itemize{
-		 \item  LEFT-click to clear a spot.
-		 \item  RIGHT-click to flag a spot.
-		 \item  MIDDEL-click(wheel) a cleared and numbered spot to open neighor spots, if flagged correctly.
-		 \item  Click Restart for a new game
+		 \item  Left arrow to move left.
+		 \item  Right arrow to move right.
+		 \item  Up arrow to rotate.
+		 \item  Down arrow to speed up.
+		 \item  Space key to sink to the bottom.
 		}
  
 }
 
 \note{
-    An interactive graphics window is needed to run this function correctly. So it won't run in RStudio's plot pane. The function will use the x11() or x11(type='Xlib') graphic device to open a pop-up window.
+    This function works only under the Windows OS not Linux or Mac. An interactive graphics window is needed to run this function correctly. So it won't run in RStudio's plot pane. The function will use the x11() or x11(type='Xlib') graphic device to open a pop-up window.
 }
  
 \seealso{
-  \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
+  \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{geeLandsat}} 
 }
 \examples{
 \donttest{
 
  library(Rbeast)
- minesweeper() 
  
- # A mine field of size 20x25 with rougly a 15% of the spots being mines.
- minesweeper(20,25,0.15) 
+ tetris() 
+ 
+ # A  field of size 20x25 with the blocks moving down every 0.1 second.
+ tetris(20,25,0.1) 
 }
 
 }

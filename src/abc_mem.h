@@ -5,11 +5,11 @@
 typedef struct MemPointers MemPointers;
 struct MemPointers
 {
-	I64     bytesAllocated;
+	I64         bytesAllocated;
 	VOID_PTR * memPointer;
-	I08PTR     mem64Aligned;
-	I16  npts;
-	I16  nptsMax;
+	I08PTR     memAlignOffset;
+	I16        npts;
+	I16        nptsMax;
 	void       (*init)(     MemPointers *  self);
 	VOID_PTR   (*alloc)(    MemPointers *  self,I64 size,U08 alignment);
 	VOID_PTR   (*alloc0)(   MemPointers *  self,I64 size,U08 alignment);

@@ -2165,7 +2165,7 @@ HEIGHT=800
 #if (.Platform$OS.type == "windows")     x11(width=WIDTH/dpi , height=HEIGHT/dpi           )
 #else                                    x11(width=WIDTH/dpi , height=HEIGHT/dpi, type = "Xlib")
 
-dpi <<- get.dpi() 
+dpi = get.dpi() 
 new.interactiveWindow(width=WIDTH/dpi , height=HEIGHT/dpi)
 
 x0<-0.01

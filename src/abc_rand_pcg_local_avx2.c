@@ -5,7 +5,6 @@
 #include "abc_datatype.h"
 #include "abc_ide_util.h"
 #include "abc_vec.h"
-#include "abc_math_avx.h"
 #include "abc_rand_pcg_global.h"
 #include "abc_rand_pcg_local.h"
 #ifdef MSVC_COMPILER
@@ -20,7 +19,8 @@
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
      #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
 #endif
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64)
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#include "abc_math_avx.h"
 #define PCG_DEFAULT_MULTIPLIER_64  6364136223846793005ULL 
 #define PCG_DEFAULT_INCREMENT_64   1442695040888963407ULL 
 #define PCG_DEFAULT_GLOBAL_STATE_64     0x853c49e6748fea9bULL

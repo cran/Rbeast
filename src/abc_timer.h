@@ -2,10 +2,10 @@
 #include "abc_000_macro.h"
 #include "abc_datatype.h"
 #ifdef MSVC_COMPILER
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>          
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>          
 #elif defined( __MACH__)
-#include <mach/mach_time.h>
+    #include <mach/mach_time.h>
 #endif
 #ifdef _WIN32
     #include <windows.h>
@@ -36,11 +36,18 @@ extern void SetBreakPointForStartedTimer();
 extern F64  GetElaspedTimeFromBreakPoint();
 extern U64  TimerGetTickCount();
 #ifdef MSVC_COMPILER
-    #include <intrin.h>  
+    #include <intrin.h>    
 #elif defined(SOLARIS_COMPILER)
    #include <sys/time.h>
-    static  unsigned long long __rdtsc() {
+    static INLINE   unsigned long long __rdtsc() {
         return  gethrtime();
+    }
+#elif defined(ARM64_OS)
+  static INLINE  U64 __rdtsc(void)   {  return  __builtin_readcyclecounter();  }
+    static INLINE U64 rdtsc(void)     {
+        U64 val;
+        asm volatile("mrs %0,cntvct_el0" : "=r" (val));
+        return val;
     }
 #else
     #include <x86intrin.h> 
@@ -48,5 +55,5 @@ extern U64  TimerGetTickCount();
 static INLINE unsigned long long readTSC() {
     return __rdtsc();
 }
-extern void tic();
+extern void               tic();
 extern unsigned long long toc();

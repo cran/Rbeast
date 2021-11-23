@@ -323,19 +323,19 @@ int GetCPUInfo() {
 }
 void PrintCPUInfo() {
     r_printf("\nCPU Information:\n");
-    r_printf("Number of NUMA nodes:%d\n",cpuInfo.numaNodeCount);
-    r_printf(("Number of physical processors (sockets):%d\n"),cpuInfo.processorPackageCount);
-    r_printf(("Number of processor cores:%d\n"),cpuInfo.processorCoreCount);
-    r_printf(("Number of logical processors:%d\n"),cpuInfo.logicalProcessorCount);
-    r_printf("Number of processor groups:%d\n",cpuInfo.processorGroupCount);
+    r_printf("Number of NUMA nodes: %d\n",cpuInfo.numaNodeCount);
+    r_printf(("Number of physical processors (sockets): %d\n"),cpuInfo.processorPackageCount);
+    r_printf(("Number of processor cores: %d\n"),cpuInfo.processorCoreCount);
+    r_printf(("Number of logical processors: %d\n"),cpuInfo.logicalProcessorCount);
+    r_printf("Number of processor groups: %d\n",cpuInfo.processorGroupCount);
     for (int i=0; i < cpuInfo.processorGroupCount; i++) {
-        r_printf("--Processor group #%d:%d cores\n",i,cpuInfo.coreCountPerGrp[i]);
+        r_printf("--Processor group #%d: %d cores\n",i,cpuInfo.coreCountPerGrp[i]);
     }
-    r_printf(("Number of processor L1/L2/L3 caches:%d/%d/%d\n"),cpuInfo.processorL1CacheCount,
+    r_printf(("Number of processor L1/L2/L3 caches: %d/%d/%d\n"),cpuInfo.processorL1CacheCount,
         cpuInfo.processorL2CacheCount,cpuInfo.processorL3CacheCount);
-    r_printf("Group ID of current thread:%d\n",cpuInfo.currentGroup);
-    r_printf("Core ID of current thread:%d\n",cpuInfo.currentCoreNumber);
-    r_printf("CPU affinity mask of current thread:%#x\n",cpuInfo.currentThreadAffinity);
+    r_printf("Group ID of current thread: %d\n",cpuInfo.currentGroup);
+    r_printf("Core ID of current thread: %d\n",cpuInfo.currentCoreNumber);
+    r_printf("CPU affinity mask of current thread: %#x\n",cpuInfo.currentThreadAffinity);
 }
  void CPU_ZERO(cpu_set_t* cpus) {
     memset(cpus,0,sizeof(cpu_set_t));

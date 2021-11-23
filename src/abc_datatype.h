@@ -60,6 +60,8 @@ extern "C" {
 	typedef uint16_t* _restrict U16PTR;
 	typedef int8_t* _restrict I08PTR;
 	typedef uint8_t* _restrict U08PTR;
+	typedef  I08PTR I08PTR08; 
+	typedef  U08PTR U08PTR08; 
 	typedef void* _restrict  VOID_PTR;
 	typedef void* _restrict  VOIDPTR;
 	#define rFLOATPTR	register  FLOATPTR

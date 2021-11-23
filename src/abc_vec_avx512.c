@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include <immintrin.h>
-#include "math.h" 
+#include <math.h>         
+#include "abc_000_macro.h"
 #include "abc_000_warning.h"
 #ifdef CLANG_COMPILER
     #pragma clang optimize on
@@ -13,14 +13,13 @@
 	 #pragma GCC target("avx,avx2,avx512f,avx512dq,avx512bw,avx512vl") 
 #endif
 #include "abc_vec.h"
-#include "abc_math_avx512.h"
 #if defined(WIN64_OS)||defined(WIN32_OS)
     #include <malloc.h> 
 #else
     #include <alloca.h> 
 #endif
 #ifdef MSVC_COMPILER
-#define __attribute__(x)
+    #define __attribute__(x)
 #endif
 #define NF        16
 #define NF2       (NF*2)
@@ -42,7 +41,9 @@
 #define add         _mm512_add_ps
 #define sub         _mm512_sub_ps
 #define addi32      _mm512_add_epi32
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64)
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#include <immintrin.h>
+#include "abc_math_avx512.h"
 static __mmask16 masktemplate[16];
 static INLINE void      FillMaskTemplate() {   for (I32 i=0; i < 16; i++)    masktemplate[i]=(1UL << i) - 1UL;  }
 static INLINE __mmask16  __attribute__((always_inline)) GetMoveMask(int n)  {

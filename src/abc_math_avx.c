@@ -1,7 +1,4 @@
-#include <immintrin.h>
 #include "abc_000_warning.h"
-#include "abc_vec.h"
-#include "abc_math_avx.h"
 #ifdef CLANG_COMPILER
     #pragma clang optimize on
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))),apply_to=function)
@@ -31,7 +28,10 @@
 #define add         _mm256_add_ps
 #define sub         _mm256_sub_ps
 #define addi32      _mm256_add_epi32
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64)
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#include <immintrin.h>
+#include "abc_vec.h"
+#include "abc_math_avx.h"
 #ifdef MSVC_COMPILER
     # define ALIGN32_BEG __declspec(align(32))
     # define ALIGN32_END 

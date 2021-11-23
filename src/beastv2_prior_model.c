@@ -38,8 +38,8 @@ static F32 ST_ModelPriorFactor1(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
 	I32  Kold=basis->K;
 	I32  Knew=Kold+(new->k2_new-new->k2_old);
 	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
-	I32  Sold=basis->numKnot+1;
-	I32  Snew=new->numKnot_prop+1;
+	I32  Sold=basis->nKnot+1;
+	I32  Snew=new->nKnot_new+1;
 	I32 O1=basis->prior.minOrder+(basis->type==TRENDID);
 	I32 O2=basis->prior.maxOrder+(basis->type==TRENDID);
 	I32 NUMORDER=basis->prior.maxOrder - basis->prior.minOrder;
@@ -47,13 +47,13 @@ static F32 ST_ModelPriorFactor1(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
 	F64 NEW=K_OUT_OF_N(Knew - Snew * (O1 - 1) -1,Snew-1);
 	F32 factor0=OLD/NEW  * (F32)(NUMORDER*Sold+1)/(NUMORDER*Snew+1);	
 	F32 factor;
-	if (new->flagMoveType==ChORDER)  
+	if (new->jumpType==ChORDER)  
 		factor=factor0; 
-	else if (new->flagMoveType==BIRTH) {
-		factor=(F32)basis->goodNum/(N - basis->numKnot);
+	else if (new->jumpType==BIRTH) {
+		factor=(F32)basis->goodNum/(N - basis->nKnot);
 		factor=factor0 * factor;
 	} else {
-		factor=(F32)(basis->goodNum+basis->prior.minSepDist*2)/(N-new->numKnot_prop);
+		factor=(F32)(basis->goodNum+basis->prior.minSepDist*2)/(N-new->nKnot_new);
 		factor=factor0/factor;
 	}
 	return (F32) log(factor);
@@ -62,22 +62,22 @@ static F32 ST_ModelPriorFactor2(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
 	I32  Kold=basis->K;
 	I32  Knew=Kold+(new->k2_new-new->k2_old);
 	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
-	I32  Sold=basis->numKnot+1;
-	I32  Snew=new->numKnot_prop+1;
+	I32  Sold=basis->nKnot+1;
+	I32  Snew=new->nKnot_new+1;
 	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder; 
 	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
 	F64PTR MAT=basis->priorMat;
 	F32    factor0=MAT[(Sold-1) * KMAX+Kold - 1] * (NUMORDER*Sold+1L)
 		              /( MAT[(Snew-1) * KMAX+Knew - 1] * (NUMORDER*Snew+1L));
 	F32 factor;
-	if (new->flagMoveType==ChORDER)  
+	if (new->jumpType==ChORDER)  
 		factor=factor0; 
-	else if (new->flagMoveType==BIRTH) {
-		factor=(F32)basis->goodNum/(N - basis->numKnot);
+	else if (new->jumpType==BIRTH) {
+		factor=(F32)basis->goodNum/(N - basis->nKnot);
 		factor=factor0 * factor;
 	}
 	else {
-		factor=(F32)(basis->goodNum+basis->prior.minSepDist*2)/(N-new->numKnot_prop);
+		factor=(F32)(basis->goodNum+basis->prior.minSepDist*2)/(N-new->nKnot_new);
 		factor=factor0/factor;
 	}
 	return log(factor);
@@ -89,13 +89,13 @@ static F32 ST_ModelPriorFactor3(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
 		if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
 	    F32 factor0=basis->priorVec[Knew-1] - basis->priorVec[Kold - 1];
 		F32 factor;
-		if (new->flagMoveType==ChORDER)
+		if (new->jumpType==ChORDER)
 			factor=factor0;
-		else if (new->flagMoveType==BIRTH) {
-			factor=(F32)basis->goodNum/(N - basis->numKnot+1);
+		else if (new->jumpType==BIRTH) {
+			factor=(F32)basis->goodNum/(N - basis->nKnot+1);
 			factor=factor0+log( factor);
 		}	else {
-			factor=(F32)(basis->goodNum+basis->prior.minSepDist * 2)/(new->numKnot_prop+1);
+			factor=(F32)(basis->goodNum+basis->prior.minSepDist * 2)/(new->nKnot_new+1);
 			factor=factor0 -log(factor);
 		}
 		return (factor);	  
@@ -105,8 +105,8 @@ static F32 ST_ModelPriorFactor4(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
 	I32  Kold=basis->K;
 	I32  Knew=Kold+(new->k2_new-new->k2_old);
 	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
-	I32  Sold=basis->numKnot+1;
-	I32  Snew=new->numKnot_prop+1; 
+	I32  Sold=basis->nKnot+1;
+	I32  Snew=new->nKnot_new+1; 
 	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder; 
 	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
 	F64PTR MAT=basis->priorMat;
@@ -116,9 +116,9 @@ static F32 ST_ModelPriorFactor4(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
 static F32 ST_ModelPriorFactor5(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
 {
 	F32 factor=0;
-	int delta_k1=basis->numKnot;
+	int delta_k1=basis->nKnot;
 	delta_k1++;
-	int delta_k2=new->numKnot_prop;
+	int delta_k2=new->nKnot_new;
 	delta_k2++;
 	I32 Kold=basis->K;
 	I32 Knew=basis->K+new->k2_new - new->k2_old;

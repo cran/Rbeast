@@ -1,16 +1,15 @@
-#include <immintrin.h>
+
 #include <math.h> 
 #include <stdio.h>
 #include <string.h>
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
+#include "abc_vec.h"
 #if defined (WIN64_OS)||defined(WIN32_OS)
     #include <malloc.h> 
 #else
     #include <alloca.h> 
 #endif
-#include "abc_vec.h"
-#include "abc_math_avx.h"
 #ifdef MSVC_COMPILER
     #define __attribute__(x)
 #endif
@@ -43,7 +42,9 @@
 #define add         _mm256_add_ps
 #define sub         _mm256_sub_ps
 #define addi32      _mm256_add_epi32
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64)
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#include <immintrin.h>
+#include "abc_math_avx.h"
 #if defined(MSVC_COMPILER)
 static INLINE __m256i GetMoveMask(int n) {
     __m128i maskIdx=_mm_cvtsi64_si128(0x0706050403020100);

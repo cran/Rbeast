@@ -44,9 +44,9 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 	MODEL.prop.XtY=MyALLOC(*MEM,K_MAX * q,F32,64);
 	MODEL.prop.cholXtX=MyALLOC(*MEM,K_MAX * K_MAX,F32,64);
 	MODEL.prop.beta_mean=MyALLOC(*MEM,K_MAX * q,F32,64);
-	MODEL.deviation=MyALLOC(*MEM,(N*q)+(q)+(Npad16),F32,64);	
+	MODEL.deviation=MyALLOC(*MEM,(N*q)+(q),F32,64);	
 	MODEL.avgDeviation=MODEL.deviation+N*q;
-	MODEL.extremePosVec=MODEL.avgDeviation+q;
+	MODEL.extremePosVec=MyALLOC(*MEM,Npad16,I08,8);
 	MODEL.NUMBASIS=opt->prior.numBasis;
 	I32   NumBasis=MODEL.NUMBASIS;
 	for (int i=0; i < NumBasis; i++)

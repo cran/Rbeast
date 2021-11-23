@@ -77,7 +77,7 @@ static void fetch_next_timeSeries_MEM_reglular(A(YINFO_PTR)  yInfo,int idx,A(IO_
 	I32    q=io->q; 
 	F32PTR Y=yInfo->Y;
 	for (I32 i=0; i < q; i++) {
-		CopyStrideMEMToF32Arr(Y+i * N,io->pdata[i],N,stride,offset,io->dataType);
+		CopyStrideMEMToF32Arr(Y+i * N,io->pdata[i],N,stride,offset,io->dtype[i]);
 		f32_set_nan_by_value(Y+i * N,N,io->meta.missingValue);
 	}
 }
@@ -89,7 +89,7 @@ static void fetch_next_timeSeries_MEM_irregular(A(YINFO_PTR)  yInfo,int idx,F32P
 	I32    q=io->q; 
 	F32PTR Y=yInfo->Y;	
 	for (I32 i=0; i < q; i++) {
-		CopyStrideMEMToF32Arr(GlobalMEMBuf,io->pdata[i],Nraw,stride,offset,io->dataType);
+		CopyStrideMEMToF32Arr(GlobalMEMBuf,io->pdata[i],Nraw,stride,offset,io->dtype[i]);
 		f32_set_nan_by_value(GlobalMEMBuf,Nraw,io->meta.missingValue);
 		tsAggegrationPerform(Y+Nnew*i,Nnew,GlobalMEMBuf,Nraw,io->T.numPtsPerInterval,io->T.sortedTimeIdx+io->T.startIdxOfFirsInterval);
 	}			

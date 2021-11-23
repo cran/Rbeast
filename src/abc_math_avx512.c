@@ -1,6 +1,4 @@
-#include <immintrin.h>
 #include "abc_000_warning.h"
-#include "abc_vec.h"
 #ifdef CLANG_COMPILER
     #pragma clang optimize on
 	#pragma clang attribute push (__attribute__((target("avx,avx2,avx512f,avx512dq,avx512bw"))),apply_to=function)
@@ -10,7 +8,9 @@
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
 	 #pragma GCC target("avx,avx2,avx512f,avx512dq,avx512bw") 
 #endif
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64)
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#include <immintrin.h>
+#include "abc_vec.h"
 #ifdef MSVC_COMPILER
     # define ALIGN64_BEG __declspec(align(64))
     # define ALIGN64_END 

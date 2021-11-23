@@ -67,11 +67,11 @@ static void GetOutputOffsetStride(A(IO_PTR) io,I64 idx,I64 N,I64* pStride,I64* p
 	*pStride=stride;
 	*pOffset=offset;
 }
-void  A(WriteOutput)(A(OPTIONS_PTR) opt,A(RESULT_PTR) result,I64 pixelIndex)
+void  BEAST2_WriteOutput(A(OPTIONS_PTR) opt,A(RESULT_PTR) result,I64 pixelIndex)
 {
 	A(IO_PTR)       io=&opt->io;
 	A(RESULT_PTR)   mat=io->out.result;
-	DATA_TYPE datType=io->out.dataType;
+	DATA_TYPE datType=io->out.dtype;
 	const I64 N=io->N;
 	const I64 seasonMaxKnotNum=opt->prior.seasonMaxKnotNum;
 	const I64 trendMaxKnotNum=opt->prior.trendMaxKnotNum;
@@ -208,7 +208,7 @@ void  MR_WriteOutput(A(OPTIONS_PTR) opt,A(RESULT_PTR) result,I64 pixelIndex)
 {
 	A(IO_PTR)       io=&opt->io;
 	A(RESULT_PTR)   mat=io->out.result;
-	DATA_TYPE datType=io->out.dataType;
+	DATA_TYPE datType=io->out.dtype;
 	const I64 N=io->N;
 	const I64 q=io->q;
 	const I64 seasonMaxKnotNum=opt->prior.seasonMaxKnotNum;
@@ -231,9 +231,11 @@ void  MR_WriteOutput(A(OPTIONS_PTR) opt,A(RESULT_PTR) result,I64 pixelIndex)
 		len=1,offset=(pixelIndex - 1) * q,stride=1;
 		WriteF32ArraryToStrideMEM(result->RMSE+i,mat[i].RMSE,len,stride,offset,datType);
 	}
-	if (opt->extra.dumpInputData) {
-		len=N;  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
-		WriteF32ArraryToStrideMEM(result->data,mat->data,len,stride,offset,datType);
+	if (opt->extra.dumpInputData) {	
+		for (I32 i=0; i < q;++i) {
+			len=N;  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
+			WriteF32ArraryToStrideMEM(result->data+i*N,mat[i].data,len,stride,offset,datType);
+		}
 	}
 	#define  _(x) WriteF32ArraryToStrideMEM((F32PTR)result->x,mat->x,len,stride,offset,datType)
 	#define  _2(x,y) _(x),_(y)
@@ -242,11 +244,11 @@ void  MR_WriteOutput(A(OPTIONS_PTR) opt,A(RESULT_PTR) result,I64 pixelIndex)
 	#define  _5(x,y,z,v,v1) _4(x,y,z,v),_(v1)
 	if (hasSeasonCmpnt) {
 		len=1,offset=pixelIndex - 1,stride=0;
-		_(sncp);
+		_(sncp);      
 		len=(seasonMaxKnotNum+1);  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
-		_(sncpPr);
+		_(sncpPr);    
 		len=N;  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
-		_(scpOccPr);
+		_(scpOccPr);   
 		for (I32 i=0; i < q;++i) {			
 			len=N;  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
 			WriteF32ArraryToStrideMEM(result->sY+N*i,mat[i].sY,len,stride,offset,datType);
@@ -266,11 +268,11 @@ void  MR_WriteOutput(A(OPTIONS_PTR) opt,A(RESULT_PTR) result,I64 pixelIndex)
 		}
 	}
 		len=1,offset=pixelIndex - 1,stride=0;
-		_(tncp);
+		_(tncp);           
 		len=(trendMaxKnotNum+1);  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
-		_(tncpPr);
+		_(tncpPr);         
 		len=N;  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
-		_(tcpOccPr);
+		_(tcpOccPr);       
 		for (I32 i=0; i < q;++i) {
 			len=N;  GetOutputOffsetStride(io,pixelIndex,len,&stride,&offset);
 			WriteF32ArraryToStrideMEM(result->tY+N * i,mat[i].tY,len,stride,offset,datType);

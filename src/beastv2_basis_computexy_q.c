@@ -14,7 +14,7 @@ static void ST(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad)
 	X+=basis->Kbase * Npad;
 	beta+=basis->Kbase;
 	TKNOT_PTR KNOT=basis->KNOT;
-	for (I32 i=0; i < basis->numKnot+1; i++) {
+	for (I32 i=0; i < basis->nKnot+1; i++) {
 		I32 order=basis->ORDER[i];
 		I32 Kseg=(basis->type==TRENDID) ? order+1 : order * 2;
 		I32 r1=KNOT[i - 1];
@@ -35,7 +35,7 @@ static void DD_0(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad)
 	TKNOT_PTR  KNOT=basis->KNOT;
 	I16PTR     KS=basis->ks;
 	I16PTR     KE=basis->ke;
-	int NUM_OF_SEG=basis->numKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                  
 	for (I32 i=1; i <=NUM_OF_SEG; i++) {
 		I32 k1=KS[i-1]-1,k2=KE[i-1]-1;
@@ -58,7 +58,7 @@ static void OO_0(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad)
 	beta+=basis->Kbase;
 	TKNOT_PTR	knotList=basis->KNOT;
 	F32			sqrtN=basis->bConst.outlier.SQRTN;
-	for (I32 i=0; i < basis->numKnot; i++) {
+	for (I32 i=0; i < basis->nKnot; i++) {
 		Y[knotList[i] - 1]=beta[i] * sqrtN;
 	}
 }

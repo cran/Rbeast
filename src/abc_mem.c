@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include "abc_000_warning.h"
+#include "abc_ide_util.h"
 #include "abc_001_config.h"
 #include "abc_mem.h"
-#include "abc_ide_util.h"
  static VOID_PTR  malloc_64(size_t N)	{ 
 	VOID_PTR  mem=malloc(N+64);
 	VOID_PTR  ptr=(VOID_PTR )(((uintptr_t)mem+64) & ~(uintptr_t)0x3F);
@@ -14,61 +14,68 @@
 	free(porig);
 }
  static void  ExpandInternelBuf(MemPointers* self ) {
-	 if (self->npts==self->nptsMax) {
+	 if (self->npts >=self->nptsMax) {
 		 int       oldMax=self->nptsMax;
 		 VOID_PTR* oldPointers=self->memPointer;
-		 I08PTR    oldAlign=self->mem64Aligned;
+		 I08PTR    oldAlign=self->memAlignOffset;
 		 self->nptsMax=oldMax+200;
 		 self->memPointer=(VOID_PTR*)malloc(sizeof(VOID_PTR) * self->nptsMax);
-		 self->mem64Aligned=(I08PTR)   malloc(sizeof(I08) *      self->nptsMax);
+		 self->memAlignOffset=(I08PTR)  malloc(sizeof(I08) *      self->nptsMax);
 		 if (oldPointers) {
 			 memcpy((const void* )self->memPointer,(const void*)oldPointers,sizeof(VOID_PTR) * oldMax);
-			 memcpy((const void*)self->mem64Aligned,(const void*)oldAlign,sizeof(I08) * oldMax);
+			 memcpy((const void*)self->memAlignOffset,(const void*)oldAlign,sizeof(I08) * oldMax);
 			 free(( void*)oldPointers);
 			 free(( void*)oldAlign);
 		 } 
 	 }
  }
-static VOID_PTR  MemAlloc(MemPointers * self,I64 sizeInByte,U08 alignment)
+static VOID_PTR  MemAlloc(MemPointers * self,I64 N,U08 alignment)
 {
-	VOID_PTR  newPointer;
-	if (alignment==0){
-		newPointer=malloc(sizeInByte);
-		self->bytesAllocated+=sizeInByte;
-	} else {
-		newPointer=malloc_64(sizeInByte);
-		self->bytesAllocated+=sizeInByte+64;
-	}
 	ExpandInternelBuf(self);
-	self->memPointer[  self->npts]=newPointer;
-	self->mem64Aligned[self->npts]=alignment;
+	alignment=alignment==0 ? 1 : alignment;
+	int       isSuccess=0;
+	VOID_PTR  ptr=NULL;
+	VOID_PTR  ptrAligned;
+	if (alignment <=8) {
+		ptr=malloc(N);
+		ptrAligned=(VOID_PTR)((uintptr_t)ptr & ~(uintptr_t) (alignment-1) );  
+		isSuccess=(ptr==ptrAligned);
+		self->bytesAllocated+=isSuccess?N:0;
+	}
+	if (!isSuccess) { 
+		if (ptr) free(ptr);
+		ptr=malloc(N+(alignment-1)  );
+		ptrAligned=(VOID_PTR)( ( (uintptr_t)ptr+alignment-1) &  ~(uintptr_t)(alignment - 1) );		
+		self->bytesAllocated+=N+(alignment - 1);
+	}
+	self->memPointer[   self->npts]=ptrAligned;
+	self->memAlignOffset[self->npts]=(uintptr_t)ptrAligned- (uintptr_t)ptr;
 	self->npts++;
-	return newPointer;
+	return ptrAligned;
 }
-static VOID_PTR  MemAlloc0(MemPointers* _restrict self,I64 sizeInByte,U08 alignment)
-{
-	VOID_PTR  newPointer=MemAlloc(self,sizeInByte,alignment);
-	memset(newPointer,0,sizeInByte);
-	return newPointer;
+static VOID_PTR  MemAlloc0(MemPointers* _restrict self,I64 sizeInByte,U08 alignment){
+	VOID_PTR  ptr=MemAlloc(self,sizeInByte,alignment);
+	memset(ptr,0,sizeInByte);
+	return ptr;
 }
 static void mem_free_all(MemPointers * _restrict self)
 {
 	for (int i=0; i < self->npts; i++) 	{
-		if (self->mem64Aligned[i]==0)	free(   self->memPointer[i]);
-		else                 			free_64(self->memPointer[i]);
+		free(  (char*) self->memPointer[i] - self->memAlignOffset[i]);	
 	}
-	if (self->memPointer !=NULL) 	{
+	if (self->memPointer) 	{
 		free(self->memPointer);
 		self->memPointer=NULL;
 	}
-	if (self->mem64Aligned !=NULL) 	{
-		free(self->mem64Aligned);
-		self->mem64Aligned=NULL;
+	if (self->memAlignOffset) 	{
+		free(self->memAlignOffset);
+		self->memAlignOffset=NULL;
 	}
-	self->bytesAllocated+=0;
+	self->bytesAllocated=0;
+	self->npts=0;
+	self->nptsMax=0;
 }
-void mem_init(MemPointers* self)
-{
+void mem_init(MemPointers* self) {	 
 	*self=(MemPointers) {
 			.alloc=MemAlloc,
 			.alloc0=MemAlloc0,
@@ -77,6 +84,6 @@ void mem_init(MemPointers* self)
 			.nptsMax=0,
 			.npts=0,
 			.bytesAllocated=0,
-			};	
+			};			
 }
 #include "abc_000_warning.h"

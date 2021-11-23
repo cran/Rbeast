@@ -19,13 +19,13 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 		return 0;
 	}
 	meta->rawInput=prhs[1];	
-	I08 seasonForm='S'; 
 	I08 metaProcessed=0;
 	if (nrhs < 3) {
 		meta->isMetaStruct=0;
 		meta->isRegularOrdered=1; 
 		meta->hasSeasonCmpnt=1;
 		meta->hasOutlierCmpnt=0;
+		meta->seasonForm='S';
 		meta->detrend=0;
 		meta->deseasonalize=0;
 		meta->period=getNaN();
@@ -43,6 +43,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 		meta->isRegularOrdered=1L; 
 		meta->hasSeasonCmpnt=1L;
 		meta->hasOutlierCmpnt=0L;
+		meta->seasonForm='S';
 		meta->detrend=0;
 		meta->deseasonalize=0;
 		meta->period=GetScalar(pmeta);
@@ -67,16 +68,18 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 			ToUpper(season);
 			char a=season[0],b=season[1];
 			if      (a=='N' && b=='O') 		meta->hasSeasonCmpnt=0;							    
-			else if (a=='H' && b=='A') 		meta->hasSeasonCmpnt=1,seasonForm='S';			
-			else if (a=='D' && b=='U')		meta->hasSeasonCmpnt=1,seasonForm='D';			
-			else if (a=='S' && b=='V')		meta->hasSeasonCmpnt=1,seasonForm='V';			
+			else if (a=='H' && b=='A') 		meta->hasSeasonCmpnt=1,meta->seasonForm='S'; 	
+			else if (a=='D' && b=='U')		meta->hasSeasonCmpnt=1,meta->seasonForm='D';			
+			else if (a=='S' && b=='V')		meta->hasSeasonCmpnt=1,meta->seasonForm='V';			
 			else {
-				meta->hasSeasonCmpnt=1,seasonForm='S';
+				meta->hasSeasonCmpnt=1;
+				meta->seasonForm='S';  
 				r_warning("WARNING: metadata$season=%s is specified but has an unrecongizable string. A default metadata$season='harmonic' is used instead.\n",season);
 			}
-			if (seasonForm=='V') meta->svdTerms=GetField(pmeta,"svdTerms");
+			if (meta->seasonForm=='V') meta->svdTerms=GetField(pmeta,"svdTerms");
 		} else  {
-			meta->hasSeasonCmpnt=1,seasonForm='S';
+			meta->hasSeasonCmpnt=1;
+			meta->seasonForm='S';
 			r_warning("WARNING: metadata$season is either missing or not given as a valid specifier string (e.g.,none,harmonic,or dummy). A default "
 				      "metadata$season='harmonic' is assumed.\n");
 		}	
@@ -86,6 +89,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 		meta->period=(tmp=GetField(pmeta,"period")) ? GetScalar(tmp) : getNaN();
 		if (!meta->hasSeasonCmpnt && tmp !=NULL)
 			r_warning("WARNING: For metadata$season='none' (i.e.,no periodic component in the time series),metadata$period is ignored!\n");
+		I08 isDefaultStartTime=0;
 		tmp=GetField(pmeta,"startTime");
 		if     (tmp && IsClass(tmp,"Date")) 		{
 			int   days=GetScalar(tmp);
@@ -99,8 +103,8 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 				F32 Y=GetNumericElement(tmp,0);
 				F32 M=GetNumericElement(tmp,1);
 				meta->startTime=YMDtoF32time(Y,M,15);
-				r_warning("WARNING: Your metadata$startTime (%f,%f) is interpreted as (Year:%d,Month:%d,Day: 15) and converted to "
-					       "a numeric value of%f. If not making sense,make sure to supply a correct start time: "
+				r_warning("WARNING: Your metadata$startTime (%f,%f) is interpreted as (Year: %d,Month: %d,Day: 15) and converted to "
+					       "a numeric value of %f. If not making sense,make sure to supply a correct start time: "
 					       "startTime can take a numeric scalar,a vector of two values (year,month),or a vector of three values (year,month,day).",
 					       Y,M,(int)Y,(int)M,meta->startTime);
 			}
@@ -109,8 +113,8 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 				F32 M=GetNumericElement(tmp,1);
 				F32 D=GetNumericElement(tmp,2);
 				meta->startTime=(F32) YMDtoF32time((int)Y,(int)M,(int)D);
-				r_warning("WARNING: Your metadata$startTime (%f,%f,%f) is interpreted as (Year:%d,Month:%d,Day:%d) and converted to "
-					"a numeric value of%f. If not making sense,make sure to supply a correct start time: "
+				r_warning("WARNING: Your metadata$startTime (%f,%f,%f) is interpreted as (Year: %d,Month: %d,Day: %d) and converted to "
+					"a numeric value of %f. If not making sense,make sure to supply a correct start time: "
 					"startTime can take a numeric scalar,a vector of two values (year,month),or a vector of three values (year,month,day).",
 					Y,M,D,(int)Y,(int)M,(int)D,meta->startTime);
 			}
@@ -121,24 +125,39 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 			}
 		} else {
 			meta->startTime=1L;
-  			if (meta->isRegularOrdered && tmp==NULL)
-				r_warning("WARNING: when metadata$isRegualrOrdered=TURE,the input data is assumed to be regular and ordered in time AND the times of "
-							"individual datapoints are determined by \"startTime\" and \"deltaTime\". But metadata$startTime is missing and a default value 1 is used!\n");
+			isDefaultStartTime=1L;
 		}
-		meta->deltaTime=(tmp=GetField(pmeta,"deltaTime")) ? GetScalar(tmp) : getNaN();	
+		I08 isDefaultDeltaTime=0;
+		meta->deltaTime=(tmp=GetField(pmeta,"deltaTime")) ? GetScalar(tmp) : getNaN();			
 		if (!meta->isRegularOrdered && IsNaN(meta->deltaTime) ) {
 			r_error("ERROR: when metadata$isRegualrOrdered=FALSE,the input data is considered irregular/unordered in time AND "
 			 	   "metadata$deltaTime must be specified for BEAST to pre-process and aggregate the irregular input to a regular time series spaced at deltaTime.\n");
 			return 0;
 		} 
-		if (meta->isRegularOrdered && IsNaN(meta->deltaTime)) {
-			meta->deltaTime=1.f;
-			r_warning("WARNING: when metadata$isRegualrOrdered=TURE,the input is assumed to be regular and ordered in time AND the times of "
-				      "individual datapoints are determined by \"startTime\" and \"deltaTime\". But metadata$deltaTime is not given and a default value 1 is used!\n");
-		} 	
 		if (meta->deltaTime <=0  ) {
 			r_error("ERROR: metadata$deltaTime must be a positive time interval!\n");
 			return 0;
+		}
+		if (meta->isRegularOrdered && IsNaN(meta->deltaTime)) {
+			meta->deltaTime=1.f;
+			isDefaultDeltaTime=1;		
+		}
+		if (meta->isRegularOrdered ) {
+			if (isDefaultDeltaTime && isDefaultStartTime) {
+				r_warning("WARNING: when metadata$isRegualrOrdered=TRUE,the input data is assumed to be regular and ordered in time AND the times of "
+					"individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'. But metadata$startTime and deltaTime "
+					"are missing and a default value 1 is used for both!\n");
+			}
+			else if (isDefaultStartTime) {
+				r_warning("WARNING: when metadata$isRegualrOrdered=TRUE,the input data is assumed to be regular and ordered in time AND the times of "
+					"individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'. But startTime is missing "
+					"and a default value 1 is used!\n");
+			}
+			else if (isDefaultDeltaTime) {
+				r_warning("WARNING: when metadata$isRegualrOrdered=TRUE,the input data is assumed to be regular and ordered in time AND the times of "
+					"individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'. But deltaTime is missing and a default"
+					" value 1 is used!\n");	
+			}			
 		}
 		meta->rawTimeVec=(tmp=GetField(pmeta,"time")) ? tmp : NULL;
 		if (meta->isRegularOrdered && tmp)
@@ -158,27 +177,18 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 		r_error("ERROR: The 'metadata' parameter given is of unsupported type.\n");
 		return 0;
 	}
-	if (meta->hasSeasonCmpnt) {
-		if (meta->hasOutlierCmpnt) 	memcpy(meta->cmpntString,"STO",3+1);
-		else                        memcpy(meta->cmpntString,"ST",2+1);
-		meta->cmpntString[0]=seasonForm; 
-	}
-	else {
-		if (meta->hasOutlierCmpnt) 	memcpy(meta->cmpntString,"TO",2+1);
-		else                        memcpy(meta->cmpntString,"T",1+1);
-	}
 	if (meta->hasSeasonCmpnt) {	
 		meta->period=meta->period/meta->deltaTime;
 		F32 period=meta->period;
 		if (period==0) {
 			r_error("ERROR: Your input parameters are \"metadata$period=0\" and \"metadata$season='%s'\". BEAST cann't handle a time series with no perodicity. "
 				"If you mean to handle a trend-only time series,please use the trend-only version of the BEAST algorithm by specifying metadata$season='none'."
-				,meta->cmpntString[0]=='S' ? "harmonic" : "dummy" );
+				,meta->seasonForm=='S' ? "harmonic" : "dummy" );
 			return 0;
 		}
-		if (meta->cmpntString[0]=='D' && !IsNaN(period) && !IsAlmostInteger(period)  ) {
+		if (meta->seasonForm=='D' && !IsNaN(period) && !IsAlmostInteger(period)  ) {
 			r_error("ERROR: Your input parameters are \"metadata$period=%f\" and \"metadata$season='%s'\". For a dummy seasonal component,"
-				"period must be a multiple of deltaTime by an INTEGER number. Your period/deltaTime is%f.",	
+				"period must be a multiple of deltaTime by an INTEGER number. Your period/deltaTime is %f.",	
 				 period*meta->deltaTime,"dummy",period );
 			return 0;
 		}
@@ -314,12 +324,12 @@ int __ReadRawTime(F32PTR time,VOID_PTR timeField,const I32 Nraw) {
 			for (int i=0; i < Nraw;++i) {	
 				char TMP[255+1];
 				if (!GetCharVecElem(datestr,i,TMP,255)) {
-					r_error("ERROR: Unable to read the%d-ith date string from metadata$time$dateStr.\n",i+1);
+					r_error("ERROR: Unable to read the %d-ith date string from metadata$time$dateStr.\n",i+1);
 					return 0L;
 				}
 				time[i]=Str2F32time_fmt1(TMP,&fmt1);
 				if (time[i] < -1e9) {
-					r_error("ERROR: The%d-th string ($metadata$time$dateStr=\"%s\") is invalid,incompatiable with the specified "
+					r_error("ERROR: The %d-th string ($metadata$time$dateStr=\"%s\") is invalid,incompatiable with the specified "
 							" metadata$time$strFmat=\"%s\".\n",i+1,TMP,STRFmt);
 					return 0L;
 				}
@@ -330,12 +340,12 @@ int __ReadRawTime(F32PTR time,VOID_PTR timeField,const I32 Nraw) {
 			for (int i=0; i < Nraw;++i) {	
 				char TMP[255+1];
 				if (!GetCharVecElem(datestr,i,TMP,255)) {
-					r_error("ERROR: Unable to read the%d-ith date string from metadata$time$dateStr.\n",i+1);
+					r_error("ERROR: Unable to read the %d-ith date string from metadata$time$dateStr.\n",i+1);
 					return 0L;
 				}
 				time[i]=Str2F32time_fmt2(TMP,&fmt2);
 				if (time[i] < -1e9) {
-					r_error("ERROR: The%d-th string (metadata$time$dateStr=\"%s\") is invalid,incompatiable with the specified "
+					r_error("ERROR: The %d-th string (metadata$time$dateStr=\"%s\") is invalid,incompatiable with the specified "
 							" metadata$time$strFmat=\"%s\".\n",i+1,TMP,STRFmt);
 					return 0L;
 				}
@@ -346,12 +356,12 @@ int __ReadRawTime(F32PTR time,VOID_PTR timeField,const I32 Nraw) {
 			for (int i=0; i < Nraw;++i) {	
 				char TMP[255+1];
 				if (!GetCharVecElem(datestr,i,TMP,255)) {
-					r_error("ERROR: Unable to read the%d-ith date string from metadata$time$dateStr.\n",i+1);
+					r_error("ERROR: Unable to read the %d-ith date string from metadata$time$dateStr.\n",i+1);
 					return 0L;
 				}
 				time[i]=Str2F32time_fmt3(TMP,&fmt3);
 				if (time[i] < -1e9) {
-					r_error("ERROR: The%d-th string ($metadata$time$dateStr=\"%s\") is invalid,incompatiable with the specified "
+					r_error("ERROR: The %d-th string ($metadata$time$dateStr=\"%s\") is invalid,incompatiable with the specified "
 							" metadata$time$strFmat=\"%s\".\n",i+1,TMP,STRFmt);
 					return 0L;
 				}
@@ -392,33 +402,38 @@ static int ParseInputData( BEAST2_IO_PTR _OUT_ io){
 		int     numel=GetNumberOfElements(DATA);
 		if (!(IsDouble(DATA) && numel > 2) && 	!(IsSingle(DATA) && numel > 2) &&
 			!(IsInt32(DATA)  && numel > 2) &&	!(IsInt16(DATA) && numel > 2) &&
-			!(IsStruct(DATA) && numel >=2 ) 
+			!(IsStruct(DATA) && numel >=1 ) &&
+			!(IsCell(DATA) )       
 		   ) {   
 			r_error("ERROR: The input data should be numeric and must be long enough.\n");
 			return 0;
 		}
 		I32       q;
 		VOID_PTR  Y;
-		if (IsStruct(DATA) && numel >=2) {
+		if ( (IsStruct(DATA) && numel >=1)||IsCell(DATA)) {
 			q=numel;
 			io->pdata=malloc(sizeof(VOID_PTR) * q);
+			io->dtype=malloc(sizeof(DATA_TYPE) * q);
 			for (I32 i=0; i < q; i++) {
-				Y=GetFieldByIdx(DATA,i);
+				 Y=GetFieldByIdx(DATA,i);
 				io->pdata[i]=GetData(Y);
-			}
-			Y=GetFieldByIdx(DATA,0);
+				io->dtype[i]=GetDataType(Y);
+			}		
 		} else {
 			q=1;
 			io->pdata=malloc(sizeof(VOID_PTR) * q);
+			io->dtype=malloc(sizeof(DATA_TYPE) * q);
 			io->pdata[0]=GetData(DATA);
+			io->dtype[0]=GetDataType(DATA);
 			Y=DATA;
-		}		
-		io->q=q;
-		io->dataType=GetDataType(Y);
-		if (io->dataType==DATA_UNKNOWN ) {
-			r_error("ERROR: The input data has an uknown numeric type!\n");
-			return 0;
+		}				
+		for (I32 i=0; i < q; i++) {
+			if (io->dtype[i]==DATA_UNKNOWN) {
+				r_error("ERROR: The input data has an uknown numeric type!\n");
+				return 0;
+			}
 		}
+		io->q=q;
 		I32 ndims=GetNumOfDim(Y);
 		if (ndims==0) {
 			I32 N=GetNumberOfElements(Y);
@@ -453,7 +468,7 @@ static int ParseInputData( BEAST2_IO_PTR _OUT_ io){
 				io->dims[1]=M;
 				I32 whichDimIsTime=io->meta.whichDimIsTime;
 				if (whichDimIsTime==-1||(whichDimIsTime !=1 && whichDimIsTime !=2 )) {
-					r_error("ERROR: For a 2D matrix input of size [%d x%d] (i.e.,multiple time series),metadata$whichDimIsTime must be given "
+					r_error("ERROR: For a 2D matrix input of size [%d x %d] (i.e.,multiple time series),metadata$whichDimIsTime must be given "
 						    "to tell which dim of the matrix  refers to time. It must take a value out of 1 or 2 only.\n",N,M);
 					return 0;
 				}
@@ -465,7 +480,7 @@ static int ParseInputData( BEAST2_IO_PTR _OUT_ io){
 			GetDimensions(Y,io->dims,3L);
 			I32 whichDimIsTime=io->meta.whichDimIsTime;
 			if (whichDimIsTime==-1||(whichDimIsTime!=1 && whichDimIsTime!=2 && whichDimIsTime!=3 )  ) {
-				r_error("ERROR: For a 3D array input of size [%d x%d x%d] (i.e.,stacked time series images),metadata$whichDimIsTime must be given "
+				r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e.,stacked time series images),metadata$whichDimIsTime must be given "
 					     "to tell which dim of the 3D array  refers to time. It must take a value out of 1,2 or 3 only.\n", 
 					     io->dims[0],io->dims[1],io->dims[2]);
 				return 0;	}
@@ -473,7 +488,7 @@ static int ParseInputData( BEAST2_IO_PTR _OUT_ io){
 		}
 		else {
 			r_printf("ERROR: The maximum dimension allowed is 3 when the data is a 3D stacked of images over time,"
-				    " but the input data cannot have a dimension of%d .\n",ndims);
+				    " but the input data cannot have a dimension of %d .\n",ndims);
 			return 0;
 		}
 		int res=io->meta.isRegularOrdered? ___PraseMetaData_RegularTS_Dim123(  &io->meta,io):
@@ -531,14 +546,14 @@ static int ParseInputData( BEAST2_IO_PTR _OUT_ io){
 		free(tmp);
 		if (period > 0) {
 			r_warning("WARNING: When metadata$season='%s' (i.e.,the time series has a periodic component),\"metadata$period\" "
-				"must be known in advance and specified by the user but it is missing. A BEST GUESS of it is%f (%d*deltaTime=%d*%f) and "
+				"MUST be known in advance and specified by the user but it is missing. A BEST GUESS of it is %f (period=freq*deltaTime=%d*%f) and "
 				"will be used. Please make sure this estimate makes sense; otherwise,the BEAST decomposition result will be incorrect.\n",
-				io->meta.cmpntString[0]=='S' ? "harmonic" : "dummy",period* io->meta.deltaTime,(int)period,(int)period,io->meta.deltaTime);
+				io->meta.seasonForm=='S' ? "harmonic" : "dummy",period* io->meta.deltaTime,(int)period,io->meta.deltaTime);
 		} else {
 			r_error("ERROR: When metadata$season='%s' (i.e.,a periodic component present in the input time series),the \"metadata$period\" parameter "
 				"must be known in advance and specified by the user but it is missing. BEAST tried to estimate it via an auotcorrelation method but failed to "
 				"get a reliable estimate. Please specify the value for metadata$period EXPLICILTY. Or if your input has no periodic component at all,"
-				" set  metadata$season='none',which will fit a trend-only model.\n",io->meta.cmpntString[0]=='S' ? "harmonic" : "dummy");
+				" set  metadata$season='none',which will fit a trend-only model.\n",io->meta.seasonForm=='S' ? "harmonic" : "dummy");
 			return 0;
 		}
 		io->meta.period=period;
@@ -589,7 +604,6 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 		U08   alpha1,alpha2,delta1,delta2;
 	} m={0,};
 	#define o  (*prior)
-	o.numBasis=1L+io->meta.hasSeasonCmpnt+io->meta.hasOutlierCmpnt;
 	if (nrhs < 4) 	
 		memset(&m,1L,sizeof(struct PRIOR_MISSING));
 	if (nrhs >=4) {		 
@@ -625,26 +639,20 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 			o.precPriorType=__GetPrecPriorType(S);
 		}
 	} 
-	char* modelType=io->meta.cmpntString;
-	ToUpper(modelType);
-	if (strcmp(modelType,"T") !=0  &&   strcmp(modelType,"TO") !=0 &&
-		strcmp(modelType,"ST") !=0 &&   strcmp(modelType,"STO") !=0 &&
-		strcmp(modelType,"DT") !=0 &&   strcmp(modelType,"DTO") !=0 &&
-		strcmp(modelType,"VT") !=0 &&   strcmp(modelType,"VTO") !=0)
-	{
-		r_error("ERROR: the modelType parameter is not an valid string. It should be one of 'T','TO',"
-			     ",'ST',or 'STO' where T stands for trend,S for seasonal,and O for outliers! \n");
-		return 0;
+	o.numBasis=1L+io->meta.hasSeasonCmpnt+io->meta.hasOutlierCmpnt;
+	I32  basisIdx=0;	
+	if (io->meta.hasSeasonCmpnt) {
+		I08  seasonFrom=io->meta.seasonForm;
+		if      (seasonFrom=='S')	o.basisType[basisIdx++]=SEASONID;
+		else if (seasonFrom=='D') o.basisType[basisIdx++]=DUMMYID;
+		else if (seasonFrom=='V') o.basisType[basisIdx++]=SVDID;
+		else {
+			r_error("ERROR: the seasonform character is unrecognized. It must be one of 'S','D',or 'V'. \n");
+			return 0;
+		}
 	}
-	for (int i=0; i < o.numBasis; i++) {
-		switch (modelType[i]) {
-		case 'S':	o.basisType[i]=SEASONID;		break;		
-		case 'D':	o.basisType[i]=DUMMYID;		break;		
-		case 'V':	o.basisType[i]=SVDID;			break;
-		case 'T':	o.basisType[i]=TRENDID;		break;		
-		case 'O':	o.basisType[i]=OUTLIERID;
-		} 
-	} 
+	o.basisType[basisIdx++]=TRENDID;
+	if (io->meta.hasOutlierCmpnt) o.basisType[basisIdx++]=OUTLIERID;
 	I32 period=io->meta.period;
 	I32 N=io->N;
 	if (m.seasonMinOrder)    o.seasonMinOrder=1L;				   o.seasonMinOrder=min(o.seasonMinOrder,period/2 - 1);    o.seasonMinOrder=max(o.seasonMinOrder,1L);
@@ -787,7 +795,7 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 	if (m.numThreadsPerCPU)      o.numThreadsPerCPU=2;
 	if (m.numParThreads)         o.numParThreads=0;
 	if (m.numCPUCoresToUse)      o.numCPUCoresToUse=0;	
-	if (m.consoleWidth||o.consoleWidth<=0)   o.consoleWidth=GetConsoleWidth();
+	if (m.consoleWidth||o.consoleWidth<=0)  o.consoleWidth=GetConsoleWidth(); 	o.consoleWidth=max(o.consoleWidth,40);
 	if (m.printProgressBar)      o.printProgressBar=1;
 	if (m.printOptions)          o.printOptions=1;
 	if (m.computeCredible)       o.computeCredible=0L;
@@ -899,30 +907,30 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 		I08 type=PRIOR->basisType[i];
 		if (type==SEASONID) {
 			I32 order=ceil((PRIOR->seasonMaxOrder+PRIOR->seasonMinOrder)/2.0);
-			I32 numKnot=ceil((PRIOR->seasonMinKnotNum+PRIOR->seasonMaxKnotNum)/2.0);   
-			K_INITIAL_MODEL+=(order * 2) * (numKnot+1);
+			I32 nKnot=ceil((PRIOR->seasonMinKnotNum+PRIOR->seasonMaxKnotNum)/2.0);   
+			K_INITIAL_MODEL+=(order * 2) * (nKnot+1);
 		}
 		if (type==DUMMYID) {
 			I32 order=ceil(opt->io.meta.period);
-			I32 numKnot=ceil((PRIOR->seasonMinKnotNum+PRIOR->seasonMaxKnotNum)/2.0);   
-			K_INITIAL_MODEL+=(order ) * (numKnot+1);
+			I32 nKnot=ceil((PRIOR->seasonMinKnotNum+PRIOR->seasonMaxKnotNum)/2.0);   
+			K_INITIAL_MODEL+=(order ) * (nKnot+1);
 		}
 		if (type==SVDID) {
 			I32 order=ceil(opt->io.meta.period);
-			I32 numKnot=ceil((PRIOR->seasonMinKnotNum+PRIOR->seasonMaxKnotNum)/2.0);   
-			K_INITIAL_MODEL+=(order) * (numKnot+1);
+			I32 nKnot=ceil((PRIOR->seasonMinKnotNum+PRIOR->seasonMaxKnotNum)/2.0);   
+			K_INITIAL_MODEL+=(order) * (nKnot+1);
 		}
 		if (type==TRENDID)		{
 			I32 order=ceil((PRIOR->trendMaxOrder+PRIOR->trendMinOrder)/2.0);
-			I32 numKnot=ceil((PRIOR->trendMinKnotNum+PRIOR->trendMaxKnotNum)/2.0);   
-			K_INITIAL_MODEL+=(order+1L) * (numKnot+1);
+			I32 nKnot=ceil((PRIOR->trendMinKnotNum+PRIOR->trendMaxKnotNum)/2.0);   
+			K_INITIAL_MODEL+=(order+1L) * (nKnot+1);
 		}
 		if (type==OUTLIERID) {
 			K_INITIAL_MODEL+=0;
 		}
 	}
 	PRIOR->K_MAX=max(PRIOR->K_MAX,K_INITIAL_MODEL);
-	opt->io.out.dataType=IsRinterface() ? DATA_DOUBLE : DATA_FLOAT;
+	opt->io.out.dtype=IsRinterface() ? DATA_DOUBLE : DATA_FLOAT;
 	opt->io.out.whichDimIsTime=opt->extra.whichOutputDimIsTime;
 	return 1;
 }
@@ -950,6 +958,10 @@ void BEAST2_DeallocateTimeSeriesIO(BEAST2_IO_PTR  o) {
 	if (o->pdata !=NULL) {
 		free(o->pdata);
 		o->pdata=NULL;
+	}
+	if (o->dtype !=NULL) {
+		free(o->dtype);
+		o->dtype=NULL;
 	}
 	if (o->out.result !=NULL) {
 		free(o->out.result);

@@ -219,14 +219,16 @@ void beast2_main_corev4_gui()
 			{   
 				GenarateRandomBasis(MODEL.b,MODEL.NUMBASIS,N,&RND);
 				if (q > 1) {
-					MODEL.b[0].numKnot=0;
+					MODEL.b[0].nKnot=0;
 					MODEL.b[0].KNOT[0]=N+1;
-					MODEL.b[0].ORDER[0]=3;
+					MODEL.b[0].ORDER[0]=MODEL.b[0].prior.minOrder;
 					MODEL.b[0].CalcBasisKsKeK_TermType(&MODEL.b[0]);
-					MODEL.b[1].numKnot=0;
-					MODEL.b[1].KNOT[0]=N+1;
-					MODEL.b[1].ORDER[0]=1;
-					MODEL.b[1].CalcBasisKsKeK_TermType(&MODEL.b[1]);
+					if (MODEL.NUMBASIS >=2) {
+						MODEL.b[1].nKnot=0;
+						MODEL.b[1].KNOT[0]=N+1;
+						MODEL.b[1].ORDER[0]=MODEL.b[0].prior.minOrder;
+						MODEL.b[1].CalcBasisKsKeK_TermType(&MODEL.b[1]);
+					}
 				}
 				MODEL.b[0].Kbase=0;                           
 				UpdateBasisKbase(MODEL.b,MODEL.NUMBASIS,0);	
@@ -265,7 +267,7 @@ void beast2_main_corev4_gui()
 				basis->Propose(basis,&NEW,&PROPINFO); 
 				#ifdef __DEBUG__
 					I32 basisIdx=basis - MODEL.b;
-					if (basisIdx==0 && (NEW.flagMoveType==BIRTH||NEW.flagMoveType==MOVE)) {
+					if (basisIdx==0 && (NEW.jumpType==BIRTH||NEW.jumpType==MOVE)) {
 						flagSat[NEW.newKnot - 1]+=1;
 					}
 				#endif
@@ -350,7 +352,9 @@ void beast2_main_corev4_gui()
 						   precFunc.GetXtXPrecDiag(&MODEL);
 						   precFunc.chol_addCol(MODEL.curr.XtX,MODEL.curr.cholXtX,MODEL.curr.precXtXDiag,MODEL.curr.K,1L,MODEL.curr.K);
 						   precFunc.ComputeMargLik(&MODEL.curr,&MODEL,&yInfo,&hyperPar);
-						   r_printf("prec:%.4f|marg_lik_prop:%.4f|marg_like_curr:%.4f \n",MODEL.precVal,MODEL.prop.marg_lik,MODEL.curr.marg_lik);
+						   #if !(defined(R_RELEASE)||defined(M_RELEASE))
+						   r_printf("prec: %.4f|marg_lik_prop: %.4f|marg_like_curr: %.4f \n",MODEL.precVal,MODEL.prop.marg_lik,MODEL.curr.marg_lik);
+						   #endif
 						   continue;
 					   }  else {
 						   skipCurrentPixel=2;
@@ -364,7 +368,7 @@ void beast2_main_corev4_gui()
 				   }
 				}
 				F32  factor;				
-				if   ( NEW.flagMoveType==MOVE||basis->type==OUTLIERID) 	factor=0.;
+				if   ( NEW.jumpType==MOVE||basis->type==OUTLIERID) 	factor=0.;
 				else { factor=basis->ModelPrior(basis,&NEW,N); }
 				F32 delta_lik=MODEL.prop.marg_lik - MODEL.curr.marg_lik+factor;
 				I08     acceptTheProposal;
@@ -377,14 +381,14 @@ void beast2_main_corev4_gui()
 					else						acceptTheProposal=*(RND.rnd32)++< expValue * 4.294967296e+09;
 				}
 				#ifdef __DEBUG__
-					if (basisIdx==0)++(flagS[NEW.flagMoveType]);
-					else++(flagT[NEW.flagMoveType]);
+					if (basisIdx==0)++(flagS[NEW.jumpType]);
+					else++(flagT[NEW.jumpType]);
 				#endif
 				if(acceptTheProposal)
 				{
 					#ifdef __DEBUG__
-						if (basisIdx==0)++(accS[NEW.flagMoveType]);
-						else++(accT[NEW.flagMoveType]);
+						if (basisIdx==0)++(accS[NEW.jumpType]);
+						else++(accT[NEW.jumpType]);
 					#endif
 					if (yInfo.nMissing > 0 && Knewterm > 0 )  
 						f32_mat_multirows_set_by_submat(Xnewterm,Npad,Knewterm,Xt_zeroBackup,yInfo.rowsMissing,yInfo.nMissing);
@@ -453,7 +457,7 @@ void beast2_main_corev4_gui()
 					if (ite%10==0) {
 						 float sum=0;
 						 int   n=0;
-							r_printf("ite%d: ",ite);
+							r_printf("ite %d: ",ite);
 							for (int i=1; i <=MODEL.nPrec; i++) {
 								if (opt->prior.precPriorType < 2) {
 									sum+=MODEL.precVal;
@@ -475,7 +479,9 @@ void beast2_main_corev4_gui()
 						precFunc.ComputeMargLik( &MODEL.curr,&MODEL,&yInfo,&hyperPar);
 					} while (  IsNaN(MODEL.curr.marg_lik) && ntries < 20 );
 					if ( IsNaN(MODEL.curr.marg_lik) ) {
-						r_printf("skip3|prec:%.4f|marg_lik_cur:%.4f \n",MODEL.precVal,MODEL.curr.marg_lik);
+						#if !(defined(R_RELEASE)||defined(M_RELEASE))
+						r_printf("skip3|prec: %.4f|marg_lik_cur: %.4f \n",MODEL.precVal,MODEL.curr.marg_lik);
+						#endif
 						skipCurrentPixel=3;
 						break;
 					} 
@@ -518,13 +524,13 @@ void beast2_main_corev4_gui()
 					{
 						BEAST2_BASIS_PTR  basis=MODEL.b+i;
 						CORESULT        * result=coreResults+i;
-						I32        numKnot=basis->numKnot;
+						I32        nKnot=basis->nKnot;
 						TKNOT_PTR  KNOT=basis->KNOT;
-						result->xNProb[numKnot]+=1L;
-						for (I32 i=0; i < numKnot; i++) result->xProb[ KNOT[i]-1 ]+=1L;
+						result->xNProb[nKnot]+=1L;
+						for (I32 i=0; i < nKnot; i++) result->xProb[ KNOT[i]-1 ]+=1L;
 						if (result->xorder !=NULL) {
 							TORDER_PTR  orderList=basis->ORDER;
-							for (I32 i=0; i <=numKnot;++i) {
+							for (I32 i=0; i <=nKnot;++i) {
 								I16 r1=KNOT[i-1],r2=KNOT[i]-1;
 								r_ippsAddC_32s_ISfs(orderList[i],result->xorder+r1 - 1,r2 - r1+1,0);							
 							}
@@ -549,7 +555,7 @@ void beast2_main_corev4_gui()
 					F32PTR           MEMBUF1=Xnewterm+3*Npad;
 					F32PTR           MEMBUF2=MODEL.prop.beta_mean; 
 					BEAST2_BASIS_PTR basis=&MODEL.b[MODEL.sid];
-					I32             knotNum=basis->numKnot;
+					I32             knotNum=basis->nKnot;
 					TKNOT_PTR       knotList=basis->KNOT;
 					F32PTR       beta=BETA;
 					TORDER_PTR   orderList=basis->ORDER;
@@ -589,7 +595,7 @@ void beast2_main_corev4_gui()
 				if(extra.computeTrendSlope)
 				{
 					BEAST2_BASIS_PTR basis=&MODEL.b[MODEL.tid];
-					I32             knotNum=basis->numKnot;
+					I32             knotNum=basis->nKnot;
 					TKNOT_PTR       knotList=basis->KNOT;
 					F32PTR TREND=Xnewterm+Npad * MODEL.tid;     
 					F32PTR SLP=Xnewterm+3 * Npad;				
@@ -624,7 +630,7 @@ void beast2_main_corev4_gui()
 				if(extra.tallyPosNegOutliers)
 				{
 					BEAST2_BASIS_PTR basis=&MODEL.b[MODEL.oid];
-					rI32             knotNum=basis->numKnot;
+					rI32             knotNum=basis->nKnot;
 					rTKNOT_PTR       knotList=basis->KNOT;
 					const F32PTR OUTLIIER=Xnewterm+Npad* MODEL.oid;
 					I32  posKnotNum=0;
@@ -656,8 +662,8 @@ void beast2_main_corev4_gui()
 				EnterCriticalSection(&gData.cs);
 				gData.ite=ite;
 				gData.sample=sample;
-				gData.tKnotNum=MODEL.b[1].numKnot;
-				gData.sKnotNum=MODEL.b[0].numKnot;;
+				gData.tKnotNum=MODEL.b[1].nKnot;
+				gData.sKnotNum=MODEL.b[0].nKnot;;
  				if (gData.yMaxT==gData.yMinT||ite%200==0)
 				{
 					int idx;
@@ -690,8 +696,7 @@ void beast2_main_corev4_gui()
 					LeaveCriticalSection(&gData.cs);
 					MEM.free_all(&MEM);
 					r_vslDeleteStream(&stream);
-					return; NULL_RET;
-				}
+					return; 				}
 				LeaveCriticalSection(&gData.cs);
 			}
 			if (!skipCurrentPixel)
@@ -1048,7 +1053,7 @@ void beast2_main_corev4_gui()
 					result.oneg_cpOccPr,result.oneg_cp,result.oneg_cpPr,result.oneg_cpCI);
 			}
 		}
-		if (opt->extra.dumpInputData||!skipCurrentPixel) {	
+		if ( !skipCurrentPixel) {	
 			I32  N=opt->io.N;	
 			I32  Nq=N * q;  
 			for (int i=0; i < q;++i) {
@@ -1071,7 +1076,7 @@ void beast2_main_corev4_gui()
 			I08 hasSeasonCmpnt=opt->prior.basisType[0]==SEASONID||opt->prior.basisType[0]==DUMMYID||opt->prior.basisType[0]==SVDID;
 			I08 hasOutlierCmpnt=opt->prior.basisType[opt->prior.numBasis - 1]==OUTLIERID;
 			I08 hasTrendCmpnt=1;
-			F32PTR BUF=Xnewterm+Nq;
+			F32PTR BUF=yInfo.Y;
 			f32_fill_val(0.,BUF,Nq);
 			if (hasTrendCmpnt)   f32_add_vec_inplace(result.tY,BUF,Nq);
 			if (hasSeasonCmpnt)  f32_add_vec_inplace(result.sY,BUF,Nq);

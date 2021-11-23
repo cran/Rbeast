@@ -31,9 +31,9 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	#define Print(fmtstr,hasComponent,...) {if(hasComponent) r_printf(fmtstr,__VA_ARGS__);}
 	Print("%s",hasAlways,"\n");
 	Print("%c--------------------------------------------------%c\n",hasAlways,comment,comment);
-	Print("%c      OPTIONS used in the MCMC inference%c\n",hasAlways,comment,comment);
+	Print("%c      OPTIONS used in the MCMC inference          %c\n",hasAlways,comment,comment);
 	Print("%c--------------------------------------------------%c\n",hasAlways,comment,comment);
-	Print("%cset extra%cprintOptions=0 to suppress the printing%c\n",hasAlways,comment,filler,comment);
+	Print("%cset extra%cprintOptions=0 to suppress the printing %c\n",hasAlways,comment,filler,comment);
 	Print("%c--------------------------------------------------%c\n",hasAlways,comment,comment);
 	Print("%s",hasAlways,"\n");
  	A(METADATA_PTR) meta=&(opt->io.meta);
@@ -41,8 +41,8 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	Print("   metadata=%s\n",hasAlways,emptyList);
 	Print("   metadata%cisRegularOrdered=%s\n",hasAlways,filler,logicals[!!meta->isRegularOrdered]);
 	Print("   metadata%cseason='%s'\n",!hasSeasonCmpnt,filler,"none")                                
-	Print("   metadata%cseason='%s'\n",hasSeasonCmpnt&&meta->cmpntString[0]=='S',filler,"harmonic")  
-	Print("   metadata%cseason='%s'\n",hasSeasonCmpnt&&meta->cmpntString[0]=='D',filler,"dummy")
+	Print("   metadata%cseason='%s'\n",hasSeasonCmpnt&&meta->seasonForm=='S',filler,"harmonic")  
+	Print("   metadata%cseason='%s'\n",hasSeasonCmpnt&&meta->seasonForm=='D',filler,"dummy")
 	Print("   metadata%cperiod=%f\n",hasSeasonCmpnt,filler,meta->period*meta->deltaTime);
 	Print("   metadata%cstartTime=%.5f\n",hasAlways,filler,meta->startTime);
 	Print("   metadata%cdeltaTime=%.5f\n",hasAlways,filler,meta->deltaTime);

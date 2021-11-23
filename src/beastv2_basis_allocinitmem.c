@@ -15,7 +15,7 @@ static void DSVT_AllocInitBasis(BEAST2_BASIS_PTR basis,I32 N,I32 K_MAX,MemPointe
 	basis->ks=MyALLOC(*MEM,nElem,I16,64);
 	basis->ke=basis->ks+MAX_NUM_SEG;
 	I32 Npad16=16 * ((N+15)/16);
-	basis->goodvec=MyALLOC(*MEM,Npad16,U08,64);
+	basis->goodvec=MyALLOC(*MEM,Npad16,U08,8);
 	memset(basis->goodvec+N,0L,Npad16 - N);    
 	basis->termType=MyALLOC(*MEM,K_MAX,U08,64);
 }
