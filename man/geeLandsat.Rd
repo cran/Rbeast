@@ -29,8 +29,9 @@
 }
 \examples{
 
-\donttest{
+
  library(Rbeast)
+\dontrun{ 
  df = geeLandsat(lon=-80.983877,lat= 40.476882) #if it fails, try a few more times before giving up
  print(df)
 }

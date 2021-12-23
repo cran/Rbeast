@@ -41,10 +41,13 @@
 
  library(Rbeast)
  
+ \dontrun{
  tetris() 
  
- # A  field of size 20x25 with the blocks moving down every 0.1 second.
- tetris(20,25,0.1) 
+ # A  field of size 20x25 with blocks moving down every 0.1 sec.
+ tetris(20,25,0.1)  
+ }
+ 
 }
 
 }

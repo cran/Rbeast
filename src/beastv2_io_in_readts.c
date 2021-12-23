@@ -115,8 +115,8 @@ static I08 _timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo,BEAST2_BASIS_PT
 	if (yInfo->Yseason){
 		F32PTR TERMS=NULL;
 		if      (basis[0].type==SEASONID){ SEASON_CONST* bConst=&basis[0].bConst.season; TERMS=bConst->TERMS;} 
-		else if (basis[0].type==DUMMYID) { DUMMY_CONST* bConst=&basis[0].bConst.dummy;   TERMS=bConst->TERMS;}
-		else if (basis[0].type==SVDID)  { 	SVD_CONST* bConst=&basis[0].bConst.dummy;	 TERMS=bConst->TERMS;	}	
+		else if (basis[0].type==DUMMYID) { DUMMY_CONST* bConst=&basis[0].bConst.dummy;  TERMS=bConst->TERMS;}
+		else if (basis[0].type==SVDID)  {  SVD_CONST* bConst=&basis[0].bConst.dummy;	 TERMS=bConst->TERMS;	}	
 		SCPY(Kseason * N,TERMS,X);
 		X+=Kseason * N;
 		K+=Kseason;		

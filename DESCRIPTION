@@ -1,7 +1,7 @@
 Package: Rbeast
 Type: Package
-Version: 0.9.1
-Date: 2021-11-22
+Version: 0.9.2
+Date: 2021-12-22
 Title: Bayesian Change-Point Detection and Time Series Decomposition
 Authors@R: c(person(given = "Kaiguang", family = "Zhao", role = c("aut", "cre"), email = "lidar.rs@gmail.com"),
              person(given = "Tongxi", family = "Hu", role = "aut", email = "hu.1555@osu.edu"),
@@ -21,6 +21,6 @@ LazyData: true
 Imports: grid
 License: GPL (>= 2)
 NeedsCompilation: yes
-Packaged: 2021-11-23 17:15:34 UTC; zhaokg
+Packaged: 2021-12-22 07:27:48 UTC; zhaokg
 Repository: CRAN
-Date/Publication: 2021-11-23 23:30:02 UTC
+Date/Publication: 2021-12-23 08:20:09 UTC

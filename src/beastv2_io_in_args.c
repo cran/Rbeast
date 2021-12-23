@@ -7,6 +7,7 @@
 #include "abc_datatype.h"
 #include "abc_blas_lapack_lib.h"
 #include "abc_ide_util.h"  
+#include "abc_common.h"  
 #include "abc_ts_func.h"
 #include "abc_date.h"
 #include "beastv2_func.h"    
@@ -739,6 +740,7 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 		I08   consoleWidth;
 		I08   whichOutputDimIsTime;
 		I08   dumpInputData;
+		I08   ncpStatMethod;
 		I08  smoothCpOccPrCurve;
 		I08  useMeanOrRndBeta;
 		I08  computeCredible;
@@ -786,9 +788,21 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 			_2(computeSeasonAmp,computeTrendSlope);
 			_4(tallyPosNegSeasonJump,tallyPosNegTrendJump,tallyIncDecTrendJump,tallyPosNegOutliers);
 			_1(useMeanOrRndBeta);
+			if ( (tmp=GetField(S,"ncpStatMethod")) && IsChar(tmp)) {
+				char a[10+1];
+				GetCharArray(tmp,a,10);
+				if      (strcicmp(a,"mean")==0)    o.ncpStatMethod=StatMEAN;
+				else if (strcicmp(a,"mode")==0)   o.ncpStatMethod=StatMODE;
+				else if (strcicmp(a,"median")==0)  o.ncpStatMethod=StatMEDIAN;
+				else								 o.ncpStatMethod=StatMODE;
+				m.ncpStatMethod=0;
+			} else {
+				m.ncpStatMethod=1;
+			}
 		} 
 	} 
-	if (m.whichOutputDimIsTime)				o.whichOutputDimIsTime=whichDimIsTime;
+	if (m.whichOutputDimIsTime)		o.whichOutputDimIsTime=whichDimIsTime;
+	if (m.ncpStatMethod)			o.ncpStatMethod=StatMODE;
 	if (o.whichOutputDimIsTime > ndims)		o.whichOutputDimIsTime=1L; 
 	if (m.smoothCpOccPrCurve)    o.smoothCpOccPrCurve=0;
 	if (m.dumpInputData)		 o.dumpInputData=0;

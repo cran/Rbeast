@@ -169,7 +169,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 	int    nptr=0;
 	if (IS_STRING_EQUAL(algorithm,"beastv4Demo"))
 	{
-		BEAST2_OPTIONS    option={0,}; 
+		BEAST2_OPTIONS      option={ {{0,},},}; 
 		option.io.out.result=NULL;		
 		GLOBAL_OPTIONS=(BEAST2_OPTIONS_PTR)&option;
 		if ( BEAST2_GetArgs(prhs,nrhs,&option)==0 ) {
@@ -188,7 +188,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 	}
 	else if (IS_STRING_EQUAL(algorithm,"beastv4"))
 	{
-		BEAST2_OPTIONS      option={0,};		
+		BEAST2_OPTIONS      option={ {{0,},},}; 
 		if (BEAST2_GetArgs(prhs,nrhs,&option)==0) {
 			BEAST2_DeallocateTimeSeriesIO(&(option.io));
 			return IDE_NULL;
@@ -278,7 +278,9 @@ void * mainFunction(void *prhs[],int nrhs) {
 				r_printf("\nRbeast: Waiting on %d threads...\n",NUM_THREADS);
 			}
 			for (I32 i=0; i < NUM_THREADS; i++) {
-				pthread_join(thread_id[i],NULL);
+				I64 ret=0;
+				pthread_join(thread_id[i],&ret);
+				r_printf("\nstack size %d.\n",ret/1024/1024);
 			}
 			if (IDE_USER_INTERRUPT==0)
 				r_printf("\nRbeast: Waited on %d threads. Done.\n",NUM_THREADS);
@@ -321,7 +323,11 @@ void * mainFunction(void *prhs[],int nrhs) {
 #if R_INTERFACE==1
 #include <R_ext/libextern.h>
 #include "Rembedded.h"
+#if defined(MSVC_COMPILER)
+SEXP DllExport rexFunction1(SEXP rList,SEXP dummy)
+#else
 SEXP DllExport rexFunction(SEXP rList,SEXP dummy)
+#endif
 {
 	if (!isNewList(rList)) 	return R_NilValue;
 	SEXP   prhs[10];
@@ -338,7 +344,11 @@ SEXP DllExport rexFunction(SEXP rList,SEXP dummy)
 #if (defined(WIN64_OS)||defined(WIN32_OS)) 
 	SEXP TetrisSetTimer(SEXP action,SEXP seconds,SEXP envior);
 	static const R_CallMethodDef CallEntries[]={
+		#if defined(MSVC_COMPILER)
+		CALLDEF(rexFunction1,2),
+		#else
 		CALLDEF(rexFunction,2),
+		#endif
 		CALLDEF(TetrisSetTimer,3),
 		{ NULL,NULL,0 }
 	};

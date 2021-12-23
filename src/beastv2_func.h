@@ -5,6 +5,7 @@
 #include "abc_mem.h"
 #include "abc_blas_lapack_lib.h"
 #include "beastv2_header.h"
+extern int  GetMedianNcp(F32PTR prob,I32 N);
 extern void SetupPointersForCoreResults(CORESULT* coreResults,BEAST2_BASIS_PTR b,I32 NumBasis,BEAST2_RESULT* resultChain);
 extern void CvtKnotsToBinVec(BEAST2_BASIS_PTR b,I32 NUMBASIS,I32 N,BEAST2_YINFO_PTR yInfo);
 extern void GenarateRandomBasis(BEAST2_BASIS_PTR basis,I32 NUMBASIS,I32 N,BEAST2_RNDSTREAM* PRAND);
@@ -56,7 +57,7 @@ static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b,I32 NUMBASIS,int startBas
 {
 	 I32 Kterms=0;
 	 for (int i=0; i < numSeg; i++) {			 Kterms+=SEG[i].K; 	 }
-	 I32 Npad=(N+7)/8 * 8;
+	 I32 Npad=(N+7)/8 * 8; Npad=N;
 	r_cblas_sgemv(CblasColMajor,CblasTrans,
 		N,Kterms,1.f,
 		X,Npad,
@@ -69,7 +70,7 @@ static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b,I32 NUMBASIS,int startBas
 	I32 Kterms2=0;
 	for (int i=0; i < numBandsX; i++) { Kterms1+=infoX[i].K; }
 	for (int i=0; i < numBandsY; i++) { Kterms2+=infoY[i].K; }
-	I32 Npad=(N+7)/8 * 8;
+	I32 Npad=(N+7)/8 * 8; Npad=N;
 	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,\
 		Kterms1,Kterms2,N,1.0f,\
 		X,Npad,
@@ -79,7 +80,7 @@ static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b,I32 NUMBASIS,int startBas
 static void XtX_ByGroup_FULL(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR XtX,I32 N,I32 Knew) {
 	I32 Kterms=0;
 	for (int i=0; i < numSeg; i++) { Kterms+=SEG[i].K; }
-	I32 Npad=(N+7)/8 * 8;
+	I32 Npad=(N+7)/8 * 8; Npad=N;
 	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,
 					Kterms,Kterms,N,1.0,
 					X,Npad,

@@ -39,10 +39,13 @@
 \donttest{
 
  library(Rbeast)
+ 
+ \dontrun{
  minesweeper() 
  
  # A mine field of size 20x25 with rougly a 15% of the spots being mines.
  minesweeper(20,25,0.15) 
+ }
 }
 
 }

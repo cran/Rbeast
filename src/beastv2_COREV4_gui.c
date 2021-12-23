@@ -89,7 +89,7 @@ void beast2_main_corev4_gui()
 	BEAST2_Result_AllocMEM(&resultChain,opt,&MEM); 	
 	BEAST2_Result_AllocMEM(&result,opt,&MEM);
 	if (extra.computeCredible) {
-		I32  Npad=(opt->io.N+7)/8 * 8;
+		I32  Npad=(opt->io.N+7)/8 * 8; Npad=opt->io.N;
 		I32  XnewOffset=0;
 		for (I32 i=0; i < MODEL.NUMBASIS; i++) {
 			if (MODEL.b[i].type==SEASONID||MODEL.b[i].type==DUMMYID||MODEL.b[i].type==SVDID)
@@ -120,7 +120,7 @@ void beast2_main_corev4_gui()
 	#undef  __DEBUG__ 
 	#ifdef __DEBUG__
 		I32    N=opt->io.N;
-		I32    Npad=(N+7)/8 * 8;
+		I32    Npad=(N+7)/8 * 8; Npad=N;
 		F32PTR flagSat=MyALLOC0(MEM,N,I32,64);
 		F32PTR Xdebug=MyALLOC0(MEM,Npad*(opt->prior.K_MAX+opt->prior.K_MAX),I32,64); 
 	#endif
@@ -213,8 +213,8 @@ void beast2_main_corev4_gui()
 			LARGE_INTEGER tStart,tEnd,tFrequency;
 			QueryPerformanceCounter(&tStart);
 			QueryPerformanceFrequency(&tFrequency);
-			const I32  N=opt->io.N;
-			const I32  Npad=(N+7)/8 * 8;
+			const I32  N=opt->io.N; 
+			const I32  Npad=N;
 			const I32  Npad16=(N+15)/16 * 16;	
 			{   
 				GenarateRandomBasis(MODEL.b,MODEL.NUMBASIS,N,&RND);
@@ -278,7 +278,7 @@ void beast2_main_corev4_gui()
 					Knewterm+=kterms;
 				} 
 				#ifdef SOLARIS_COMPILER
-					NEW.k1=NEW.k1_old;
+					NEW.k1=NEW.k1_new=NEW.k1_old;
 				#endif
 				NEW.k2_new=NEW.k1+Knewterm - 1L;	
 				NEW.k1+=basis->Kbase;			
@@ -936,8 +936,9 @@ void beast2_main_corev4_gui()
 			F32PTR	mem=Xnewterm;  
 			I32PTR  cptList=(I32PTR)mem+5LL * N;
 			F32PTR  cptCIList=(F32PTR)mem+6LL * N;
-			I32  cptNumber;
-			I32  trueCptNumber;
+			I32   cptNumber;
+			I32   trueCptNumber;
+			F32   maxncpProb;
 			const F32 T0=(F32)opt->io.meta.startTime;
 			const F32 dT=(F32)opt->io.meta.deltaTime;
 			I32   sMAXNUMKNOT=MODEL.sid >=0 ? MODEL.b[MODEL.sid].prior.maxKnotNum : -9999999;
@@ -946,9 +947,13 @@ void beast2_main_corev4_gui()
 			I32   sMINSEPDIST=MODEL.sid >=0 ? MODEL.b[MODEL.sid].prior.minSepDist : -9999999;
 			I32   tMINSEPDIST=MODEL.tid >=0 ? MODEL.b[MODEL.tid].prior.minSepDist : -9999999;
 			I32   oMINSEPDIST=MODEL.oid >=0 ? 1 : -9999999;
-			if (extra.computeSeasonChngpt && MODEL.sid >=0) 
-			{
-				cptNumber=(I32)round((double)*result.sncp);
+			if (extra.computeSeasonChngpt && MODEL.sid >=0)  	{
+				if (extra.ncpStatMethod==StatMEAN) 	
+					cptNumber=(I32)round((double)*result.sncp);
+				else if (extra.ncpStatMethod==StatMODE)	
+					cptNumber=f32_maxidx(result.sncpPr,sMAXNUMKNOT+1,&maxncpProb);
+				else 					
+					cptNumber=GetMedianNcp(result.sncpPr,sMAXNUMKNOT+1);
 				trueCptNumber=FindChangepoint((F32PTR)result.scpOccPr,mem,threshold,cptList,cptCIList,N,sMINSEPDIST,cptNumber);
 				for (int i=0; i < trueCptNumber; i++) {
 					*(result.scp+i)=(F32)(*(cptList+i)) * dT+T0;
@@ -958,17 +963,22 @@ void beast2_main_corev4_gui()
 				}
 				for (int i=trueCptNumber; i < sMAXNUMKNOT; i++)
 					*(result.scp+i)=nan,
-					* (result.scpPr+i)=nan,
-					* (result.scpAbruptChange+i)=nan;
+					*(result.scpPr+i)=nan,
+					*(result.scpAbruptChange+i)=nan;
 				for (int i=0; i < trueCptNumber; i++)
 					*(result.scpCI+i)=(F32)(*(cptCIList+i)) * dT+T0,
-					* (result.scpCI+sMAXNUMKNOT+i)=(F32)(*(cptCIList+trueCptNumber+i)) * dT+T0;
+					*(result.scpCI+sMAXNUMKNOT+i)=(F32)(*(cptCIList+trueCptNumber+i)) * dT+T0;
 				for (int i=trueCptNumber; i < sMAXNUMKNOT; i++)
 					*(result.scpCI+i)=nan,
-					* (result.scpCI+sMAXNUMKNOT+i)=nan;
+					*(result.scpCI+sMAXNUMKNOT+i)=nan;
 			}
 			if (extra.computeTrendChngpt) {
-				cptNumber=(I32)round((double)*result.tncp);
+				if (extra.ncpStatMethod==StatMEAN)
+					cptNumber=(I32)round((double)*result.tncp);
+				else if (extra.ncpStatMethod==StatMODE)
+					cptNumber=f32_maxidx(result.tncpPr,tMAXNUMKNOT+1,&maxncpProb);
+				else
+					cptNumber=GetMedianNcp(result.tncpPr,tMAXNUMKNOT+1);
 				trueCptNumber=FindChangepoint((F32PTR)result.tcpOccPr,mem,threshold,cptList,cptCIList,N,tMINSEPDIST,cptNumber);
 				for (int i=0; i < trueCptNumber; i++) {
 					*(result.tcp+i)=(F32)(*(cptList+i)) * dT+T0,
@@ -987,14 +997,20 @@ void beast2_main_corev4_gui()
 					*(result.tcpCI+i)=nan,
 					*(result.tcpCI+tMAXNUMKNOT+i)=nan;
 			}
-#define GET_CHANGPOINTS(KNOTNUM,MINSEP,MAX_KNOTNUM,CHANGEINPUT,PROBCURVE,CP,CPPROB,CP_CHANGE,CP_CI)    \
-			cptNumber=(I32)round((double)*KNOTNUM); \
-			trueCptNumber=FindChangepoint((F32PTR)PROBCURVE,mem,threshold,cptList,cptCIList,N,MINSEP,cptNumber);\
+			#define GET_CHANGPOINTS(NcpProb,KNOTNUM,MINSEP,MAX_KNOTNUM,Y,CpOccPr,CP,CPPROB,CP_CHANGE,CP_CI)    \
+			if (extra.ncpStatMethod==StatMEAN)                    \
+				cptNumber=(I32)round((double)*KNOTNUM);       \
+			else if (extra.ncpStatMethod==StatMODE)               \
+				cptNumber=f32_maxidx(NcpProb,MAX_KNOTNUM+1,&maxncpProb); \
+			else                                                              \
+				cptNumber=GetMedianNcp(NcpProb,MAX_KNOTNUM+1);            \
+			\
+			trueCptNumber=FindChangepoint((F32PTR)CpOccPr,mem,threshold,cptList,cptCIList,N,MINSEP,cptNumber);\
 			for (int i=0; i < trueCptNumber; i++) {\
 				*(CP+i)=(F32) cptList[i]* dT+T0,\
 				*(CPPROB+i)=(F32) mem[i];\
 		         I32 cptLoc=cptList[i]==0 ? 1 : cptList[i];\
-				 *(CP_CHANGE+i)=CHANGEINPUT[cptLoc] - CHANGEINPUT[cptLoc - 1];\
+				 *(CP_CHANGE+i)=Y[cptLoc] - Y[cptLoc - 1];\
 			}\
 			for (int i=trueCptNumber; i <MAX_KNOTNUM; i++) {\
 				*(CP+i)=nan;\
@@ -1007,8 +1023,32 @@ void beast2_main_corev4_gui()
 			for (int i=trueCptNumber; i < MAX_KNOTNUM; i++)\
 				*(CP_CI+i)=nan,\
 				*(CP_CI+MAX_KNOTNUM+i)=nan;
-#define OGET_CHANGPOINTS(KNOTNUM,MINSEP,MAX_KNOTNUM,PROBCURVE,CP,CPPROB,CP_CI)    \
-			cptNumber=(I32)round((double)*KNOTNUM); \
+			if (extra.tallyPosNegSeasonJump && MODEL.sid >=0) {
+				GET_CHANGPOINTS(result.spos_ncpPr,result.spos_ncp,sMINSEPDIST,sMAXNUMKNOT,result.samp,
+					result.spos_cpOccPr,result.spos_cp,result.spos_cpPr,result.spos_cpAbruptChange,result.spos_cpCI);
+				GET_CHANGPOINTS(result.sneg_ncpPr,result.sneg_ncp,sMINSEPDIST,sMAXNUMKNOT,result.samp,
+					result.sneg_cpOccPr,result.sneg_cp,result.sneg_cpPr,result.sneg_cpAbruptChange,result.sneg_cpCI);
+			}			
+			if (extra.tallyPosNegTrendJump) {
+				GET_CHANGPOINTS(result.tpos_ncpPr,result.tpos_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tY,
+					result.tpos_cpOccPr,result.tpos_cp,result.tpos_cpPr,result.tpos_cpAbruptChange,result.tpos_cpCI);
+				GET_CHANGPOINTS(result.tneg_ncpPr,result.tneg_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tY,
+					result.tneg_cpOccPr,result.tneg_cp,result.tneg_cpPr,result.tneg_cpAbruptChange,result.tneg_cpCI);
+			}
+			if (extra.tallyIncDecTrendJump) {
+				GET_CHANGPOINTS(result.tinc_ncpPr,result.tinc_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tslp,
+					result.tinc_cpOccPr,result.tinc_cp,result.tinc_cpPr,result.tinc_cpAbruptChange,result.tinc_cpCI);
+				GET_CHANGPOINTS(result.tdec_ncpPr,result.tdec_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tslp,
+					result.tdec_cpOccPr,result.tdec_cp,result.tdec_cpPr,result.tdec_cpAbruptChange,result.tdec_cpCI);
+			}
+			#define OGET_CHANGPOINTS(NcpProb,KNOTNUM,MINSEP,MAX_KNOTNUM,PROBCURVE,CP,CPPROB,CP_CI)    \
+			if (extra.ncpStatMethod==StatMEAN)                    \
+				cptNumber=(I32)round((double)*KNOTNUM);       \
+			else if (extra.ncpStatMethod==StatMODE)               \
+				cptNumber=f32_maxidx(NcpProb,MAX_KNOTNUM+1,&maxncpProb); \
+			else                                                              \
+				cptNumber=GetMedianNcp(NcpProb,MAX_KNOTNUM+1);            \
+			\
 			trueCptNumber=FindChangepoint((F32PTR)PROBCURVE,mem,threshold,cptList,cptCIList,N,MINSEP,cptNumber);\
 			for (int i=0; i < trueCptNumber; i++) {\
 				*(CP+i)=(F32) cptList[i]* dT+T0;\
@@ -1025,31 +1065,13 @@ void beast2_main_corev4_gui()
 			for (int i=trueCptNumber; i < MAX_KNOTNUM; i++)\
 				*(CP_CI+i)=nan,\
 				*(CP_CI+MAX_KNOTNUM+i)=nan;
-			if (extra.tallyPosNegSeasonJump && MODEL.sid >=0) {
-				GET_CHANGPOINTS(result.spos_ncp,sMINSEPDIST,sMAXNUMKNOT,result.samp,
-					result.spos_cpOccPr,result.spos_cp,result.spos_cpPr,result.spos_cpAbruptChange,result.spos_cpCI);
-				GET_CHANGPOINTS(result.sneg_ncp,sMINSEPDIST,sMAXNUMKNOT,result.samp,
-					result.sneg_cpOccPr,result.sneg_cp,result.sneg_cpPr,result.sneg_cpAbruptChange,result.sneg_cpCI);
-			}
-			if (extra.tallyPosNegTrendJump) {
-				GET_CHANGPOINTS(result.tpos_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tY,
-					result.tpos_cpOccPr,result.tpos_cp,result.tpos_cpPr,result.tpos_cpAbruptChange,result.tpos_cpCI);
-				GET_CHANGPOINTS(result.tneg_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tY,
-					result.tneg_cpOccPr,result.tneg_cp,result.tneg_cpPr,result.tneg_cpAbruptChange,result.tneg_cpCI);
-			}
-			if (extra.tallyIncDecTrendJump) {
-				GET_CHANGPOINTS(result.tinc_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tslp,
-					result.tinc_cpOccPr,result.tinc_cp,result.tinc_cpPr,result.tinc_cpAbruptChange,result.tinc_cpCI);
-				GET_CHANGPOINTS(result.tdec_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tslp,
-					result.tdec_cpOccPr,result.tdec_cp,result.tdec_cpPr,result.tdec_cpAbruptChange,result.tdec_cpCI);
-			}
 			if (extra.computeOutlierChngpt) {
-				OGET_CHANGPOINTS(result.oncp,oMINSEPDIST,oMAXNUMKNOT,result.ocpOccPr,result.ocp,result.ocpPr,result.ocpCI);
+				OGET_CHANGPOINTS(result.oncpPr,result.oncp,oMINSEPDIST,oMAXNUMKNOT,result.ocpOccPr,result.ocp,result.ocpPr,result.ocpCI);
 			}
 			if (extra.tallyPosNegOutliers && MODEL.oid >=0) {
-				OGET_CHANGPOINTS(result.opos_ncp,oMINSEPDIST,oMAXNUMKNOT, 
+				OGET_CHANGPOINTS(result.opos_ncpPr,result.opos_ncp,oMINSEPDIST,oMAXNUMKNOT,
 					result.opos_cpOccPr,result.opos_cp,result.opos_cpPr,result.opos_cpCI);
-				OGET_CHANGPOINTS(result.oneg_ncp,oMINSEPDIST,oMAXNUMKNOT, 
+				OGET_CHANGPOINTS(result.oneg_ncpPr,result.oneg_ncp,oMINSEPDIST,oMAXNUMKNOT,
 					result.oneg_cpOccPr,result.oneg_cp,result.oneg_cpPr,result.oneg_cpCI);
 			}
 		}

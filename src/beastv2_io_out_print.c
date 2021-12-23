@@ -95,6 +95,9 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	Print("%c......Start of displaying 'extra' ......\n",hasAlways,comment);
 	Print("   extra=%s\n",hasAlways,emptyList);
 	Print("   extra%cdumpInputData=%s\n",hasAlways,filler,logicals[!!extra->dumpInputData]);
+	Print("   extra%cncpStatMethod='%s'\n",hasAlways && extra->ncpStatMethod==StatMEAN,filler,"mean")  
+	Print("   extra%cncpStatMethod='%s'\n",hasAlways && extra->ncpStatMethod==StatMEDIAN,filler,"median")  
+	Print("   extra%cncpStatMethod='%s'\n",hasAlways && extra->ncpStatMethod==StatMODE,filler,"mode")  
 	Print("   extra%cwhichOutputDimIsTime=%d\n",hasAlways,filler,extra->whichOutputDimIsTime );
 	Print("   extra%ccomputeCredible=%s\n",hasAlways,filler,logicals[!!extra->computeCredible]);
 	Print("   extra%cfastCIComputation=%s\n",hasAlways,filler,logicals[!!extra->fastCIComputation] );

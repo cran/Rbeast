@@ -22,8 +22,6 @@ extern void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32
 void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers* MEM)
 {	
 	I32 N=opt->io.N;
-	I32 Npad=(N+7)/8 * 8;
-	I32 Npad16=(N+15)/16 * 16;
 	I32 K_MAX=opt->prior.K_MAX;
 	I32 q=opt->io.q;
 	if (q==1) {
@@ -46,7 +44,10 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 	MODEL.prop.beta_mean=MyALLOC(*MEM,K_MAX * q,F32,64);
 	MODEL.deviation=MyALLOC(*MEM,(N*q)+(q),F32,64);	
 	MODEL.avgDeviation=MODEL.deviation+N*q;
+	{
+	I32 Npad16=(N+15)/16 * 16;
 	MODEL.extremePosVec=MyALLOC(*MEM,Npad16,I08,8);
+	}
 	MODEL.NUMBASIS=opt->prior.numBasis;
 	I32   NumBasis=MODEL.NUMBASIS;
 	for (int i=0; i < NumBasis; i++)
@@ -224,7 +225,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			SVD_CONST* SVD=&basis->bConst;
 			I32 sMAXORDER=opt->io.meta.deseasonalize? opt->io.meta.period: basis->prior.maxOrder;
 			SVD->TERMS=MyALLOC(*MEM,N*sMAXORDER,F32,64);
-			SVD->SQR_CSUM=MyALLOC(*MEM,(N+1L) * sMAXORDER * 2L,F32,64);
+			SVD->SQR_CSUM=MyALLOC(*MEM,(N+1L) * sMAXORDER,F32,64);
 			CopyNumericArrToF32Arr(SVD->TERMS,opt->io.meta.svdTerms,N* sMAXORDER);
 			{
 				F32PTR ptr=SVD->TERMS;

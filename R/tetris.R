@@ -60,6 +60,10 @@
 
 tetris <- function(height=25, width=14, speed=0.6) {
 
+  if (! base::interactive()) {
+    cat("teris() runs only in the interactive command mode.")
+    invisible(return(NULL))
+  }
   speed=max(speed,0.05)
   speed=min(speed,2)
    

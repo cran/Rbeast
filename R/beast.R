@@ -1,14 +1,15 @@
 beast <- function(  y,                        
 				    start  = 1, deltat = 1, 
-					season = c('harmonic','dummy','none'),
+					season = c('harmonic','dummy', 'svd','none'),
 					freq   = NA,                  
 					scp.minmax=c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
 					tcp.minmax=c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
 					detrend   =FALSE, deseasonalize=FALSE,
 					mcmc.seed =0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
-					print.options=TRUE,
-					progressbar  =TRUE,
- 					gui=FALSE,...)
+					ci             = TRUE,
+					print.options  =TRUE,
+					print.progress =TRUE,
+ 					gui = FALSE,...)
 {
 
   #start  = 1; deltat = 1 
@@ -69,17 +70,16 @@ beast <- function(  y,
 	   argname2 = names(syscall)[[3]]
 	   if( is.null(argname2) ){ argname2=''}
        if (is.numeric(arg2) && length(arg2)==1 && argname2=='') {
-          s=sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,freq=%d)\n', arg2);   warning(s);
+          s=sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,freq=%d)\n', arg2);   warning(s);
 		  freq=arg2;
           invisible( return( beast.old(y,freq) )  )
        }
      
        if (is.list(arg2)) {
-          
-          
+        
           valname2 = deparse(syscall[[3]])
           if (  argname2 == '' && valname2 =='opt' )     {
-              s=sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,opt)\n');  warning(s);
+              s=sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,opt)\n');  warning(s);
 			  opt=arg2;
 			  invisible( return( beast.old(y,opt) )  )
           } else if (argname2 == 'option' )    {
@@ -96,20 +96,27 @@ beast <- function(  y,
    # ...length()
    # ...1
  #################################################################################
-#################################################################################  
-
-
+ #################################################################################  
 
  # tmplist=list(...)
-#......Start of displaying 'MetaData' ......
+ #......Start of displaying 'MetaData' ......
    metadata = list()
    metadata$isRegularOrdered = TRUE
    metadata$season           = season   
    metadata$startTime        = start
    metadata$deltaTime        = deltat
-   if ( !(season=='none')){
-   metadata$period           = deltat*freq;
+   if ( season!='none'){
+     metadata$period           = deltat*freq;
    }   
+   if ( season=='svd' ){
+		if (freq<=1.1 || is.na(freq) ) {
+	     	stop('When season=svd, freq must be specified and larger than 1.')
+		    invisible(return(NULL))
+		}
+		metadata$svdTerms=svdbasis(y,freq,deseasonalize)
+   }
+   metadata$deseasonalize     =deseasonalize
+   metadata$detrend           =detrend
    #metadata$whichDimIsTime   = 1
    metadata$missingValue     = NaN
    metadata$maxMissingRate   = 0.7500
@@ -151,7 +158,7 @@ beast <- function(  y,
    extra = list()
    extra$dumpInputData        = TRUE
    #extra$whichOutputDimIsTime = 1
-   extra$computeCredible      = TRUE
+   extra$computeCredible      = ci
    extra$fastCIComputation    = TRUE
    extra$computeSeasonOrder   = TRUE
    extra$computeTrendOrder    = TRUE
@@ -168,9 +175,13 @@ beast <- function(  y,
    #extra$numThreadsPerCPU     = 2
    #extra$numParThreads        = 0
  
+ if (gui && base::interactive()) {
+  warning('R is not running in the inteactive mode. Resetting gui to FALSE.');
+  gui = FALSE
+ }
  
  funstr = ifelse(!gui,"beastv4","beastv4demo") 
- ANS    = .Call(  BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
+ ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
  invisible(return(ANS))    
 }
 

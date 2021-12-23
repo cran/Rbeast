@@ -6,7 +6,7 @@
  
 \title{Bayesian time series decomposition for changepoint, trend, and periodicity or seasonality}
 \description{
-   A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components: Abrupt changes, trends, or periodic/seasonal variations. As a multi-purpose tool, it is useful for nonlinear trend analysis, time series decomposition, time series segmentation, changepoint detection, and detection of breakpoints or structural breaks.
+   A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations. BEAST is useful for changepoint detection (e.g., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation.
   }
 \usage{
     beast123( Y, 
@@ -23,17 +23,21 @@
   	a 1D vector, 2D matrix, or 3D array of numeric data. Missing values are allowed and can be indicated by \code{NA}, \code{NaN}, or a value customized in the 2nd argument \code{metadata} (e.g., \code{metadata$missingValue=-9999}).	 
 	\itemize{
     	\item If \code{Y} is a vector of size \code{Nx1} or \code{1xN}, it is treated as a single time series of length \code{N}.
-		\item If \code{Y} is a 2D matrix or 3D array of dimension \code{N1xN2} or \code{N1xN2xN3} (e.g., stacked images of geophysical data), it includes multiple time series of equal length: Which dimension is time has to be given in the 2nd argument using \code{metadata$whichDimIsTime}. For example, \code{metadata$whichDimIsTime=1} for a 190x35 input indicates 35 time series of length 190 each; \code{metadata$whichDimIsTime} = 2 for a 100x200x300 input indicates 30000=100*300 time series of length 200 each.
-               } 	
-        \code{Y} can be either regular (i.e., evenly-spaced in time) or irregular/unordered in time.
+		
+		\item If \code{Y} is a 2D matrix or 3D array of dimension \code{N1xN2} or \code{N1xN2xN3} (e.g., stacked images of geospatial data), it includes multiple time series of equal length: Which dimension is time has to be specified in the 2nd argument using \code{metadata$whichDimIsTime}. For example, \code{metadata$whichDimIsTime} = 1 for a 190x35 2D input indicates 35 time series of length 190 each; \code{metadata$whichDimIsTime} = 2 for a 100x200x300 3D input indicates 30000=100*300 time series of length 200 each.
+    } 	
+    \code{Y} can be either regular (i.e., evenly-spaced in time) or irregular/unordered in time.
   	\itemize{
-    	\item If regular, the individual times will be determined from the time of the 1st data point \code{startTime} and the time span between consecutive points \code{deltaTime}, which are specified in the 2nd arg through \code{metadata$startTime and metadata$deltaTime}; if not given, \code{startTime} and \code{deltaTime} take a default 1.0.
-		\item  If irregular or regular but unordered, the times have to be explicitly given through \code{metadata$time}. The BEAST model is currently formulated for regular data only, so internally, the \code{beast} function will aggregate/re-bin irregular data into regular ones; for the aggregation, the  \code{metadata$deltaTime} parameter MUST also be also provided to specify the desired bin size or time interval.
-               }
-        \code{Y} can have a periodic component or have a trend component only. Use the argument \code{season} to specify the cases.
+    	\item If regular, individual times are determined from the time of the 1st data point \code{startTime} and the time span between consecutive points \code{deltaTime}, which are specified in the 2nd arg through \code{metadata$startTime and metadata$deltaTime}; if not given, \code{startTime} and \code{deltaTime} take a default 1.0.
+		
+		\item  If irregular or regular but unordered, the times have to be explicitly given through \code{metadata$time}. The BEAST model is currently formulated for regular data only, so internally, the \code{beast123} function will aggregate/re-bin irregular data into regular ones; for the aggregation, the  \code{metadata$deltaTime} parameter MUST also be also provided to specify the desired bin size or time interval.
+	}
+
+    \code{Y} can have a periodic component or have a trend component only. Use the argument \code{season} to specify the cases.
   	\itemize{
-    		\item  If \code{season='none'}, \code{Y} is treated as trend-only; no periodic components are present in the time series.
-		\item  If \code{season='harmonic'}, \code{Y} has a periodic/seasonal component. The term 'season' is a misnomer being used here to broad refer to any periodic variations present in \code{Y}. The periodicity is not a statistical parameter estimated by beast but a known constant given by the user through \code{metadata$freq}. The periodic component is modeled as a harmonic curve--a combination of sins and cosines.
+   		\item  If \code{season='none'}, \code{Y} is treated as trend-only; no periodic components are present in the time series.
+		\item  If \code{season='harmonic'}, \code{Y} has a periodic/seasonal component. The term 'season' is a misnomer being used here to broad refer to any periodic variations present in \code{Y}. The periodicity is not a statistical parameter estimated by BEAST but a known constant given by the user through \code{metadata$freq}. The periodic component is modeled as a harmonic curve--a combination of sins and cosines.
+		
 		\item  If \code{season='dummy'}, the same as 'harmonic' except that the periodic/seasonal component is modeled as a non-parametric curve.
                }
   }
@@ -129,13 +133,16 @@
 
 	(optional). a list object consisting of flags to control the outputs from the BEAST runs or configure other program setting. Below are possible parameters:
 
-           	\itemize{
-    			\item \code{extra$dumpInputData}: logical (default to FALSE). If TRUE, the input time series will be copied into the output. When the input \code{Y} is irregular (i.e., \code{metadata$isRegularOrdered=FALSE}), the dumped copies will be the aggragated regular time series. 
-    			\item \code{extra$whichOutputDimIsTime}: integer (<=3). If the input \code{Y} is a 2D or 3D array (i.e., multiple time series such as stacked images), the \code{whichOutputDimIsTime} specifies which dimension is the time in the output variables. \code{whichOutputDimIsTime} defaults to 3 for 3D inputs and is ignored if the input is a vector (i.e., a single time series).			
-    			\item \code{extra$computeCredible}: logical (default to TRUE). Credible intervals will be computed and outputted only if set to TRUE.
-    			\item \code{extra$fastCIComputation}:  logical (default to TRUE). If TRUE, a fast method is used to compute credible intervals (CI). Computation of CI is one of the most computational parts and fastCIComputation should be set to TRUE unless more accurate CI estimation is desired.  
-    			\item \code{extra$computeSeasonOrder}: logical (default to TRUE). If TRUE, a posterior estimate of the seasonal harnomic order will be outputted; this flag is only valid if the time series has a seasonal component (i.e., season='harmonic' and prior$seasonMinOrder is not equal to prior$seasonMaxOrder).
-    			\item \code{extra$computeTrendOrder}: logical (default to TRUE). If TRUE, a posterior estimate of the tend polynomia order will be outputted; this flag is only valid when prior$trendMinOrder is not equal to prior$trendMaxOrder).
+        \itemize{
+    		\item \code{extra$dumpInputData}: logical (default to FALSE). If TRUE, the input time series will be copied into the output. When the input \code{Y} is irregular (i.e., \code{metadata$isRegularOrdered=FALSE}), the dumped copies will be the aggragated regular time series. 
+    		\item \code{extra$whichOutputDimIsTime}: integer (<=3). If the input \code{Y} is a 2D or 3D array (i.e., multiple time series such as stacked images), the \code{whichOutputDimIsTime} specifies which dimension is the time in the output variables. \code{whichOutputDimIsTime} defaults to 3 for 3D inputs and is ignored if the input is a vector (i.e., a single time series).	
+			
+			\item \code{extra$ncpStatMethod}: character. A string to specify which statitic is used to determine the number of changepoint (ncp) when computing the most likley changepoint locations (e.g., out$trend$cp, and out$season$cp). Three values are possible: 'mode', 'mean', and 'median'; the default is 'mode'. Models sampled by BEAST has a varying dimension (e.g., number of changeponts or knots). For example, if mcmc$samples=10, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2), and the mode is 1.
+			
+    		\item \code{extra$computeCredible}: logical (default to TRUE). Credible intervals will be computed and outputted only if set to TRUE.
+    		\item \code{extra$fastCIComputation}:  logical (default to TRUE). If TRUE, a fast method is used to compute credible intervals (CI). Computation of CI is one of the most computational parts and fastCIComputation should be set to TRUE unless more accurate CI estimation is desired.  
+    		\item \code{extra$computeSeasonOrder}: logical (default to TRUE). If TRUE, a posterior estimate of the seasonal harnomic order will be outputted; this flag is only valid if the time series has a seasonal component (i.e., season='harmonic' and prior$seasonMinOrder is not equal to prior$seasonMaxOrder).
+    		\item \code{extra$computeTrendOrder}: logical (default to TRUE). If TRUE, a posterior estimate of the tend polynomia order will be outputted; this flag is only valid when prior$trendMinOrder is not equal to prior$trendMaxOrder).
   			\item \code{extra$computeTrendOrder}: logical (default to TRUE). If TRUE, a posterior estimate of the tend polynomia order will be outputted; this flag is only valid when prior$trendMinOrder is not equal to prior$trendMaxOrder).
   			\item \code{extra$computeSeasonChngpt}: logical (default to TRUE). If TRUE, compute the most likely times/positions where changepoints occur in the seasonal component. This flag is not valid if there is a seasonal component in the time series  (i.e., season='harmonic' or season='dummy' and prior$seasonMaxKnotNum is non-zero).
   			\item \code{extra$computeTrendChngpt}: logical (default to TRUE). If TRUE, compute the most likely times/positions where changepoints occur in the trend component.
@@ -424,7 +431,7 @@ library(Rbeast)
  o=beast123(ohio$ndvi, metadata)       # Default values used for those missing parameters
 
  ##################################################################################### 
- class(ohio$rdate)                     # Another accepted time format for beast123
+ class(ohio$rdate)                      # Another accepted time format for beast123
  
  metadata = list()                                                 
  metadata$isRegularOrdered = FALSE      # The input data is irregular
@@ -502,7 +509,7 @@ library(Rbeast)
 #############################################################################################
 # Handle multiple time series: 'simdata' is a 2D matrix of dim 300x3; it consits of 3
 # time series of length 300 each. As a toy example, the 3 time series are the same.
-\donttest{ 
+\dontrun{ 
  data(simdata)                         # 
  dim(simdata)                          # dim of simdata: 300 x 3 (time x num_of_ts)
  
@@ -530,7 +537,7 @@ library(Rbeast)
 ###################################################################################### 
 # Handle 3D stacked images of irregular and unordered time-series: imagestack is a 3D 
 # array of size 12x9x1066, each pixel being a time series of length 1066
-\donttest{ 
+\dontrun{ 
  data(imagestack)
  dim(imagestack$ndvi)               # Dim: 12 x 9 X 1066 (row x col x time)
  imagestack$datestr                 # A character vector of 1066 date strings
@@ -558,64 +565,8 @@ library(Rbeast)
  image(o$trend$ncp) # number of trend changepoints over space
 } 
  
-\donttest{
-			
-###################################################################################### 
-# Handle 3D stacked images of irregular time-series : 'ndvi.zip' is  a zip file of 
-# 437 NDIV tiff image files, each having a dim of 12 x 9.
 
- zipfile = system.file("extdata/ndvi.zip", package="Rbeast") # the full path of ndvi.zip
- tmpfld  = file.path(tempdir(), "RbeastTmpFld" )  # get a temp folder
- dir.create(tmpfld)                               # create the tmp folder if non-existing
- unzip(zipfile, exdir= normalizePath(tmpfld))     # unzip the images to the tmp folder
-
- #library(raster)             # uncomment this line when trying this example
- filelist = list.files(path=tmpfld, pattern='*.tif', full.names=TRUE) # the tiff filenames
- ndvi3d   = stack(filelist)   # create a rasterstack object 
- inMemory(ndvi3d)             # image data not read yet
- ndvi3d   = readAll(ndvi3d)   # To use beast, make sure all the data is read into memory
-                              # 'raster' is slow with the reading,even for our small images
- ndvi3d   = brick(ndvi3d)     # Convert the stack to a RasterBrick object
- inMemory(ndvi3d)             # Now, all the image data is in memory
- dims     = dim(ndvi3d)   # WARNING: the 'raster' package reports a dim of 12 x 9 x 437 
-                          #corresponding to row x col x band/time. But 'raster' seems to 
-                          # use a row-major storage mode. So internally, the RasterBrick image
-                          # data is 9 x 12 x 437 in term of R's column-major storage mode:
-                          #  beast also use the col-major mode.
- Y        = values(ndvi3d)
- dim(Y)   = c(9, 12, 437) # Assign the correct column-major dim
- datestr  = names(ndvi3d) # the time strings
-
- metadata                  = list()        
- metadata$isRegularOrdered = FALSE    # IRREGULAR input
- metadata$whichDimIsTime   = 3        # 437 is the ts length, so dim is set to '3' here.
- metadata$time$datestr     = datestr 
- metadata$time$strfmt      = 'LT05_018032_20080311.yyyy-mm-dd'
- metadata$deltaTime        = 1/12     # Aggregate the irr ts at a monthly interval:1/12 year
- metadata$period           = 1.0      # The period is 1 year: deltaTime*freq=1/12*12=1.0
-
- extra = list()
- extra$numThreadsPerCPU     = 3   # Each cpu core will spawn 3 threads
- extra$numParThreads        = 30  # A total of 30 threads used, each processing individual
-                                  #  time series. For a computer with 100 cores, only the 
-                                  # first 30/3=10 cores will be used; if the computer has 5 
-                                  # cores only, then each core will spawn 30/5=6 threads 
-                                  # instead of numThreadsPerCPU=3. 
-
- o=beast123(Y, metadata=metadata,extra=extra)   # Default values used for missing parameters 
-
- # WARNING: bcz the input ts is from a RasterBrick object that has a row-major storage mode, 
- # the beast output will be of size 9 x 12 for each band r time. That is, the row and col are
- # reversed. This is a glitch only with the raster package. The beast output dim is consistent
- # with the dim of the input Y.
  
- image(o$trend$ncp)                       # number of changepoints over space
- grid::grid.raster( o$trend$ncpPr[,,1:3]) # an pseduo-RGB image composed from the prob of having
-                                          # 0, 1, and 2 trend changepoints.
- plot(o,c(4,5))
-
- unlink(tmpfld, recursive = TRUE)         # Delete the tmp folder and the extract tiff images
-}  
  
 }
 

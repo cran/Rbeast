@@ -146,8 +146,8 @@ tsextract = function(x, index=1){
 	 
 	 
 	    if(length(tags) == 1)	{	  
-	            if (is.null(tmp))   o[ tags[1] ]   = list(NULL)
-              else                o[[ tags[1] ]] = tmp 
+	          if (is.null(tmp))   o[ tags[1] ]   = list(NULL)
+              else                  o[[ tags[1] ]] = tmp 
 	  
 	     }  else  {          	    
              if (is.null(tmp))   o[[ tags[1] ]][ tags[2] ]   = list(NULL)

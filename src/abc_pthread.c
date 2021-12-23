@@ -323,19 +323,19 @@ int GetCPUInfo() {
 }
 void PrintCPUInfo() {
     r_printf("\nCPU Information:\n");
-    r_printf("Number of NUMA nodes: %d\n",cpuInfo.numaNodeCount);
-    r_printf(("Number of physical processors (sockets): %d\n"),cpuInfo.processorPackageCount);
-    r_printf(("Number of processor cores: %d\n"),cpuInfo.processorCoreCount);
-    r_printf(("Number of logical processors: %d\n"),cpuInfo.logicalProcessorCount);
-    r_printf("Number of processor groups: %d\n",cpuInfo.processorGroupCount);
+    r_printf(" - Number of NUMA nodes: %d\n",cpuInfo.numaNodeCount);
+    r_printf((" - Number of physical processors (sockets): %d\n"),cpuInfo.processorPackageCount);
+    r_printf((" - Number of processor cores: %d\n"),cpuInfo.processorCoreCount);
+    r_printf((" - Number of logical processors: %d\n"),cpuInfo.logicalProcessorCount);
+    r_printf(" - Number of processor groups: %d\n",cpuInfo.processorGroupCount);
     for (int i=0; i < cpuInfo.processorGroupCount; i++) {
-        r_printf("--Processor group #%d: %d cores\n",i,cpuInfo.coreCountPerGrp[i]);
+        r_printf(" -- Processor group #%d: %d cores\n",i,cpuInfo.coreCountPerGrp[i]);
     }
-    r_printf(("Number of processor L1/L2/L3 caches: %d/%d/%d\n"),cpuInfo.processorL1CacheCount,
+    r_printf((" - Number of processor L1/L2/L3 caches: %d/%d/%d\n"),cpuInfo.processorL1CacheCount,
         cpuInfo.processorL2CacheCount,cpuInfo.processorL3CacheCount);
-    r_printf("Group ID of current thread: %d\n",cpuInfo.currentGroup);
-    r_printf("Core ID of current thread: %d\n",cpuInfo.currentCoreNumber);
-    r_printf("CPU affinity mask of current thread: %#x\n",cpuInfo.currentThreadAffinity);
+    r_printf(" - Group ID of current thread: %d\n",cpuInfo.currentGroup);
+    r_printf(" - Core ID of current thread: %d\n",cpuInfo.currentCoreNumber);
+    r_printf(" - CPU affinity mask of current thread: %#x\n",cpuInfo.currentThreadAffinity);
 }
  void CPU_ZERO(cpu_set_t* cpus) {
     memset(cpus,0,sizeof(cpu_set_t));
@@ -356,7 +356,7 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
         *tid=cpuFunc.CreateRemoteThreadEx(
             GetCurrentProcess(),
             (LPSECURITY_ATTRIBUTES)NULL,
-            (SIZE_T)0,
+            (SIZE_T)attr->dwStackSize, 
             (LPTHREAD_START_ROUTINE)start,
             (LPVOID)arg,
             (DWORD)0,
@@ -365,9 +365,55 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
         );
     }
 #else
-    * tid=CreateThread(NULL,NULL,(LPTHREAD_START_ROUTINE)start,arg,0,0);
+    * tid=CreateThread(NULL,attr->dwStackSize,(LPTHREAD_START_ROUTINE)start,arg,0,0);
 #endif
     return 0;
 }
+#endif
+#if defined(_WIN32)||defined(WIN64_OS)
+    #if _WIN32_WINNT >=0x0602
+        int get_thread_stacksize() {
+            ULONG_PTR lowLimit;
+            ULONG_PTR highLimit; 
+            GetCurrentThreadStackLimits(&lowLimit,&highLimit);
+            return (highLimit - lowLimit);
+        }
+    #else
+        int get_thread_stacksize() {
+             NT_TIB* tib=(NT_TIB*)NtCurrentTeb();
+             LPVOID   StackLimit=tib->StackLimit;
+             LPVOID   StackBase=tib->StackBase;
+             return  StackLimit;
+        }
+    #endif
+    static void * __getstacksize(void * arg) {  *((size_t*) arg)=get_thread_stacksize();  return 0; }
+    int pthread_attr_getstacksize_win32(pthread_attr_t* attr,size_t* stacksize) {
+        static int default_stacksize=0;
+        if (attr->dwStackSize > 0) {
+            *stacksize=attr->dwStackSize;            
+        } else{
+            if (default_stacksize==0) {
+                pthread_t tid=CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)__getstacksize,stacksize,0,0);
+                pthread_join(tid,NULL);
+                default_stacksize=*stacksize;
+            }
+            *stacksize=default_stacksize;
+        }       
+        return 0;        
+    }
+#elif defined(LINUX_OS) 
+int get_thread_stacksize() {
+    pthread_attr_t attr;
+    size_t   stksize;
+    void*    stkaddr;
+    (void)pthread_getattr_np(pthread_self(),&attr);
+    (void)pthread_attr_getstack(&attr,&stkaddr,&stksize);
+    (void)pthread_attr_destroy(&attr);
+    return stksize;
+}
+#else 
+int get_thread_stacksize() {
+    return  0;
+    }
 #endif
 #include "abc_000_warning.h"

@@ -7,7 +7,7 @@
 #include "beastv2_header.h"
 static int TT_04(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST * ptr) {
 	#define TREND  (*((TREND_CONST*)ptr))	
-	I32  Npad=((N+7L)/8L) * 8L;
+	I32  Npad=((N+7L)/8L) * 8L;  Npad=N;
 	I32  Nseg=seg->R2 - seg->R1+1L;
 	I32  Kterms=(seg->ORDER2 - seg->ORDER1)+1;
 	r_ippsSet_32f(0,X,Kterms*Npad);	
@@ -35,7 +35,7 @@ static int TT_04(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST * ptr) {
 }
 static int TT_1(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define TREND  (*((TREND_CONST*)ptr))	
-	I32  Npad=((N+7L)/8L) * 8L;
+	I32  Npad=((N+7L)/8L) * 8L;  Npad=N;
 	I32  Nseg=seg->R2 - seg->R1+1L;
 	I32  Kterms=(seg->ORDER2 - seg->ORDER1)+1;
 	r_ippsSet_32f(0,X,Kterms*Npad);	
@@ -57,7 +57,7 @@ static int TT_1(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 }
 static int TT_2(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define TREND  (*((TREND_CONST*)ptr))	
-	I32  Npad=((N+7L)/8L) * 8L;
+	I32  Npad=((N+7L)/8L) * 8L; Npad=N;
 	I32  Nseg=seg->R2 - seg->R1+1L;
 	I32  Kterms=(seg->ORDER2 - seg->ORDER1)+1;
 	r_ippsSet_32f(0,X,Kterms*Npad);	
@@ -76,7 +76,7 @@ static int TT_2(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 }
 static int TT_3(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define TREND  (*((TREND_CONST*)ptr))	
-	I32  Npad=((N+7L)/8L) * 8L;
+	I32  Npad=((N+7L)/8L) * 8L;  Npad=N;
 	I32  Nseg=seg->R2 - seg->R1+1L;
 	I32  Kterms=(seg->ORDER2 - seg->ORDER1)+1;
 	r_ippsSet_32f(0,X,Kterms*Npad);	
@@ -95,7 +95,7 @@ static int TT_3(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 }
 static int DD_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define dummy (*((DUMMY_CONST*)ptr))
-	I32  Npad=((N+7L)/8L) * 8L;
+	I32  Npad=((N+7L)/8L) * 8L;  Npad=N;
 	I32  Nseg=seg->R2 - seg->R1+1L;
 	I32  period=dummy.period;
 	I32 Kterms=Nseg >=period ? period : Nseg;
@@ -116,15 +116,14 @@ static int DD_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 }
 static int VV_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 #define SVD  (*((SVD_CONST*)ptr))
-	I32     Npad=((N+7L)/8L) * 8L;
+	I32     Npad=((N+7L)/8L) * 8L;  Npad=N;
 	I32     Nseg=seg->R2 - seg->R1+1L;
-	I32 kTerms=((seg->ORDER2 - seg->ORDER1)+1) * 2;
+	I32 kTerms=(seg->ORDER2 - seg->ORDER1)+1 ;
 	r_ippsSet_32f(0,X,kTerms * Npad);
 	F32PTR TERM=SVD.TERMS+N * (seg->ORDER1 - 1)+seg->R1 - 1;
 	F32PTR svd_csum=SVD.SQR_CSUM+1L+(N+1) * (seg->ORDER1 - 1);
 	I32    k=0;
-	for (I32 j=seg->ORDER1; j <=seg->ORDER2; j++)
-	{
+	for (I32 j=seg->ORDER1; j <=seg->ORDER2; j++){
 		F32   scalingFactor;
 		r_cblas_scopy(Nseg,TERM,1L,X+seg->R1 - 1,1L);
 		scalingFactor=sqrtf(N/(svd_csum[seg->R2 - 1] - svd_csum[(seg->R1 - 1) - 1]));
@@ -132,13 +131,14 @@ static int VV_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 		k+=1;
 		TERM+=N ;
 		X+=Npad;
-		svd_csum+=(N+1L) ;	}
+		svd_csum+=(N+1L) ;	
+	}
 	return k;
 #undef SEASON
 }
 static int SS_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define SEASON  (*((SEASON_CONST*)ptr))
-	I32     Npad=((N+7L)/8L) * 8L;
+	I32     Npad=((N+7L)/8L) * 8L;  Npad=N;
 	I32     Nseg=seg->R2 - seg->R1+1L;
 	I32 kTerms=((seg->ORDER2 - seg->ORDER1)+1) * 2;
 	r_ippsSet_32f(0,X,kTerms * Npad);
@@ -164,7 +164,7 @@ static int SS_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 }
 static int SS_1(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define SEASON  (*((SEASON_CONST*)ptr))
-	I32     Npad=((N+7L)/8L) * 8L;
+	I32     Npad=((N+7L)/8L) * 8L; Npad=N;
 	I32     Nseg=seg->R2 - seg->R1+1L;
 	I32 kTerms=((seg->ORDER2 - seg->ORDER1)+1) * 2;
 	r_ippsSet_32f(0,X,kTerms * Npad);
@@ -185,7 +185,7 @@ static int SS_1(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 }
 static int SS_2(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define SEASON  (*((SEASON_CONST*)ptr))
-	I32     Npad=((N+7L)/8L) * 8L;
+	I32     Npad=((N+7L)/8L) * 8L; Npad=N;
 	I32     Nseg=seg->R2 - seg->R1+1L;
 	I32 kTerms=((seg->ORDER2 - seg->ORDER1)+1) * 2;
 	r_ippsSet_32f(0,X,kTerms * Npad);
@@ -208,7 +208,7 @@ static int SS_2(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 }
 static int SS_3(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	#define SEASON  (*((SEASON_CONST*)ptr))
-	I32     Npad=((N+7L)/8L) * 8L;
+	I32     Npad=((N+7L)/8L) * 8L; Npad=N;
 	I32     Nseg=seg->R2 - seg->R1+1L;
 	I32 kTerms=((seg->ORDER2 - seg->ORDER1)+1) * 2;
 	r_ippsSet_32f(0,X,kTerms * Npad);
@@ -230,7 +230,7 @@ static int SS_3(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 #undef SEASON
 }
 static int OO_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* bConst) {
-	I32 Npad=((N+7L)/8L) * 8L;
+	I32 Npad=((N+7L)/8L) * 8L; Npad=N;
 	I32 kTerms=1;
 	F32 sqrt_n=bConst->outlier.SQRTN;
 	I32 knotOutlier=seg->outlierKnot;
@@ -239,7 +239,7 @@ static int OO_0(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* bConst) {
 	return 1;
 }
 static int OO_1(F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* bConst) {
-	I32 Npad=((N+7L)/8L) * 8L;
+	I32 Npad=((N+7L)/8L) * 8L; Npad=N;
 	I32 kTerms=1;
 	F32 sqrt_n1=bConst->outlier.SQRTN_1;
 	I32 knotOutlier=seg->outlierKnot;

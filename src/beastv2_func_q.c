@@ -7,7 +7,20 @@
 #include "abc_rand.h"
 #include "abc_mat.h"
 #include "abc_math.h"  
+#include "abc_vec.h"  
 #include "beastv2_func.h"
+int  GetMedianNcp(F32PTR prob,I32 N) {
+	I32 ncp=0;
+	F32 cumProb=0.f;
+	for (int i=0; i < N; i++) {
+		cumProb+=prob[i];
+		if (cumProb > 0.5) {
+			ncp=i;
+		break;
+		}
+	}
+	return ncp;
+}
 void SetupPointersForCoreResults(CORESULT* coreResults,BEAST2_BASIS_PTR b,I32 NumBasis,BEAST2_RESULT* resultChain) {
 	for (I32 i=0; i < NumBasis; i++) {
 		if (b[i].type==SEASONID||b[i].type==DUMMYID||b[i].type==SVDID) {
@@ -37,7 +50,7 @@ void BEAST2_EvaluateModel(
 	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
 	BEAST2_YINFO_PTR  yInfo,BEAST2_HyperPar *hyperPar,F32 precVal,VOID_PTR stream )
 {
-	I32 Npad=(I32)ceil((F32)N/8.0f) * 8;
+	I32 Npad=(I32)ceil((F32)N/8.0f) * 8; Npad=N;
 	I32 K=0;	 
 	for (I32 basisID=0; basisID < NUMBASIS; basisID++) {
 		BEAST2_BASIS_PTR basis=b+basisID;
@@ -97,7 +110,7 @@ void BEAST2_EvaluateModel(
 }
 void MatxVec(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR Y,F32PTR XtY,I32 N)
 {
-	I32 Npad=(N+7)/8 * 8;
+	I32 Npad=(N+7)/8 * 8; Npad=N;
 	for (int i=1; i<=numSeg; i++) {  		
 		I32 r1=SEG[i -1].R1;
 		I32 r2=SEG[i -1].R2;
@@ -190,7 +203,7 @@ I32  GetInfoBandList_post(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Kstart
 }
 void MatxMat(BEAST2_BASESEG*infoX,I32 numBandsX,F32PTR X,BEAST2_BASESEG*infoY,I32 numBandsY,F32PTR Y,F32PTR XtY,I32 N,I32 Knew)
 {
-	I32 Npad=(N+7)/8 * 8;
+	I32 Npad=(N+7)/8 * 8; Npad=N;
 	I32 Ksegcsum=0;
 	for (int i=0; i < numBandsY; i++) {
 		I32 new_r1=infoY[i].R1;
@@ -221,7 +234,7 @@ void MatxMat(BEAST2_BASESEG*infoX,I32 numBandsX,F32PTR X,BEAST2_BASESEG*infoY,I3
 	}
 }
 void XtX_ByGroup(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR XtX,I32 N,I32 Knew) {
-	I32 Npad=(N+7)/8 * 8;
+	I32 Npad=(N+7)/8 * 8; Npad=N;
 	I32 Ksegcolcsum=0;
 	for (int i=1; i <=numSeg; i++) {
 		I32 Ksegcol=SEG[i- 1].K;
@@ -272,7 +285,7 @@ void MR_EvaluateModel(
 	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
 	BEAST2_YINFO_PTR yInfo,BEAST2_HyperPar *hyperPar,F32 precVal,VOID_PTR stream )
 {
-	I32 Npad=(I32)ceil((F32)N/8.0f) * 8;
+	I32 Npad=(I32)ceil((F32)N/8.0f) * 8; Npad=N;
 	I32 K=0;	 
 	for (I32 basisID=0; basisID < NUMBASIS; basisID++) {
 		BEAST2_BASIS_PTR basis=b+basisID;

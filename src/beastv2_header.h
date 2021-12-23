@@ -79,6 +79,7 @@ typedef struct BEAST2_MCMC {
 	U32   burnin,samples,chainNumber;
 	U16   thinningFactor;
 } BEAST2_MCMC,* _restrict BEAST2_MCMC_PTR;
+typedef enum {StatMEAN,StatMEDIAN,StatMODE} StatMethod;
 typedef struct BEAST2_EXTRA {
 	I08   smoothCpOccPrCurve;
 	I08   useMeanOrRndBeta;
@@ -88,6 +89,7 @@ typedef struct BEAST2_EXTRA {
 	U16   numCPUCoresToUse;
 	U16   consoleWidth;
 	I08   whichOutputDimIsTime;
+	I08   ncpStatMethod;
 	bool  computeCredible;
 	bool  fastCIComputation;
 	bool  computeSeasonOrder;

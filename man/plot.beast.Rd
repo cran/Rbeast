@@ -14,7 +14,7 @@
      main        = "BEAST decomposition and changepoint detection",
      xlab        = 'Time',
      ylab        = NULL,
-     cex.main    = 1.2,
+     cex.main    = 1,
      cex.lab     = 1,  
      relative.heights = NULL,           
      interactive =FALSE,
@@ -57,10 +57,11 @@
   \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
 }
 \examples{
-\donttest{
+
  library(Rbeast)
  data(simdata)
- result=beast(simdata)
+\dontrun{ 
+ result=beast123(simdata, metadata=list(whichDimIsTime=1))
  plot(result,1)
  plot(result,2)
 }

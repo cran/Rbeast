@@ -25,7 +25,7 @@ static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR op
 	I32 MAX_MEM_FOR_CHANGEPOINTS=6 * opt->io.N;
 	I32 Nraw=opt->io.dims[ opt->io.meta.whichDimIsTime-1L];
 	I32 MAX_COLS_YPRED=opt->io.q * MODEL.NUMBASIS;
-	I32 Npad=((opt->io.N+7)/8) * 8;
+	I32 Npad=((opt->io.N+7)/8) * 8;  Npad=opt->io.N;
 	I32 TOTAL_NUM=max4( MAXNUMCOL_Xnewterm* Npad+MAX_NUMELEM_SEGINFO, 
 		                  MAX_MEM_FOR_CHANGEPOINTS,MAX_COLS_YPRED*Npad,
 		                  Nraw);

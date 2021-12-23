@@ -8,27 +8,28 @@
 \alias{RBEAST}
 \title{Bayesian time series decomposition for changepoint, trend, and periodicity or seasonality}
 \description{
-   A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components: Abrupt changes, trends, or periodic/seasonal variations. As a multi-purpose tool, it is useful for nonlinear trend analysis, time series decomposition, time series segmentation, changepoint detection, and detection of breakpoints or structural breaks.
+   A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations. BEAST is useful for changepoint detection (e.g., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation.
   }
 \usage{
   beast(   
          y, 
          start        = 1,      
          deltat       = 1, 
-         season       = c('harmonic','dummy','none'), 
+         season       = c('harmonic','dummy','svd','none'), 
          freq         = NA,  		   
          scp.minmax   = c(0,10),  sorder.minmax = c(0,5),  sseg.min = NULL,
          tcp.minmax   = c(0,10),  torder.minmax = c(0,1),  tseg.min = NULL,
          detrend      = FALSE, 
          deseasonalize= FALSE,
          mcmc.seed    = 0,      
-         mcmc.burnin   = 200, 
+         mcmc.burnin  = 200, 
          mcmc.chains  = 3,
          mcmc.thin    = 5,
          mcmc.samples = 8000,
-         print.options=TRUE,
-         progressbar  =TRUE,		 
-         gui          = FALSE,
+         ci             = TRUE,		 
+         print.options  = TRUE,
+         print.progress = TRUE,		 
+         gui            = FALSE,
          ...
       )
 }
@@ -36,13 +37,11 @@
 
   \item{y}{ a vector for an evenly-spaced regular time series. Missing values such as NA and NaN are allowed.
 			\itemize{
-				\item  If \code{y} is irregular or unordered in time, use the \code{\link[Rbeast]{beast.irreg}} function instead.
-				
-				\item  If \code{y} is quasi-regular (e.g., multiple years of daily data spanning across leap years: 365 points in some years, and 366 in others), also use the \code{\link[Rbeast]{beast.irreg}} function instead.
+				\item  If \code{y} is irregular or unordered in time (e.g., multiple years of daily data spanning across leap years: 365 points in some years, and 366 in others), use the \code{\link[Rbeast]{beast.irreg}} function instead.
 				
 				\item  If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
 				
-				\item  If \code{y} is an object of class 'ts', its time attributes (i.e.,start, end, frequency) will be used to specify \code{start},\code{detlta},and \code{freq}: their original values, if explicitly supplied to \code{beast}, will be overwritten. If \code{frequency}=1, \code{season='none'} is assumed regardless of its input value; if \code{frequency}>1 and if \code{season='none'} is specified by the user, 'none' will be replaced by 'harnomic'.
+				\item  If \code{y} is an object of class 'ts', its time attributes (i.e.,start, end, frequency) will be used to specify the next several args such as   \code{start},\code{detlta},\code{freq}, and \code{season}: No need to provide them explicilty; even if provided, the values are ignored to honor the time attributes of \code{y}. For example, if \code{y} has a frequency = 1, \code{season = 'none'} is always assumed; if \code{y} has a frequency > 1 (i.e., with a periodic component) but \code{season='none'} is specified by the user, 'none' will be replaced by 'harmomic'.
             }  
   }
   
@@ -58,6 +57,7 @@
 					\item  \code{'harmonic'}: \code{y} has a periodic/seasonal component. The term \code{season} is a misnomer, being used here to broadly refer to any periodic variations present in \code{y}. The periodicity is NOT a model parameter estimated by BEAST but a known constant given by the user through \code{freq}. By default, the periodic component is modeled as a harmonic curve--a combination of sins and cosines.
 					
 					\item  If \code{'dummy'}, the same as \code{'harmonic'} except that the periodic/seasonal component is modeled as a non-parametric curve. The harmonic order arg \code{sorder.minmax} is irrelevant and is ignored.
+					\item  If \code{'svd'}, the same as \code{'harmonic'} except that the periodic/seasonal component is modeled as a linear cominbation of function bases derived from a Single-value decomposition. The SVD-based basis functions are more parsimonious than the harmonic sin/cos bases in parameterizing the seasonal variations; therefore, more subtle changepoints are likely to be detected.
 				}  
   
   }
@@ -95,12 +95,13 @@
   
   \item{mcmc.samples}{ integer (>=0); the number of samples collected per MCMC chain. The total number of iterations is \code{(burnin+samples*thin)*chains}.}
 
-
+  \item{ci}{ boolean; If \code{TRUE}, credible intervals (i.e., out$season$CI or out$trend$CI) will be computed for the estimated seasonal and trend components. Computing CI is time-consuming, due to sorting, so set \code{ci} to FALSE if a symmetric credible interval (i.e., out$trend$SD and out$season$SD) suffices.}	
+  
   \item{print.options}{ boolean. If \code{TRUE},the full list of input parameters to BEAST  will be printed out prior to the MCMC inference; the naming for this list (e.g., metadata, prior, and mcmc) differs slightly from the input to \code{beast}, but there is a one-to-one correspondence (e.g., prior$trendMinSepDist=tseg.min). Internaly, beast convers the input parameters to the forms of metadata, prior,and mcmc. Type 'View(beast)' to see the details or check the \code{beast123} function. }	
   
-  \item{progressbar}{ boolean; control whether a progressbar will be displayed or not. }	
+  \item{print.progress}{ boolean;If \code{TRUE}, a progressbar will be displayed. }	
   
-  \item{gui}{ boolean. If \code{TRUE}, BEAST will be run in a GUI demostration mode, with a GUI window to show an animation of the MCMC sampling in the model space step by step. Note that "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac systems.}	
+  \item{gui}{ boolean. If \code{TRUE}, BEAST will be run with a GUI window to show an animation of the MCMC sampling in the model space step by step; as an experimental feature, "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac.}	
  	
   \item{\dots}{additional parameters. There are many more settings for the implemenation but not made available in the beast() interface; please use the function \code{beast123()} instead }
  
@@ -211,7 +212,7 @@
  
  
 \seealso{
-  \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
+  \code{\link[Rbeast]{beast}},    \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}},   \code{\link[Rbeast]{geeLandsat}} 
 }
 
  
@@ -233,7 +234,7 @@ library(Rbeast)
 
 #################################Example 1############################################
 # Yellowstone is not a object of class 'ts' but a pure vector without time attributes. 
-# Below, no extra argument is supplied so default values (i.e.,start=1, deltat=1) are 
+# Below, no extra argument is supplied, so default values (i.e.,start=1, deltat=1) are 
 # used and the time is 1:774. 'freq' is missing and so is guessed via auto-correlation.
 # Use of auto-correlation to compute the period of a cyclic time series is not always 
 # reliable, so it is suggested to always supply 'freq' directly, as in Example 2 and
@@ -243,11 +244,11 @@ library(Rbeast)
  plot(out)
 
 #################################Example 2############################################
-# The time info (e.g., start,delta,and freq) are explicitly provided. 'start' can be 
-# given as a vector comprising year, month,& day,  a fractional number, or a R's Date.
-# The unit of start and deltat does not neccessarily refer to time and can be arbitrary 
-# (e.g., a sequence of data observed at evenly-spaced distaces along a transect or a 
-# elevation gradient)
+# The time info such as start,delta,and freq is explicitly provided. 'start' can be 
+# given as (1) a vector comprising year, month,& day, (2) a fractional number, or (3)
+# a R's Date. The unit of start and deltat does not neccessarily refer to time and can 
+# be arbitrary (e.g., a sequence of data observed at evenly-spaced distaces along a 
+# transect or a elevation gradient)
 
  o=beast(Yellowstone, start = c(1981,7,7),          deltat=1/24, freq=24)
 #o=beast(Yellowstone, start = 1981.5137,            deltat=1/24, freq=24)  
@@ -255,19 +256,19 @@ library(Rbeast)
 
  print(o)                           # o is a R LIST object with many fields
  plot(o)                            # plot many variables 
- plot(o, vars=c('st','s','t'))      # plot the Y, seasonal, and trend components only
+ plot(o, vars=c('st','s','t') )     # plot the Y, seasonal, and trend components only
  plot(o, vars=c('s','scp','samp','t','tcp','tslp'))# plot some selected variables in 
                                                    # 'o'. Type "?plot.beast" to see 
-                                                     # more about vars
+                                                   # more about vars
  plot(o, vars=c('s','t'),col=c('red','blue') ) # specify colors of selected subplots
 
  plot(o$time, o$season$Y,type='l') # directly plot output: the fitted season
  plot(o$time, o$season$cpOccPr[,1])# directly plot output: season chgpt  prob
- plot(o$time, o$trend$Y,type='l') # directly plot output: the fitted trend
- plot(o$time, o$trend$cpOccPr[,1])# directly plot output: trend chgpt occurrence prob
- plot(o$time, o$season$order[,1]) # directly plot output: avg harmonic order
+ plot(o$time, o$trend$Y,type='l')  # directly plot output: the fitted trend
+ plot(o$time, o$trend$cpOccPr[,1]) # directly plot output: trend chgpt occurrence prob
+ plot(o$time, o$season$order[,1])  # directly plot output: avg harmonic order
  
- plot(o, interactive=TRUE)          # manually choose which variables to plot
+ plot(o, interactive=TRUE)         # manually choose which variables to plot
 
 }
 
@@ -275,9 +276,10 @@ library(Rbeast)
 
 #################################Example 3############################################
 # Specify other arguments explicilty.  Default values are used for missing parameters.
-# Note that beast() and beast123() call the same internal C/C++ library, so in beast, 
+# Note that beast() and beast123() call the same internal C/C++ library, so in beast(), 
 # the input parameters will be converted to metadata, prior, mcmc, and extra parameters
-# as explained for the beast123() function.
+# as explained for the beast123() function. Or type 'View(beast)' to check the parameter
+# assignment in the code.
   
  out = beast(Yellowstone, freq=24,season='dummy', mcmc.samples=5000, tseg.min=20)
  plot(out)
@@ -285,10 +287,10 @@ library(Rbeast)
  out=beast( 
      Yellowstone,            # Yellowstone: a pure numeric vector wo time info
      start=1981.51, deltat=1/24, freq  = 24,  
-     season='harmonic',  	 # periodic compnt exisits,fitted as a harmonic curve 
+     season    = 'harmonic', # periodic compnt exisits,fitted as a harmonic curve 
      scp.minmax    = c(0,3), # min and max numbers of seasonal changpts allowed
      sorder.minmax = c(1,5), # min and max harmonic orders allowed
-     sseg.min = 24,          # the min length of segments btw neighboring chnpts
+     sseg.min      = 24,     # the min length of segments btw neighboring chnpts
      tcp.minmax    = c(0,10),# min and max numbers of changpts allowed in the trend
      torder.minmax = c(0,1), #  min and maxx polynomial orders to fit trend
      tseg.min      = 24,     # the min length of segments btw neighboring trend chnpts
@@ -312,47 +314,46 @@ library(Rbeast)
 # The GUI inferface allows changing the option parameters interactively. This GUI is 
 # only available on Win x64 machines, not Mac or Linux.
 
-\donttest{
- beast(Yellowstone, freq=24, gui=TRUE)
-}
+\dontrun{
+ beast(Yellowstone, freq=24, gui=TRUE) }
 
 ######################################################################################
 # Apply beast to trend-only data. 'Nile' is the ANNUAL river flow of the river
 # Nile at Aswan since 1871. It is a 'ts' object; its time attributes (start=1871, 
 # end=1970,frequency=1) are used to replace the user-supplied start,deltat, and freq, 
 # if any. 
+
 \donttest{
  data(Nile)  
  plot(Nile)     
  attributes(Nile) # a ts object with time attributes (i.e., tsp=(start,end,freq)
  
- o=beast(Nile)              # start=1871, delta=1, and freq=1 taken from Nile itself
+ o = beast(Nile)  # start=1871, delta=1, and freq=1 taken from Nile itself
  plot(o)
  
- o=beast(Nile,              # the same as above. The user-supplied values are igored
-         start=2011,        # bcz Nile has its own time attributes. Its frequency tag
-         freq=24,           # is 1, so season='none'/trend-only is assumed instead of
-         season='harmonic') # the supplied 'harmonic'
- 
+ o = beast(Nile,            # the same as above. The user-supplied values (i.e., 2011,
+           start=2011,      # 24434) are ignored bcz Nile has its own time attributes.
+           freq =24434,     # Its frequency tag is 1 (i.e., trend-only), so season='none'
+           season='harmonic' # is used instead of the supplied 'harmonic'
+		   )
 } 
- \donttest{
  
 #################################Example 5############################################
 # NileVec is  a pure data vector. The first run below is WRONG bcz NileVec was assumed
 # to have a perodic component by default and beast gets a best estimate of freq=6 while 
 # the true value is freq=1. To fit a trend-only model, season='none' has to be explicilty
 # specified, as in the 2nd & 3rd funs.
-
+\donttest{
  NileVec = as.vector(Nile) # NileVec is not a ts obj but a pure numeric data vector
- o = beast(NileVec)        # ERROR: No time attributes available to interpret NileVec. 
-                           # By default, beast assumes season='harmonic', start=1,
-                           # and deltat=1. 'freq' is guessed to be 6 (WRONG).    
+ o       = beast(NileVec)  # ERROR: No time attributes available to interpret NileVec. 
+                           # By default, beast assumes season='harmonic', start=1, and
+                           # deltat=1. 'freq' is missing and guessed to be 6 (WRONG).    
  plot(o)          
 							  
  o=beast(NileVec,season='none') # Use season='none' for trend-only analysis; the default
                                 # time is the indices '1:length(NileVec)'. 
 								
- o=beast(Nile,                  # The true time attributes, if needed, has to be given 
+ o=beast(NileVec,               # The true time attributes, if needed, has to be given 
          start  = 1871,         # explicilty thru start and deltat (or freq if there is
          deltat = 1,            # a  cyclic cmpnt). 
          season = 'none')                                                
@@ -374,13 +375,14 @@ library(Rbeast)
  out=beast(co2) # co2 is a ts object and its 'tsp' time attributes are used to get the
                 # true time info. No need to specify 'start','deltat', & freq explicity.
 				
- out=beast(co2,                 # the supplied time/freq values will be ignored bcz
-           start=c(1959,1,15),  # co2 is a ts object; the correct freq = 12 will be 
-           deltat=1/12,         # used
-           freq=365)  
+ out=beast(co2,                  # The supplied time/freq values will be ignored bcz
+           start  = c(1959,1,15),# co2 is a ts object; the correct freq = 12 will be 
+           deltat = 1/12,        # used.
+           freq   = 365)  
  print(out)
  plot(out)
 } 
+
 
 
 #################################Example 7############################################
@@ -388,7 +390,7 @@ library(Rbeast)
 # necessarily time.
  
 \donttest{
-  data(CNAchrom11) # DNC copy number alterations in Chromesome 11 for cell line GM05296
+  data(CNAchrom11) # DNA copy number alterations in Chromesome 11 for cell line GM05296
                    # The data is orderd by genomic position (not time), and the values
                    # are the log2-based intensity ratio of copy numbers between the sample
                    # the reference. A value of zero means no gain or loss in copy number.
@@ -438,8 +440,30 @@ library(Rbeast)
   
 }
 
-
-#################################Example10############################################
+#################################Example 10############################################
+#    Daily confirmed COVID-19 new cases and deaths across the globe
+ 
+ \dontrun{
+ data(covid19)
+ newcases = covid19$newcases
+ 
+ # This ts varies periodically every 7 days. 7 days can't be precisely represented 
+ # in  the unit of year bcz some years has 365 days and others has 366. So, here we 
+ # use  the date number as the time unit--the num of days lapsed since 1970-01-01. 
+ 
+ datenum = as.numeric(covid19$date) 
+ o       = beast(newcases, start=min(datenum), deltat=1, freq=7) 
+ o$time  = as.Date(o$time, origin='1970-01-01') # Convert from integers to Date.
+ plot(o)
+ 
+ # Apply BEAST to the square root-transformed time series
+ o        = beast(sqrt(newcases), start=min(datenum), deltat=1, freq=7) 
+ o$time   = as.Date(o$time, origin='1970-01-01')  # Convert from integers to Date.
+ plot(o)
+ 
+ }
+ 
+#################################Example11############################################
 # The old API interface of beast is still made available but not recommended. It is 
 # kept mainly to ensure the working of the sample code on Page 475 in the text
 # Ecological Metods by Drs. Southwood and Henderson.

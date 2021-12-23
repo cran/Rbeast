@@ -25,12 +25,21 @@
   \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}}, \code{\link[Rbeast]{geeLandsat}} 
 } 
 \examples{
-\donttest{
-library(Rbeast)
-data(simdata)
-result=beast(simdata)
-plot(result,1)
-plot(result,2)
+
+ library(Rbeast)
+ data(simdata)
+ 
+ \donttest{
+ # handle only the 1st ts
+ out=beast(simdata[,1]) 
+ }
+ 
+ \dontrun{
+ # handle all the ts
+ out=beast123(simdata, metadata=list(whichDimIsTime=1))  
+ 
+ plot(out,1)
+ plot(out,2)
 }
 }
 \keyword{misc}

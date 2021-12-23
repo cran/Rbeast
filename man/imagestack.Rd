@@ -17,8 +17,11 @@
 \donttest{
  
  data(imagestack) 
- imagestack$ndvi    # NDVI images collected over the past several deccades
  imagestack$datestr # A string vector containg the observation dates of individual ndvi images
+ \dontrun{
+ imagestack$ndvi    # NDVI images collected over the past several deccades
+ }
+ plot(imagestack$ndvi[3,4,],type='l') # Plot the raw data at a pixel
 
 
 }

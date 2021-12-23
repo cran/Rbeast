@@ -819,7 +819,7 @@ static INLINE I32 __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist,I32 N,I32 
 	for (int i=0; i < N; i++) {
 		if (flist[i].extra==0)	continue;
 		nptr_dummy++;
-		FIELD_ITEM qList[100]={ 0,};
+		FIELD_ITEM qList[100]={ {0,},};
 		for (int j=0; j < q; j++) {
 			strcpy(qList[j].name,nms[j]);
 			qList[j].type=flist[i].type;

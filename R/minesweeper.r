@@ -55,7 +55,11 @@ new.interactiveWindow = function(width, height) {
    if ( is.character(oldDev) ) {
       #identical(oldDev,get.devfun('windows')) ) 
 	  if (.Platform$OS.type == "windows")  {
-	     options(device = 'windows') 
+	     #options(device = 'windows') 
+		  # changed to the function bcz some package like IRanges
+		  # redefines "windows" and dev.new won't work if specified with
+		  # the string "windows".
+		 options(device = get.devfun('windows')) 
 	     dev.new(width=width, height=height)
 	  }  else {
 	     if ( devfun.exist('x11')) {
@@ -322,6 +326,11 @@ plot.buttons <-function(nx,ny, yExtra, w) {
 }
 
 minesweeper <- function(height=15, width=12, prob=0.1) {
+  
+  if (! base::interactive()) {
+    cat("teris() runs only in the interactive command mode.")
+    invisible(return(NULL))
+  }
   
   #print(parent.env( environment()))
   #print(parent.env(parent.env( environment())))

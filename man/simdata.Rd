@@ -10,20 +10,23 @@
     data(simdata)
 }
 \source{
-Rbeast v0.0.0
+Rbeast v0.9.2
 }
  
 \examples{
 
-library(Rbeast)
-data(simdata)
-plot(simdata,type='l')
-\donttest{
-result=beast(simdata)
-plot(result,1)
-plot(result,2)
-plot(result,3)
-}
+ library(Rbeast)
+ data(simdata)
+ plot(simdata[,1],type='l')
+ 
+ \dontrun{ 
+ #out=beast123(simdata) # Error: whichDimIsTime has to be specified. See below
+ out=beast123(simdata, metadata=list(whichDimIsTime=1))  
+ 
+ plot(out,1)
+ plot(out,2)
+ plot(out,3)
+ }
 }
 \keyword{misc}
 

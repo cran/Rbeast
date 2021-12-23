@@ -8,7 +8,7 @@ beast.irreg <- function(
                     deseasonalize=FALSE,
                     mcmc.seed=0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
                     print.options=TRUE,
-                    progressbar  =TRUE,					
+                    print.progress  =TRUE,					
                     gui=FALSE,...)
 {
 
@@ -21,7 +21,7 @@ beast.irreg <- function(
   #detrend = FALSE; deseasonalize=FALSE
   #mcmc.seed=0;  mcmc.bunrin=200; mcmc.chains=3; mcmc.thin=5; mcmc.samples=8000
   #print.options=TRUE
-  #progressbar  =TRUE
+  #print.progress  =TRUE
   #gui=FALSE
   
   if ( !hasArg("y") || is.list(y) )  {
@@ -59,8 +59,10 @@ beast.irreg <- function(
    metadata$period           = deltat*freq;
    }   
    #metadata$whichDimIsTime   = 1
-   metadata$missingValue     = NaN
-   metadata$maxMissingRate   = 0.7500
+   metadata$deseasonalize     =deseasonalize
+   metadata$detrend           =detrend
+   metadata$missingValue      = NaN
+   metadata$maxMissingRate    = 0.7500
    
 #......End of displaying MetaData ......
    prior = list()
@@ -110,7 +112,7 @@ beast.irreg <- function(
    extra$tallyPosNegSeasonJump= TRUE
    extra$tallyPosNegTrendJump = TRUE
    extra$tallyIncDecTrendJump = TRUE
-   extra$printProgressBar     = progressbar
+   extra$printProgressBar     = print.progress
    extra$printOptions         = print.options
    extra$consoleWidth         = 0
    #extra$numThreadsPerCPU     = 2

@@ -5,7 +5,7 @@
 
 \title{Bayesian time series decomposition for changepoint, trend, and periodicity or seasonality}
 \description{
-   A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components: Abrupt changes, trends, or periodic/seasonal variations. As a multi-purpose tool, it is useful for nonlinear trend analysis, time series decomposition, time series segmentation, changepoint detection, and detection of breakpoints or structural breaks.
+   A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations. BEAST is useful for changepoint detection (e.g., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation.
   }
 \usage{
   beast.irreg(   
@@ -22,9 +22,9 @@
        mcmc.chains  = 3,
        mcmc.thin    = 5,
        mcmc.samples = 8000,
-       print.options= TRUE,
-       progressbar  = TRUE,
-       gui          = FALSE,
+       print.options  = TRUE,
+       print.progress = TRUE,
+       gui            = FALSE,
        ...
       )
 }
@@ -93,7 +93,7 @@
 
   \item{print.options}{ boolean. If \code{TRUE},the full list of input parameters to BEAST  will be printed out prior to the MCMC inference; the naming for this list (e.g., metadata, prior, and mcmc) differs slightly from the input to \code{beast}, but there is a one-to-one correspondence (e.g., prior$trendMinSepDist=tseg.min). Internaly, beast convers the input parameters to the forms of metadata, prior,and mcmc. Type 'View(beast)' to see the details or check the \code{beast123} function. }	
   
-  \item{progressbar}{ boolean; control whether a progressbar will be displayed or not. }	
+  \item{print.progress}{ boolean;If \code{TRUE}, a progressbar will be displayed. }	
   
   
   \item{gui}{ boolean. If \code{TRUE}, BEAST will be run in a GUI demostration mode, with a GUI window to show an animation of the MCMC sampling in the model space step by step. Note that "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac systems.}	

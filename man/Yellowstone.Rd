@@ -9,17 +9,17 @@
     data(Yellowstone)
 }
 \source{
-Rbeast v0.9.1
+Rbeast v0.9.2
 }
  
 \examples{
-library(Rbeast)
-data(Yellowstone)
-plot(Yellowstone,type='l')
-\donttest{
-result=beast(Yellowstone)
-plot(result)
-}
+ library(Rbeast)
+ data(Yellowstone)
+ plot(Yellowstone,type='l')
+ \donttest{
+ result=beast(Yellowstone)
+ plot(result)
+ }
 }
 \keyword{misc}
 

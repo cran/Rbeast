@@ -2,19 +2,19 @@
 plot.beast<-function(
   x, 
   index = 1,
-  vars = c('st','s','scp','sorder','t','tcp','torder','o','ocp','error'),  
-  col  = NULL, 
-  main ="BEAST decomposition and changepoint detection",
-  xlab ='Time',
-  ylab = NULL,
-  cex.main =1.2,
+  vars  = c('st','s','scp','sorder','t','tcp','torder','o','ocp','error'),  
+  col   = NULL, 
+  main  ="BEAST decomposition and changepoint detection",
+  xlab  ='Time',
+  ylab  = NULL,
+  cex.main =1,
   cex.lab  =1,
   relative.heights=NULL,
-  interactive=FALSE,
+  interactive     =FALSE,
   ... ) 
 {
   
-  if(interactive){  
+  if(interactive & base::interactive() ){  
     plot.interactive(x, index)
     invisible(NULL)
   }
@@ -399,11 +399,11 @@ plot.beast<-function(
     if (var=='tcp')   {  get.T(); get.tcp();  plot.prob(clr,  ytitle) }
     if (var=='sorder'){  get.S(); get.scp();  plot.order(clr, ytitle)  }
     if (var=='torder'){  get.T(); get.tcp();  plot.order(clr, ytitle)  }
-    if (var=='samp')     {  get.S();           plot.amp(clr, ytitle)  }
-    if (var=='tslp')   {  get.T();             plot.slp(clr, ytitle)  }    
+    if (var=='samp')  {  get.S();             plot.amp(clr, ytitle)  }
+    if (var=='tslp')  {  get.T();             plot.slp(clr, ytitle)  }    
     if (var=='o')     {  get.O();             plot.o(clr, ytitle)  }
     if (var=='ocp')   {  get.ocp();           plot.oprob(clr, ytitle)  }
-    if (var=='error'){   get.Yts();           plot.error(clr, ytitle)  }
+    if (var=='error') {  get.Yts();           plot.error(clr, ytitle)  }
     
     title(ylab = ytitle,cex=cex.lab, mgp = c(1.25, 1.25, 0));
     
@@ -412,8 +412,13 @@ plot.beast<-function(
     }
 
     if(i==nPlots){
-      axis(  1,   labels = TRUE, padj =padj, tcl =tcl,cex.axis=1);
-      title(xlab = xlab ,mgp = c(1.2, 1.2, 0));  
+	  title(xlab = xlab ,mgp = c(1.2, 1.2, 0));  
+	  if (sum(class(t)=='Date') >0 ){
+		axis.Date(1,  t, labels = TRUE, padj =padj, tcl =tcl,cex.axis=1);	  	
+	  }	 else{
+	    axis(  1,   labels = TRUE, padj =padj, tcl =tcl,cex.axis=1);
+	  }
+      
     }
     
   }

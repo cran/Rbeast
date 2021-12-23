@@ -1,5 +1,6 @@
 #pragma once
 #include "abc_000_macro.h"
+extern int get_thread_stacksize();
 extern int GetNumCores();
 #if defined(WIN64_OS)||defined(WIN32_OS)
  #define WIN32_LEAN_AND_MEAN
@@ -70,6 +71,13 @@ static INLINE int pthread_attr_init(pthread_attr_t * attr)
 #endif
     return 0;
 }
+static INLINE int	pthread_attr_setstacksize(pthread_attr_t* tattr,size_t  size) {
+       tattr->dwStackSize=size;
+       return 0;
+}
+static int pthread_attr_getstacksize(pthread_attr_t* attr,size_t* stacksize) {
+    return pthread_attr_getstacksize_win32(attr,stacksize);
+}
 static INLINE  int pthread_attr_destroy(pthread_attr_t* attr)
 {
 #ifdef WIN64_OS
@@ -133,9 +141,12 @@ static INLINE int  pthread_attr_setdetachstate(pthread_attr_t * attr,int detachs
 {
     return 0;
 }
-static INLINE int pthread_join(pthread_t thread,void **value_ptr)
-{
+static INLINE int pthread_join(pthread_t thread,void **retvalue_ptr)
+{  
 	WaitForSingleObject(thread,INFINITE);
+    if (retvalue_ptr) {
+        GetExitCodeThread(thread,retvalue_ptr);
+    }
 	CloseHandle(thread);
     return 0;
 }
