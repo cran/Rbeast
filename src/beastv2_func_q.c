@@ -9,15 +9,19 @@
 #include "abc_math.h"  
 #include "abc_vec.h"  
 #include "beastv2_func.h"
-int  GetMedianNcp(F32PTR prob,I32 N) {
-	I32 ncp=0;
+F32  GetPercentileNcp(F32PTR prob,I32 N,F32 pctile) {
+	F32 preNcp=0;
+	F32 ncp=0;
 	F32 cumProb=0.f;
 	for (int i=0; i < N; i++) {
 		cumProb+=prob[i];
-		if (cumProb > 0.5) {
-			ncp=i;
-		break;
+		if (cumProb > pctile) {
+			F32 d2=cumProb - pctile;
+			F32 d1=pctile - (cumProb-prob[i]);
+			ncp=(preNcp*d2+i*d1)/prob[i];
+			break;
 		}
+		preNcp=i;
 	}
 	return ncp;
 }
@@ -25,24 +29,24 @@ void SetupPointersForCoreResults(CORESULT* coreResults,BEAST2_BASIS_PTR b,I32 Nu
 	for (I32 i=0; i < NumBasis; i++) {
 		if (b[i].type==SEASONID||b[i].type==DUMMYID||b[i].type==SVDID) {
 			coreResults[i].xNProb=resultChain->sncpPr,
-				coreResults[i].xProb=resultChain->scpOccPr,
-				coreResults[i].xorder=resultChain->sorder, 
-				coreResults[i].x=resultChain->sY,
-				coreResults[i].xSD=resultChain->sSD;
+			coreResults[i].xProb=resultChain->scpOccPr,
+			coreResults[i].xorder=resultChain->sorder, 
+			coreResults[i].x=resultChain->sY,
+			coreResults[i].xSD=resultChain->sSD;
 		}
 		else if (b[i].type==TRENDID) {
 			coreResults[i].xNProb=resultChain->tncpPr,
-				coreResults[i].xProb=resultChain->tcpOccPr,
-				coreResults[i].xorder=resultChain->torder, 
-				coreResults[i].x=resultChain->tY,
-				coreResults[i].xSD=resultChain->tSD;
+			coreResults[i].xProb=resultChain->tcpOccPr,
+			coreResults[i].xorder=resultChain->torder, 
+			coreResults[i].x=resultChain->tY,
+			coreResults[i].xSD=resultChain->tSD;
 		}
 		else if (b[i].type==OUTLIERID) {
 			coreResults[i].xNProb=resultChain->oncpPr,
-				coreResults[i].xProb=resultChain->ocpOccPr,
-				coreResults[i].xorder=NULL,				
-				coreResults[i].x=resultChain->oY,
-				coreResults[i].xSD=resultChain->oSD;
+			coreResults[i].xProb=resultChain->ocpOccPr,
+			coreResults[i].xorder=NULL,				
+			coreResults[i].x=resultChain->oY,
+			coreResults[i].xSD=resultChain->oSD;
 		}
 	}
 }
@@ -342,7 +346,7 @@ void MR_EvaluateModel(
 	F32 log_det_alphaQ=sum_log_diagv2(curmodel->alphaQ_star,q);	
 	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
 	F32 half_log_det_prior=-.5f * K*logf(precVal);
-	F32 marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * log_det_alphaQ;
+	F32 marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * log_det_alphaQ*2.0f;
     curmodel->marg_lik=marg_lik;
  	return;
 }

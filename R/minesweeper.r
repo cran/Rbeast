@@ -56,7 +56,7 @@ new.interactiveWindow = function(width, height) {
       #identical(oldDev,get.devfun('windows')) ) 
 	  if (.Platform$OS.type == "windows")  {
 	     #options(device = 'windows') 
-		  # changed to the function bcz some package like IRanges
+		  # Changed to the function bcz some package like IRanges
 		  # redefines "windows" and dev.new won't work if specified with
 		  # the string "windows".
 		 options(device = get.devfun('windows')) 
@@ -64,7 +64,12 @@ new.interactiveWindow = function(width, height) {
 	  }  else {
 	     if ( devfun.exist('x11')) {
 		   options(device = 'x11') 
-		   dev.new(width=width, height=height,type = "Xlib")  
+		   # X11 font can't be loaded on Ubuntu Linux for Xlib
+		     if(base::capabilities('cairo')) {
+			    dev.new(width=width, height=height,type = "cairo")  
+			 } else {
+			 	dev.new(width=width, height=height,type = "Xlib")  
+			 }			
 		 } else if ( devfun.exist('quartz')) {
 		    options(device = 'quartz') 
 		    dev.new(width=width, height=height)  		 
@@ -328,7 +333,7 @@ plot.buttons <-function(nx,ny, yExtra, w) {
 minesweeper <- function(height=15, width=12, prob=0.1) {
   
   if (! base::interactive()) {
-    cat("teris() runs only in the interactive command mode.")
+    cat("minesweeper() runs only in the interactive command mode.")
     invisible(return(NULL))
   }
   

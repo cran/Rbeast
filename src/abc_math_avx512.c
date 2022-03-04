@@ -328,8 +328,8 @@ void sincos512_ps(v16sf x,v16sf* s,v16sf* c) {
     y=_mm512_sub_ps(y,ysin1);
     xmm1=_mm512_add_ps(ysin1,ysin2);
     xmm2=_mm512_add_ps(y,y2);
-    *s=_mm512_xor_ps(xmm1,sign_bit_sin);
-    *c=_mm512_xor_ps(xmm2,sign_bit_cos);
+    _mm512_storeu_ps(s,_mm512_xor_ps(xmm1,sign_bit_sin) );
+    _mm512_storeu_ps(c,_mm512_xor_ps(xmm2,sign_bit_cos) );
 }
 v16sf pow512_ps(v16sf x,float n) {
     int    nInteger=n;

@@ -53,12 +53,12 @@ static void SetupRoutinesByCPU() {
 		 if (cpuinfo.HW_AVX512_F  && cpuinfo.HW_AVX512_BW && cpuinfo.HW_AVX512_DQ && cpuinfo.HW_AVX512_VL) {
 			 SetupVectorFunction_AVX512();
 			 SetupPCG_AVX512();
-			 r_printf("CPU checking result: the AVX512-enabled library is used ... \n\n");
+			 r_printf("CPU checking result: The AVX512-enabled library is used ... \n\n");
 		 }
 		 else if (cpuinfo.HW_AVX &&cpuinfo.HW_AVX2 && cpuinfo.HW_FMA3) {
 			 SetupVectorFunction_AVX2();
 			 SetupPCG_AVX2();
-			 r_printf("CPU checking result: the AVX2-enabled library is used ...\n\n");
+			 r_printf("CPU checking result: The AVX2-enabled library is used ...\n\n");
 		 }
 		 else {
 			 SetupVectorFunction_Generic();
@@ -197,10 +197,16 @@ void * mainFunction(void *prhs[],int nrhs) {
 		if (option.io.q==1) {
 			ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;	
 		} else {			
-			memset(&option.extra,0,sizeof(option.extra));
-			option.extra.printOptions=1;
-			option.extra.dumpInputData=1;
-			option.extra.printProgressBar=1;
+			option.extra.computeSeasonAmp=0;
+			option.extra.computeTrendSlope=0;
+			option.extra.tallyIncDecTrendJump=0;
+			option.extra.tallyPosNegTrendJump=0;
+			option.extra.tallyPosNegOutliers=0;
+			option.extra.tallyPosNegSeasonJump=0;
+			option.extra.computeTrendChngpt=1;
+			option.extra.computeSeasonChngpt=1;
+			option.extra.computeOutlierChngpt=1;
+			BEAST2_print_options(&option);
 			void* MR_Output_AllocMEM(BEAST2_OPTIONS_PTR  opt);
 			ANS=PROTECT(MR_Output_AllocMEM(&option)); nptr++;
 		}
@@ -249,7 +255,9 @@ void * mainFunction(void *prhs[],int nrhs) {
 			 #else
 				pthread_create(&thread_id[i],&attr,beast2_main_corev4_mthrd,(void*)NULL);
 			 #endif
+				r_printf("Parallel computing: thread#%-d generated ... \n",i+1);
 			}
+			r_printf("Rbeast: Waiting on %d threads...\n",NUM_THREADS);
 			pthread_attr_destroy(&attr);
 			IDE_USER_INTERRUPT=0;
 			#if R_INTERACE==1
@@ -274,13 +282,10 @@ void * mainFunction(void *prhs[],int nrhs) {
 				if (IDE_USER_INTERRUPT==0) printProgress2(1.0,0,option.extra.consoleWidth,BUF,0);
 				r_printf("\n");
 				free(BUF);
-			} else {
-				r_printf("\nRbeast: Waiting on %d threads...\n",NUM_THREADS);
-			}
+			}  
 			for (I32 i=0; i < NUM_THREADS; i++) {
 				I64 ret=0;
 				pthread_join(thread_id[i],&ret);
-				r_printf("\nstack size %d.\n",ret/1024/1024);
 			}
 			if (IDE_USER_INTERRUPT==0)
 				r_printf("\nRbeast: Waited on %d threads. Done.\n",NUM_THREADS);

@@ -3,7 +3,7 @@
 #pushViewport(D)
 #popViewport()
 
-plot.interactive =function (o, index=1) {
+plot.interactive =function (o, index=1, ncpStat='mode') {
   
 
 if ( is.null( attributes(o)$tsextract ) ) {
@@ -34,7 +34,11 @@ SlpSign=0
 
 cp   =0        
 cpCI =0        
-ncp  =0        
+ncp  =0    
+ncp_mean  =0      
+ncp_mode  =0      
+ncp_median  =0      
+ncp_pct90  =0      
 ncpPr=0        
 cpPr =0
 cpChange=0
@@ -63,9 +67,16 @@ get.T      = function(){
   
 }
 get.tcp    = function(){
-  cp  <<-o$trend$cp;         
-  cpCI <<-o$trend$cpCI;  
-  ncp <<-sum(!is.nan(cp))
+  cp   <<- o$trend$cp;         
+  cpCI <<- o$trend$cpCI;  
+  
+  cmpnt = o$trend
+  ncp  <<- switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,pct90=cmpnt$ncp_pct90,max=sum(!is.nan(cp)))
+  ncp_mean   <<- cmpnt$ncp
+  ncp_mode   <<- cmpnt$ncp_mode
+  ncp_median <<- cmpnt$ncp_median
+  ncp_pct90  <<- cmpnt$ncp_pct90
+  
   ncpPr<<-o$trend$ncpPr
   cpPr <<-o$trend$cpPr
   cpChange<<-o$trend$cpAbruptChange
@@ -120,9 +131,9 @@ get.dec_tcp=function(){
 }
 
 
-####################################################
 ########################################################
-###########################################################
+#    Functions for seasonal component
+########################################################
 Amp=0
 AmpSD=0
 get.S      = function(){
@@ -140,7 +151,12 @@ get.S      = function(){
 get.scp    = function(){
   cp      <<- o$season$cp;         
   cpCI    <<- o$season$cpCI;  
-  ncp     <<- sum(!is.nan(cp))
+  cmpnt     = o$season
+  ncp       <<- switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,pct90=cmpnt$ncp_pct90,max=sum(!is.nan(cp)))
+  ncp_mean   <<- cmpnt$ncp
+  ncp_mode   <<- cmpnt$ncp_mode
+  ncp_median <<- cmpnt$ncp_median
+  ncp_pct90  <<- cmpnt$ncp_pct90
   ncpPr   <<- o$season$ncpPr
   cpPr    <<- o$season$cpPr
   cpChange<<- o$season$cpAbruptChange
@@ -618,10 +634,49 @@ ptrend.ncp =function() {
   for (i in 1:ncpMax){
     g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
   }
+  g.lines(1,c(ncp_mean, ncp_mean), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
   set.axis(1,"Number of changepoints",'Probability')
   g.draw()
 }
-
+ptrend.ncp_median =function() {
+  
+  get.tcp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_median, ncp_median), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
+ptrend.ncp_mode =function() {
+  
+  get.tcp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_mode, ncp_mode), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
+ptrend.ncp_pct90 =function() {
+  
+  get.tcp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_pct90, ncp_pct90), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
 ptrend.ncpPr =function() {
   
   
@@ -1531,10 +1586,49 @@ pseason.ncp =function() {
   for (i in 1:ncpMax){
     g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
   }
+  g.lines(1,c(ncp_mean, ncp_mean), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
   set.axis(1,"Number of changepoints",'Probability')
   g.draw()
 }
-
+pseason.ncp_median =function() {
+  
+  get.scp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_median, ncp_median), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
+pseason.ncp_mode =function() {
+  
+  get.scp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_mode, ncp_mode), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
+pseason.ncp_pct90 =function() {
+  
+  get.scp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_pct90, ncp_pct90), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
 pseason.ncpPr =function() {
   
   
@@ -2029,7 +2123,7 @@ create.button  = function(x0,y0,w,h,r,str){
 
 create.menugrob= function(nrow=38, x0=0.01, y0=0.96, h=0.025, label ){
   
-  ncol=length(label$tags)/nrow
+  ncol=length(label$tagstr)/nrow
   ncol=ceiling(ncol)
   
   r=h/10
@@ -2037,7 +2131,7 @@ create.menugrob= function(nrow=38, x0=0.01, y0=0.96, h=0.025, label ){
   w = as.numeric(wd)+2*r
   
   G=gList()
-  N=length(label$tags)
+  N=length(label$tagstr)
   
   g=0;
   for (i in 1:ncol){
@@ -2045,7 +2139,7 @@ create.menugrob= function(nrow=38, x0=0.01, y0=0.96, h=0.025, label ){
     e=min(i*nrow,N)
     for (j in 1:(e-s+1)){
       g=g+1
-      G[[g]]=create.button(x0+(i-1)*w,y0-h*j,w,h,r, label$tags[s+j-1])
+      G[[g]]=create.button(x0+(i-1)*w,y0-h*j,w,h,r, label$tagstr[s+j-1])
     }
   }
   
@@ -2059,15 +2153,15 @@ plot.button <-function(idclicked=-1,label){
     return(0)
   }
   if (ClickedButton>0) 
-    grid.reorder(label$tags[ClickedButton],c('box','middle','upper','bottom','t2','t1'))
-  grid.reorder(label$tags[idclicked],c("middle","upper","bottom","box","t1","t2"))
+    grid.reorder(label$tagstr[ClickedButton],c('box','middle','upper','bottom','t2','t1'))
+  grid.reorder(label$tagstr[idclicked],c("middle","upper","bottom","box","t1","t2"))
   
 }
 
  
 get.fun=function(){
   FUN1=list()
-  for (i in 1:length(label$tags))  {
+  for (i in 1:length(label$tagstr))  {
     nm = label$tag[[i]]
     if (length(nm)>=2)      { 
       if (is.null(  o[[nm[1]]][[nm[2]]] ) ){
@@ -2104,14 +2198,14 @@ mousedown <- function(button,x,y) {
   col=ceiling((x-x0)/w)
   row=ceiling((y0-y)/h)
   i  = nrow*(col-1)+row
-  if (i>length(label$tags))    return(NULL)
+  if (i>length(label$tagstr))    return(NULL)
   if(ClickedButton==i)         return(NULL)
   
   plot.button(i,label)
   ClickedButton <<- i
   
  
-  cat(label$tags[i],"\n") 
+  cat(label$tagstr[i],"\n") 
   f=FUN[[i]];
   if (is.function(f)){
     #f()
@@ -2136,13 +2230,13 @@ keydown <- function(key) {
     i=1
   } else {
     i=ClickedButton+(key=="Down")-(key=="Up")
-    i=ifelse(i>length(label$tags),1, i)
-    i=ifelse(i<1,length(label$tags) , i)
+    i=ifelse(i>length(label$tagstr),1, i)
+    i=ifelse(i<1,length(label$tagstr) , i)
   }
   plot.button(i, label)
   ClickedButton<<-i
   
-  cat(label$tags[i],"\n") 
+  cat(label$tagstr[i],"\n") 
   f=FUN[[i]];
   if (is.function(f)){
     #f()
@@ -2183,7 +2277,7 @@ G   <-DF$G
 
 grid.newpage()
 grid.draw(G)
-grid.reorder(label$tags[1],c("box","middle","upper","bottom","t2","t1"))
+grid.reorder(label$tagstr[1],c("box","middle","upper","bottom","t2","t1"))
 
 setGraphicsEventHandlers(prompt = "Hit q to quit", onMouseDown = mousedown,onKeybd = keydown )
 getGraphicsEvent() 

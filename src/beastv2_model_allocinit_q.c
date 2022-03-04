@@ -42,7 +42,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 	MODEL.prop.XtY=MyALLOC(*MEM,K_MAX * q,F32,64);
 	MODEL.prop.cholXtX=MyALLOC(*MEM,K_MAX * K_MAX,F32,64);
 	MODEL.prop.beta_mean=MyALLOC(*MEM,K_MAX * q,F32,64);
-	MODEL.deviation=MyALLOC(*MEM,(N*q)+(q),F32,64);	
+	MODEL.deviation=MyALLOC(*MEM,(N*q)+(q),F32,64);	  
 	MODEL.avgDeviation=MODEL.deviation+N*q;
 	{
 	I32 Npad16=(N+15)/16 * 16;

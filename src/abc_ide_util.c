@@ -175,6 +175,19 @@ void * GetField(const void * structVar,char *fname) {
 	}
 	return elem;
 }
+void* GetField123(const void* structVar,char* fname,int nPartial) {
+	if (!structVar) return NULL;
+	void* elem=(void*)getListElement_CaseIn(structVar,fname);
+	if (elem==NULL) {	 
+		SEXP names=getAttrib(structVar,R_NamesSymbol);
+		for (int i=0; i < length(structVar); i++)
+			if (strcicmp_nfirst(CHAR(STRING_ELT(names,i)),fname,nPartial)==0) {
+				elem=VECTOR_ELT(structVar,i);
+				break;
+			} 
+	}
+	return elem;
+}
 #define IS_SCALAR(x,type) (TYPEOF((SEXP)x)==(type) && XLENGTH((SEXP)x)==1)
 F64    GetScalar(const void * ptr) { 
 	if (TYPEOF((SEXP)ptr)==INTSXP)
@@ -518,6 +531,20 @@ void * GetField(const void * structVar,char *fname) {
 		}
 	}
 	return NULL;	
+}
+void* GetField123(const void* structVar,char* fname,int nPartial) {
+	VOIDPTR ptr=(VOIDPTR)mxGetField(structVar,0,fname);
+	if (ptr !=NULL) {
+		return ptr;
+	}
+	I32 numFlds=mxGetNumberOfFields(structVar);
+	for (I32 idx=0; idx < numFlds; idx++) {
+		char* tmpName=mxGetFieldNameByNumber(structVar,idx);
+		if (strcicmp_nfirst(fname,tmpName,nPartial)==0) {
+			return mxGetFieldByNumber(structVar,0,idx);
+		}
+	}
+	return NULL;
 }
 F64    GetScalar(const void * ptr) { 	return mxGetScalar((mxArray *)ptr); }
 void * GetData(const void * ptr) {   return mxGetData((mxArray *)ptr); }

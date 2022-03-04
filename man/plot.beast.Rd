@@ -17,7 +17,8 @@
      cex.main    = 1,
      cex.lab     = 1,  
      relative.heights = NULL,           
-     interactive =FALSE,
+     interactive = FALSE,
+     ncpStat     = c('mode','median','mean','pct90','max'),
      ...	 
    ) 
 }
@@ -44,7 +45,11 @@
   
   \item{cex.lab}{cex for the axis title}
   
-  \item{interactive}{a bool scaler. If TRUE, an interactive GUI is used for examining individual elements of \code{x}.}
+  \item{interactive}{a bool scalar. If TRUE, an interactive GUI is used for examining individual elements of \code{x}.}
+  
+  \item{ncpStat}{character. A string to specify which statitic is used for the Number of ChangePoint (ncp). Five values are possible: 'mean', 'mode', 'median','pct90', and 'max'; the default is 'mode'. Individual models sampled by BEAST has a varying dimension (e.g., number of changeponts or knots). For example, if mcmc$samples=10, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp will be 3.1 (rounded to 3), the median is 2.5 (2), the mode is 1, and the maximum is 7.  The 'max' option plots all the changepoints recorded in \code{out$trend$cp}, \code{out$season$cp}, or \code{out$outlier$cp}; many of these changepoints are bound to be false positives, so do not treat all of them as actual changepoints.}
+  
+  
   \item{\dots}{additional parameters to be implemented. }
  
 }

@@ -4,7 +4,7 @@ beast <- function(  y,
 					freq   = NA,                  
 					scp.minmax=c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
 					tcp.minmax=c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
-					detrend   =FALSE, deseasonalize=FALSE,
+					detrend   = FALSE, deseasonalize=FALSE,
 					mcmc.seed =0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
 					ci             = TRUE,
 					print.options  =TRUE,
@@ -20,9 +20,11 @@ beast <- function(  y,
   #detrend = FALSE; deseasonalize=FALSE
   #mcmc.seed=0;  mcmc.burin=200; mcmc.chains=3; mcmc.thin=5; mcmc.samples=8000
   #gui=FALSE
-  season=match.arg(season)
+  
+  season = match.arg(season)
   
   if ( !hasArg("y") || is.list(y) )  {
+  # list is supported in this version for the multivariate cases
     stop("Something is wrong with the input 'y'. Make sure that y is a vector")
     invisible(return(NULL))         
   }  
@@ -35,27 +37,28 @@ beast <- function(  y,
 	y=as.vector(y);
   }  
    
-  c=class(y); 
-  if (  sum(c=='ts')>0 ){
-      tsp   =attributes(y)$tsp
-	  start =tsp[1]
-	  end   =tsp[2]
-	  deltat=(end-start)/(length(y)-1)
-	  freq=tsp[3]
-	  if (  freq==1 && season!='none'){
-	   warning("The input is a object of class ts with a frequency of 1 (trend-only data), season='none' is used instead.");
-	   season='none'
-	  }
-	  else if (  freq >1 && season=='none'){
-	   s=sprintf("The input is a object of class ts with a frequency of %d (with a periodic component), season='harmonic' is used instead.", freq)
-  	   warning(s);
-	   season='harmonic'
-	  }
-  }
-  if (sum(c=='zoo')>0 || sum(c=='xts')>0 )  {  
-        warning("The input is a object of class 'zoo' or 'xts'. Its time attributes are not ignored, and only the data vector is used.");  
+  yclass=class(y); 
+  if (  sum( yclass=='ts' | yclass=='zoo' | yclass=='xts' ) > 0  ){      
+     if ( sum(yclass=='ts') > 0 ) {
+		  tsp    = attributes(y)$tsp
+		  start  = tsp[1]
+		  end    = tsp[2]
+		  deltat = (end-start)/(length(y)-1)
+		  freq   = tsp[3]
+		  if (  freq==1 && season!='none'){
+		    warning("The input is a object of class ts with a frequency of 1 (trend-only data), season='none' is used instead.");
+		    season = 'none'
+		  } else if (freq >1 && season=='none'){
+			msg=sprintf("The input is a object of class ts with a frequency of %d (with a periodic component), season='harmonic' is used instead.", freq)
+			warning(msg);
+			season='harmonic'
+		  }
+	 } else {
+	    warning("The input is a object of class 'zoo' or 'xts'. Its time attributes are not ignored, and only the data vector is used.");  
     	y=as.vector(y);
-  }  
+	 }     
+  }
+ 
   if (length(y)==1) {
   	stop("Something is wrong with the input 'y'. Make sure that y is a vector")
 	invisible(return(NULL))
@@ -64,15 +67,17 @@ beast <- function(  y,
 #################################################################################
 #################################################################################
   syscall = sys.call()
-  if( length(syscall)==3 ) {
+  if( length(syscall)==3  ) {
        call3    = syscall[[3]]
        arg2     = eval(call3,envir = parent.frame())
 	   argname2 = names(syscall)[[3]]
-	   if( is.null(argname2) ){ argname2=''}
+	   
+	   if( is.null(argname2) ){argname2=''}
        if (is.numeric(arg2) && length(arg2)==1 && argname2=='') {
-          s=sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,freq=%d)\n', arg2);   warning(s);
+          msg    = sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,freq=%d)\n', arg2);   
+		  warning(msg);
 		  freq=arg2;
-          invisible( return( beast.old(y,freq) )  )
+          invisible( return( beast.old(y,freq) ) )
        }
      
        if (is.list(arg2)) {
@@ -90,15 +95,19 @@ beast <- function(  y,
         } 
         
      }
+	 
    # eval(substitute(alist(...)))
    # substitute(alist(...))
    # ...names()
    # ...length()
    # ...1
+   
+   # tmplist=list(...)
+	
  #################################################################################
  #################################################################################  
 
- # tmplist=list(...)
+
  #......Start of displaying 'MetaData' ......
    metadata = list()
    metadata$isRegularOrdered = TRUE
@@ -106,7 +115,7 @@ beast <- function(  y,
    metadata$startTime        = start
    metadata$deltaTime        = deltat
    if ( season!='none'){
-     metadata$period           = deltat*freq;
+     metadata$period         = deltat*freq;
    }   
    if ( season=='svd' ){
 		if (freq<=1.1 || is.na(freq) ) {
@@ -115,30 +124,43 @@ beast <- function(  y,
 		}
 		metadata$svdTerms=svdbasis(y,freq,deseasonalize)
    }
-   metadata$deseasonalize     =deseasonalize
-   metadata$detrend           =detrend
+   metadata$deseasonalize     = deseasonalize
+   metadata$detrend           = detrend
    #metadata$whichDimIsTime   = 1
-   metadata$missingValue     = NaN
-   metadata$maxMissingRate   = 0.7500
+   metadata$missingValue      = NaN
+   metadata$maxMissingRate    = 0.75
+   if ( hasArg('hasOutlier') ) {
+        hasOutlier =list(...)[['hasOutlier']]   
+		metadata$hasOutlierCmpnt=as.logical(hasOutlier)		           
+   }
+
+			
    
 #......End of displaying MetaData ......
    prior = list()
    prior$modelPriorType	  = 1   
    if (!(season=='none')){
     prior$seasonMinOrder   = sorder.minmax[1]
-	  prior$seasonMaxOrder   = sorder.minmax[2]
+	prior$seasonMaxOrder   = sorder.minmax[2]
     prior$seasonMinKnotNum = scp.minmax[1]
     prior$seasonMaxKnotNum = scp.minmax[2]
-	  if (!is.null(sseg.min) && !is.na(sseg.min))   prior$seasonMinSepDist = sseg.min
+	if (!is.null(sseg.min) && !is.na(sseg.min))   prior$seasonMinSepDist = sseg.min
    }   
    prior$trendMinOrder	  = torder.minmax[1]
    prior$trendMaxOrder	  = torder.minmax[2]
    prior$trendMinKnotNum  = tcp.minmax[1]
    prior$trendMaxKnotNum  = tcp.minmax[2]
    if (!is.null(tseg.min) && !is.na(tseg.min))  prior$trendMinSepDist = tseg.min
-   prior$K_MAX            = 300
+   
+   if ( hasArg('ocp') ) {    
+		metadata$hasOutlierCmpnt= TRUE	
+        prior$outlierMaxKnotNum	= list(...)[['ocp']] 
+   }  
+   
+   prior$K_MAX            = 500
    prior$precValue        = 1.500000
    prior$precPriorType    = 'uniform'
+   
 #......End of displaying pripr ......
 
 #......Start of displaying 'mcmc' ......
@@ -175,13 +197,20 @@ beast <- function(  y,
    #extra$numThreadsPerCPU     = 2
    #extra$numParThreads        = 0
  
- if (gui && base::interactive()) {
+ 
+ if (gui && !base::interactive()) {
   warning('R is not running in the inteactive mode. Resetting gui to FALSE.');
   gui = FALSE
  }
  
  funstr = ifelse(!gui,"beastv4","beastv4demo") 
- ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
+ if ( hasArg("cputype") )  {
+    cputype = list(...)[['cputype']]
+	cputype = switch(cputype, sse=1, avx2=2, avx512=3);
+	ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra,cputype),   212345)   		   
+ } else {
+	ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
+ }
  invisible(return(ANS))    
 }
 

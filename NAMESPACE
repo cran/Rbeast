@@ -12,9 +12,10 @@ export(beast.irreg)
 export(beast123)
 export(geeLandsat)
 export(tsextract)
-export(minesweeper)
-export(tetris)
+export("tetris","minesweeper")
+export("plot.beast","print.beast")
 S3method(print,beast)
 S3method(plot, beast)
+S3method("[", "beast")
  
  

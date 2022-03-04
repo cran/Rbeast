@@ -1,6 +1,6 @@
 #pragma once
 #include "abc_datatype.h"
-typedef enum  MOVETYPE { BIRTH,DEATH,MERGE,MOVE,ChORDER } MOVETYPE;
+typedef enum  MOVETYPE { BIRTH,DEATH,MERGE,MOVE,ChORDER,NoChangeFixGlobal } MOVETYPE;
 typedef struct _CRED_INTERVAL {
 	F32PTR CI95;
 	F32PTR minValPerStrip;

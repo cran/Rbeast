@@ -467,7 +467,7 @@ void chol_addCol_skipleadingzeros(F32PTR Au,F32PTR U,I64 N,I64 K0,I64 K1) {
 	F32PTR  Ucol=Ubase+(K0-1) * N;
 	for (I64 COL=K0; COL <=K1; COL++){
 		I64 rIdxFirstNonZero=1;
-		for (; Au[rIdxFirstNonZero-1]==0;  Ucol[rIdxFirstNonZero-1]=0,rIdxFirstNonZero++);
+		for (; Au[rIdxFirstNonZero-1]==0 && rIdxFirstNonZero<COL;  Ucol[rIdxFirstNonZero-1]=0,rIdxFirstNonZero++);
 		U=Ubase+(rIdxFirstNonZero - 1) * N;
 		F64  SUM=0.f;
 		for (I64 col=rIdxFirstNonZero; col< COL; col++) 	{			
@@ -491,7 +491,7 @@ void chol_addCol_skipleadingzeros_prec(F32PTR Au,F32PTR U,F32 precPrior,I64 N,I6
 	F32PTR Ucol=Ubase+(K0-1) * N;
 	for (I64 COL=K0; COL <=K1; COL++){
 		I64 rIdxFirstNonZero=1;
-		for (; Au[rIdxFirstNonZero-1]==0;  Ucol[rIdxFirstNonZero-1]=0,rIdxFirstNonZero++);
+		for (; Au[rIdxFirstNonZero - 1]==0 && rIdxFirstNonZero < COL; Ucol[rIdxFirstNonZero - 1]=0,rIdxFirstNonZero++);
 		U=Ubase+(rIdxFirstNonZero - 1) * N;
 		F64  SUM=0.f;
 		for (I64 col=rIdxFirstNonZero; col< COL; col++) 	{			
@@ -512,7 +512,7 @@ void chol_addCol_skipleadingzeros_prec_invdiag(F32PTR Au,F32PTR U,F32PTR precPri
 	F32PTR  Ucol=Ubase+(K0-1) * N;
 	for (I64 COL=K0; COL <=K1; COL++){
 		I64 rIdxFirstNonZero=1;
-		for (; Au[rIdxFirstNonZero-1]==0;  Ucol[rIdxFirstNonZero-1]=0,rIdxFirstNonZero++);
+		for (; Au[rIdxFirstNonZero - 1]==0 && rIdxFirstNonZero < COL; Ucol[rIdxFirstNonZero - 1]=0,rIdxFirstNonZero++);
 		U=Ubase+(rIdxFirstNonZero - 1) * N;
 		F64  SUM=0.f;
 		for (I64 col=rIdxFirstNonZero; col< COL; col++) 	{			
@@ -523,7 +523,7 @@ void chol_addCol_skipleadingzeros_prec_invdiag(F32PTR Au,F32PTR U,F32PTR precPri
 			Ucol[col-1]=Ucol_curElem;
 			SUM+=Ucol_curElem * Ucol_curElem;
 			U+=N;
-		}
+		}		
 		Ucol[COL - 1]=1.f/sqrt( (Au[COL-1]+*precPrior)- SUM); 
 		Ucol+=N;
 		Au+=N;
@@ -535,7 +535,7 @@ void chol_addCol_skipleadingzeros_precVec_invdiag(   F32PTR Au,F32PTR U,F32PTR p
 	F32PTR  Ucol=Ubase+(K0-1) * N;
 	for (I64 COL=K0; COL <=K1; COL++){
 		I64 rIdxFirstNonZero=1;
-		for (; Au[rIdxFirstNonZero-1]==0;  Ucol[rIdxFirstNonZero-1]=0,rIdxFirstNonZero++);
+		for (; Au[rIdxFirstNonZero - 1]==0 && rIdxFirstNonZero < COL; Ucol[rIdxFirstNonZero - 1]=0,rIdxFirstNonZero++);
 		U=Ubase+(rIdxFirstNonZero - 1) * N;
 		F64  SUM=0.f;
 		for (rI64 col=rIdxFirstNonZero; col< COL; col++) 

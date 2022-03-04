@@ -135,6 +135,10 @@ void f32_cumsumsqr_inplace(const F32PTR X,int N) {
 	}
 }
 void f32_sumfilter(const F32PTR X,F32PTR Y,int N,int winSize) {
+	if (winSize <=1) {
+		memcpy(Y,X,sizeof(F32) * N);
+		return;
+	}
 	I32 wLeft=winSize/2;          
 	I32 wRight=(winSize - wLeft)-1;  
 	F32 csumLeftEnd=0;
@@ -478,8 +482,8 @@ void f32_set_nan_by_value(F32PTR a,I32 N,F32 missingValue) {
 	if (missingValue !=missingValue)		
 		return;
 	F32 nan=getNaN();
-	for (I32 i=N; i > 0; i--) {		
-		a[i]=fabsf(a[i]- missingValue) < 1e-10||IsInf(a[i]) ?  nan: a[i] ;
+	for (I32 i=N-1; i >=0; i--) {
+		a[i]=fabsf(a[i] - missingValue) < 1e-10||IsInf(a[i]) ? nan : a[i];
 	}
 }
 int f32_normalize_multicols_zeroout_nans(F32PTR Y,I32PTR BadRowIndices,I32 ldy,I32 N,I32 q,F32PTR mean,F32PTR sd) {

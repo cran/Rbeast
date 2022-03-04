@@ -79,6 +79,13 @@ static void fetch_next_timeSeries_MEM_reglular(A(YINFO_PTR)  yInfo,int idx,A(IO_
 	for (I32 i=0; i < q; i++) {
 		CopyStrideMEMToF32Arr(Y+i * N,io->pdata[i],N,stride,offset,io->dtype[i]);
 		f32_set_nan_by_value(Y+i * N,N,io->meta.missingValue);
+		#if R_INTERFACE==1
+			if (io->dtype[i]==DATA_INT32) {
+				I32 INTMIN=0x80000001;
+				F32 NAinteger=(F32)(INTMIN);  
+				f32_set_nan_by_value(Y+i * N,N,NAinteger);
+			}
+		#endif
 	}
 }
 static void fetch_next_timeSeries_MEM_irregular(A(YINFO_PTR)  yInfo,int idx,F32PTR GlobalMEMBuf,A(IO_PTR)  io)
@@ -91,6 +98,13 @@ static void fetch_next_timeSeries_MEM_irregular(A(YINFO_PTR)  yInfo,int idx,F32P
 	for (I32 i=0; i < q; i++) {
 		CopyStrideMEMToF32Arr(GlobalMEMBuf,io->pdata[i],Nraw,stride,offset,io->dtype[i]);
 		f32_set_nan_by_value(GlobalMEMBuf,Nraw,io->meta.missingValue);
+	    #if R_INTERFACE==1
+			if (io->dtype[i]==DATA_INT32) {
+				I32 INTMIN=0x80000001;
+				F32 NAinteger=(F32) (INTMIN);  
+				f32_set_nan_by_value(GlobalMEMBuf,Nraw,NAinteger);	
+			}
+		#endif
 		tsAggegrationPerform(Y+Nnew*i,Nnew,GlobalMEMBuf,Nraw,io->T.numPtsPerInterval,io->T.sortedTimeIdx+io->T.startIdxOfFirsInterval);
 	}			
 }
@@ -132,6 +146,8 @@ static I08 _timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo,BEAST2_BASIS_PT
 		int  nMissing=f32_find_nans(Y,N,badRowIdx);
 		U08  skipCurrentPixel=nMissing > (N * opt->io.meta.maxMissingRate) ? 1 : 0;
 		if (skipCurrentPixel) { return skipCurrentPixel; }
+		F32PTR Ycopy=Yfit; 
+		f32_mat_multirows_extract_set_by_scalar(Y,N,1L,Ycopy,badRowIdx,nMissing,0);
 		F32PTR  Xcopy=badRowIdx+nMissing;
 		f32_mat_multirows_extract_set_by_scalar(Xtmp,N,K+1,Xcopy,badRowIdx,nMissing,0);
 		linear_regression(Y,X,N,N,K,B,Yfit,NULL,XtX);			

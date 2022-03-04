@@ -27,6 +27,14 @@
 			 free(( void*)oldPointers);
 			 free(( void*)oldAlign);
 		 } 
+		 if (self->checkHeader) {	 
+			 U64PTR   oldHeader=self->memHeaderBackup; 
+			 self->memHeaderBackup=(U64PTR)malloc(sizeof(64) * self->nptsMax);
+			 if (oldHeader) {
+				 memcpy((const void*)self->memHeaderBackup,(const void*)oldHeader,sizeof(64) * oldMax);				 
+				 free((void*)oldHeader);
+			 }
+		 }
 	 }
  }
 static VOID_PTR  MemAlloc(MemPointers * self,I64 N,U08 alignment)
@@ -50,7 +58,10 @@ static VOID_PTR  MemAlloc(MemPointers * self,I64 N,U08 alignment)
 	}
 	self->memPointer[   self->npts]=ptrAligned;
 	self->memAlignOffset[self->npts]=(uintptr_t)ptrAligned- (uintptr_t)ptr;
-	self->npts++;
+	if (self->checkHeader) {
+		self->memHeaderBackup[self->npts]=*(U64PTR) ((uintptr_t)ptr - 8); 
+	}
+    self->npts++;
 	return ptrAligned;
 }
 static VOID_PTR  MemAlloc0(MemPointers* _restrict self,I64 sizeInByte,U08 alignment){
@@ -71,9 +82,26 @@ static void mem_free_all(MemPointers * _restrict self)
 		free(self->memAlignOffset);
 		self->memAlignOffset=NULL;
 	}
+	if (self->memHeaderBackup) {
+		free(self->memHeaderBackup);
+		self->memHeaderBackup=NULL;
+	}
 	self->bytesAllocated=0;
 	self->npts=0;
 	self->nptsMax=0;
+}
+static I32  verify_header(MemPointers* _restrict self) {
+	if (!self->checkHeader||self->npts==0) {
+		return 0;
+	}
+	int badHeaderNum=0;
+	for (int i=0; i < self->npts;++i) {
+		U64 curheader=*(U64PTR)((uintptr_t)self->memPointer[i] - self->memAlignOffset[i] - 8);
+		if (curheader !=self->memHeaderBackup[i]) {
+			badHeaderNum++;
+		}
+	}
+	return badHeaderNum;
 }
 void mem_init(MemPointers* self) {	 
 	*self=(MemPointers) {
@@ -84,6 +112,11 @@ void mem_init(MemPointers* self) {
 			.nptsMax=0,
 			.npts=0,
 			.bytesAllocated=0,
+			.memAlignOffset=NULL,
+			.memPointer=NULL,
+			.memHeaderBackup=NULL,
+			.checkHeader=0,
+			.verify_header=verify_header,
 			};			
 }
 #include "abc_000_warning.h"

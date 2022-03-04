@@ -137,7 +137,7 @@
     		\item \code{extra$dumpInputData}: logical (default to FALSE). If TRUE, the input time series will be copied into the output. When the input \code{Y} is irregular (i.e., \code{metadata$isRegularOrdered=FALSE}), the dumped copies will be the aggragated regular time series. 
     		\item \code{extra$whichOutputDimIsTime}: integer (<=3). If the input \code{Y} is a 2D or 3D array (i.e., multiple time series such as stacked images), the \code{whichOutputDimIsTime} specifies which dimension is the time in the output variables. \code{whichOutputDimIsTime} defaults to 3 for 3D inputs and is ignored if the input is a vector (i.e., a single time series).	
 			
-			\item \code{extra$ncpStatMethod}: character. A string to specify which statitic is used to determine the number of changepoint (ncp) when computing the most likley changepoint locations (e.g., out$trend$cp, and out$season$cp). Three values are possible: 'mode', 'mean', and 'median'; the default is 'mode'. Models sampled by BEAST has a varying dimension (e.g., number of changeponts or knots). For example, if mcmc$samples=10, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2), and the mode is 1.
+			\item \code{extra$ncpStatMethod}: character (deprecated). A string to specify which statitic is used to determine the Number of ChangePoint (ncp) when computing the most likley changepoint locations (e.g., out$trend$cp, and out$season$cp). Three values are possible: 'mode', 'mean', and 'median'; the default is 'mode'. Individual models sampled by BEAST has a varying dimension (e.g., number of changeponts or knots). For example, if mcmc$samples=10, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2), and the mode is 1. This argument is deprecated; now all the possible changepoints are outputted, together with several versions of ncp, including \code{ncp}, \code{ncp_median}, \code{ncp_mode}, and \code{ncp_pct90}. A simialr parmater \code{ncpStat} is added to the \code{\link[Rbeast]{plot.beast}} function to specify which ncp is used when plotting. 
 			
     		\item \code{extra$computeCredible}: logical (default to TRUE). Credible intervals will be computed and outputted only if set to TRUE.
     		\item \code{extra$fastCIComputation}:  logical (default to TRUE). If TRUE, a fast method is used to compute credible intervals (CI). Computation of CI is one of the most computational parts and fastCIComputation should be set to TRUE unless more accurate CI estimation is desired.  
@@ -185,11 +185,16 @@
   \item{sig2}{numeric; the estimated variance of the model error.}
   \item{trend}{a list object numeric consisting of various outputs related to the estimated trend component:
   	\itemize{
-		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of trend changepoints.
+		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of trend changepoints. Individual models sampled by BEAST has a varying dimension (e.g., number of changeponts or knots), so several alternative statistics (e.g., \code{ncp_mode}, \code{ncp_median}, and \code{ncp_pct90}) are also given to summariize the number of changepoints. For example, if \code{mcmc$samples=10}, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2),  the mode is 1, and the 90th percetile (ncp_pct90) is 6.5. 
+		 \item \code{ncp_mode}: [Number of ChangePoints]. a numeric scalar; the mode for number of changepoints. See the above for explanatatons.
+		 \item \code{ncp_median}: [Number of ChangePoints]. a numeric scalar; the median for number of changepoints. See the above for explanatatons.
+		 \item \code{ncp_pct90}: [Number of ChangePoints]. a numeric scalar; the 90th percetile for number of changepoints. See the above for explanatatons.
 		 \item \code{ncpPr}: [Probability of the Number of ChangePoints]. A vector of length \code{(prior$trendMaxKnotNum+1)}. It gives a probability distribution of having a certain number of trend changepoints over the range of [0,prior$trendMaxKnotNum]; for example, \code{ncpPr[1]} is the probability of having no trend changepoint; \code{ncpPr[i]} is the probability of having (i-1) changepoints: Note that it is \code{ncpPr[i]} not \code{ncpPr[i-1]} because ncpPr[1] is used for having zero changepoint.
 		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the trend at each point of time. Plotting \code{cpOccPr} will depict a continous curve of probability-of-being-changepoint. Of particular note, in the curve, a higher peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time and does not neccessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window \code{c(0.1,0.2,0.21,0.2,0.1)} (i.e., the peak prob is 0.21 but the summed prob is 0.71).
 		 \item \code{order}: a vector of length N; the average polynomial order needed to approximate the fitted trend. As an average over many sampled individual piece-wise polynomial trends, \code{order} is not neccessarly an integer.
-		 \item \code{cp}: [Changepoints] a vector of length \code{metadata$trendMaxKnotNum}; the most possible  changepoint locations in the trend component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {prior$trendMinSeptDist} and then picking up to a total \code{ncp} of the highest peaks in the filterd curve. If \code{ncp<trendMaxKnotNum}, the remaining of the vector is filled with NaNs.
+
+		 \item \code{cp}: [Changepoints] a vector of length \code{tcp.max=tcp.minmax[2]}; the most possible changepoint locations in the trend component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {tseg.min} and then picking up to a total \code{prior$MaxKnotNum}/\code{tcp.max} of the highest peaks in the filterd curve.  NaNs are possible if no enough changepoints are identified. \code{cp} records all the possible changepoints identified and many of them are bound to be false postives. Do not bindely treat all of them as actual changepoints.
+		 
 		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{metadata$trendMaxKnotNum}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaning elements if \code{ncp<trendMaxKnotNum}.
 		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{metadata$trendMaxKnotNum x 2}; the credibable intervals for the detected changepoints \code{cp}.
 		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{metadata$trendMaxKnotNum}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
@@ -198,7 +203,7 @@
 		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated trend. One vector of the matrix is for the upper envelope and another for the lower envelope.
 		 \item \code{slp}: [Slope] a vector of length N;  the time-varying slope of the fitted trend component .
 		 \item \code{slpSD}: [Standar Deviation of Slope] a vector of length N;  the SD of the slope for the trend component.
-		 \item \code{slpSignPr}: [PRobability of slope having a postive sign] a vector of length N;  the probabity of the slope being positive (i.e., increasing trend) for the trend component. For example, if {slpSignPr=0.80} at a given point in time, it means that 80% of the individual trend models sampled in the MCMC chain has a positive slope at that point.
+		 \item \code{slpSignPr}: [PRobability of slope having a postive sign] a vector of length N;  the probabity of the slope being positive (i.e., increasing trend) for the trend component. For example, if {slpSignPr=0.80} at a given point in time, it means that 80\% of the individual trend models sampled in the MCMC chain has a positive slope at that point.
 
 		 \item \code{pos_ncp}: 
 		 \item \code{neg_ncp}:  
@@ -283,22 +288,28 @@
 
 \examples{
 
-library(Rbeast)
 ######################################################################################
-# beast123 is an all-inclusive function that duplicates the functionalities of beast 
+# beast123() is an all-inclusive function that duplicates the functionalities of beast 
 # and beast.irreg. It can handle a single, multiple, or 3D of stacked time series, being
-# either regular or irregular. It allows for customization through four LIST option
-# arguments:
+# either regular or irregular. It allows for customization through four LIST arguments:
 #   metadata -- additional info about the input Y
 #   prior    -- prior parameters for the beast model 
 #   mcmc     -- MCMC simulation setting
 #   extra    -- misc parameters turning on/off outputs and setting up parallel computations
+
+# Despite being essentially the same as beast and beast.irreg, beast123 is provided mainly to
+# support concurrent handling of multiple time series (e.g., stacked satellite images) via
+# parallel computing: When processing stacked raster layers, do not iterate pixels using 
+# beast or beast.irreg via an external parallel caller (e.g., doParallel or foreach). Instread
+# use beast123, which supports mulithreading internally. 
+
  
 ######################################################################################
 # Yellowstone is a half-monthly time series of  774 NDVI measurmments at a Yellowstone
 # site starting from July 1-15,1981(i.e., start=c(1981,7,7). It has 24 data points per 
 # year (freq=24).        
 
+ library(Rbeast)
  data(Yellowstone)
  plot(Yellowstone)
 
@@ -328,7 +339,7 @@ library(Rbeast)
 # Specify metadata, prior, mcmc, and extra explicitly. Only 'prior' is the true model 
 # parameters of BEAST; the other three are just options to configure the input/ouput or
 # the computation process.
-\donttest{ 
+\dontrun{ 
 
  # metadata is NOT part of BEAST itself, but some extra info to describe the input
  # time series Y. Below, the input Y is the 'Yellowstone' ts.

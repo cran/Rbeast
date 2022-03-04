@@ -321,7 +321,7 @@ void MR_ComputeMargLik_prec01(BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,B
 	F32 half_log_det_prior=-0.5f * K * model->logPrecVal;
 	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',q,data->alphaQ_star,q); 
 	F32 sumLn_alphaQ_det=sum_log_diagv2(data->alphaQ_star,q);
-	data->marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * sumLn_alphaQ_det; 	 
+	data->marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * sumLn_alphaQ_det*2.f; 	 
 }
 void SetUpPrecFunctions(I08 precPriorType,I32 q,PREC_FUNCS * funcs) {
 	if (q==1) {

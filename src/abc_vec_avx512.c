@@ -756,8 +756,8 @@ I32 avx512_f32_maxidx(const F32PTR x,const int N,F32PTR val) {
     __m128  vhigh=_mm256_extractf128_ps(maxVec256,1); 
     __m128i idxlow=_mm256_castsi256_si128(maxIdx256);
     __m128i idxhigh=_mm256_extracti128_si256(maxIdx256,1); 
-    __m128 cmpmask128=_mm_cmp_ps(vlow,vhigh,_CMP_LE_OQ);  
-    __m128 max128=_mm_blendv_ps(vlow,vhigh,cmpmask128); 
+    __m128  cmpmask128=_mm_cmp_ps(vlow,vhigh,_CMP_LE_OQ);  
+    __m128  max128=_mm_blendv_ps(vlow,vhigh,cmpmask128); 
     __m128i idx128=_mm_blendv_epi8(idxlow,idxhigh,_mm_castps_si128(cmpmask128)); 
      F32 VAL[4];
      union {
@@ -1072,7 +1072,7 @@ static INLINE void GetTwoRowFromMatrix(F32PTR row1,F32PTR row2,F32PTR mat,I32 ld
         __m512 subrow1=_mm512_mask_i32gather_ps(set0(),maskRemainder,offset,mat+i * lda,4);
         __m512 subrow2=_mm512_mask_i32gather_ps(set0(),maskRemainder,offset,mat+1+i * lda,4);
         maskstore(row1+i,maskRemainder,subrow1);
-        maskstore(row2+i,maskRemainder,subrow1);
+        maskstore(row2+i,maskRemainder,subrow2);
     }
 }
 static INLINE __m512i GetRowOffset( I32 lda ) {     
@@ -1312,19 +1312,19 @@ void avx512_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
     for (; row < N - (256 * 2 -1); row+=256*2) {
         int col=0;
         for (; col < K-1; col+=2) {
-            fma_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,256 * 2);
+            avx512_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,256 * 2);
         }
         if(col<K)
-            fma_f32_axpy_inplace(b[col],X+col * lda+row,C+row,256 * 2);
+            avx512_f32_axpy_inplace(b[col],X+col * lda+row,C+row,256 * 2);
     }
     int n=N - row;
     if (n > 0) {
         int col=0;
         for (; col < K-1; col+=2) {
-            fma_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,n);
+            avx512_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,n);
         }
         if(col<K)
-            fma_f32_axpy_inplace(b[col],X+col * lda+row,C+row,n);
+            avx512_f32_axpy_inplace(b[col],X+col * lda+row,C+row,n);
     }
 }
 static INLINE I32 _avx512_f32_findindex_cmp_lt(F32PTR  x,I32PTR indices,F32 value,int N ) {

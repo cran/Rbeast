@@ -1,19 +1,14 @@
-beast123 <- function(
-			Y, 
-			metadata=list(), prior=list(),mcmc=list(), extra=list(),
-			season=c('harmonic','dummy','none'), ... )
+beast123 <- function(Y, metadata=list(), prior=list(),
+                     mcmc=list(), extra=list(),	season=c('harmonic','dummy','none'), ... )
 {
+ # tmplist=list(...)
 
   if (!hasArg("Y") || is.list(Y) || length(Y)==1)  {
     warning("Something is wrong with the input 'Y'. Make sure the Y par is a vector, a matrix, or an 3D array.")
     invisible(return(NULL))
   }
 
- 
-
- season=match.arg(season)
-
- # tmplist=list(...)
+ season = match.arg(season)
  
  if ( season=='none') {
       if( is.numeric(metadata) )     {
@@ -51,16 +46,18 @@ beast123 <- function(
   if (is.null(metadata$season))
     metadata$season=season;
   
-  funstr='beastv4'
-  ANS=.Call(
-           BEASTV4_rexFunction,
-           list(funstr,Y,metadata,prior,mcmc,extra), 
-		       212345)   
-		   
+  funstr='beastv4'  
+  if ( hasArg("cputype") )  {
+    cputype = list(...)[['cputype']]  
+    cputype = switch(cputype, sse=1, avx2=2, avx512=3);	
+	ANS    = .Call( BEASTV4_rexFunction, list(funstr,Y,metadata,prior,mcmc,extra,cputype),   212345)   		   
+ } else {
+	ANS    = .Call( BEASTV4_rexFunction, list(funstr,Y,metadata,prior,mcmc,extra),           212345)   		   
+ }
+ 
  invisible(return(ANS))
     
 }
-
 
 meanfilter <- function(x,n=5){filter(x,rep(1,n), sides=2)}
 

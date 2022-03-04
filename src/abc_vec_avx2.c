@@ -1093,7 +1093,7 @@ static INLINE void GetTwoRowFromMatrix(F32PTR row1,F32PTR row2,F32PTR mat,I32 ld
         __m256 subrow1=_mm256_mask_i32gather_ps(set0(),mat+i * lda,offset,_mm256_castsi256_ps(mask),4);
         __m256 subrow2=_mm256_mask_i32gather_ps(set0(),mat+1+i * lda,offset,_mm256_castsi256_ps(mask),4);
         maskstore(row1+i,mask,subrow1);
-        maskstore(row2+i,mask,subrow1);
+        maskstore(row2+i,mask,subrow2);
     }
 }
 static INLINE __m256i GetRowOffset( I32 lda ) { 

@@ -47,7 +47,7 @@ static void __ChangeFieldsTimeDimFrm1to_3D(FIELD_ITEM* flist,int n,int newDim) {
 				flist[i].dims[3 - 1]=d1,
 				flist[i].dims[4 - 1]=2;		}
 		else {
-			r_printf("There must be something wrong!");
+			r_error("__ChangeFieldsTimeDimFrm1to_3D: There must be something wrong!");
 		}
 	}
 }
@@ -114,7 +114,8 @@ static void __RemoveFieldsGivenFlags_Season(A(OPTIONS_PTR)  opt,FIELD_ITEM * fie
 	#define _5(x,y,z,v1,v2)				_4(x,y,z,v1),_(v2)
 	#define _7(x,y,z,v1,v2,v3,v4)		_6(x,y,z,v1,v2,v3),_(v4)
 	if (!hasSeasonCmpnt) {
-		_6(ncp,ncpPr,cpOccPr,Y,SD,CI);
+		_4(ncp,ncp_median,ncp_mode,ncp_pct90);
+		_5(  ncpPr,cpOccPr,Y,SD,CI);
 		_7(order,amp,ampSD,cp,cpPr,cpCI,cpAbruptChange);
 		_6(pos_ncp,neg_ncp,pos_ncpPr,neg_ncpPr,pos_cpOccPr,neg_cpOccPr);
 		_4(pos_cp,neg_cp,pos_cpPr,neg_cpPr  );
@@ -162,18 +163,25 @@ static void __RemoveFieldsGivenFlags_Outlier(A(OPTIONS_PTR)  opt,FIELD_ITEM * fi
 	#define _5(x,y,z,v1,v2)				_4(x,y,z,v1),_(v2)
 	#define _7(x,y,z,v1,v2,v3,v4)		_6(x,y,z,v1,v2,v3),_(v4)
 	if (!hasOutlierCmpnt) {				
-		_6(ncp,ncpPr,cpOccPr,Y,SD,CI);
+		_4(ncp,ncp_median,ncp_mode,ncp_pct90);
+		_5(ncpPr,cpOccPr,Y,SD,CI);
 		_3(cp,cpPr,cpCI);
 		_6(pos_ncp,neg_ncp,pos_ncpPr,neg_ncpPr,pos_cpOccPr,neg_cpOccPr);
 		_4(pos_cp,neg_cp,pos_cpPr,neg_cpPr);
 		_2( pos_cpCI,neg_cpCI);		
 		return;
 	}
-	if (!flag->computeCredible)		RemoveField(fieldList,nfields,"oCI"),mat->oCI=NULL;
+	if (!flag->computeCredible)		RemoveField(fieldList,nfields,"CI"),mat->oCI=NULL;
 	if (!flag->computeOutlierChngpt)
-		RemoveField(fieldList,nfields,"ocp"),mat->ocp=NULL,
-		RemoveField(fieldList,nfields,"ocpPr"),mat->ocpPr=NULL,
-		RemoveField(fieldList,nfields,"ocpCI"),mat->ocpCI=NULL;	
+		RemoveField(fieldList,nfields,"cp"),mat->ocp=NULL,
+		RemoveField(fieldList,nfields,"cpPr"),mat->ocpPr=NULL,
+		RemoveField(fieldList,nfields,"cpCI"),mat->ocpCI=NULL;	
+	if (!flag->tallyPosNegOutliers) {
+			_4(pos_ncp,neg_ncp,pos_ncpPr,neg_ncpPr),
+			_2(pos_cpOccPr,neg_cpOccPr),
+			_4(pos_cp,neg_cp,pos_cpPr,neg_cpPr),
+			_2(pos_cpCI,neg_cpCI);
+	}
     #undef _
 	#undef _2
 	#undef _3
@@ -202,7 +210,7 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	I32         nfields=0;
 	if (io->ndim==1||io->ndim==2  ) { 
 		FIELD_ITEM fldList[]={
-			_(ncp,1,M),		    
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,1,M),
 			_(ncpPr,mxKnotNum+1,M),				
 			_(cpOccPr,N,M),			
 			_(order,N,M),						
@@ -237,7 +245,7 @@ static void* __BEAST2_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 		case 3:	ROW=io->dims[0],COL=io->dims[1]; break;
 		}
 		FIELD_ITEM fldList[]={
-			_(ncp,ROW,COL),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,ROW,COL),
 			_(ncpPr,mxKnotNum+1,ROW,COL),
 			_(cpOccPr,N,ROW,COL),
 			_(order,N,ROW,COL),
@@ -298,7 +306,7 @@ static void* __BEAST2_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 	I32         nfields=0;
 	if (io->ndim==1||io->ndim==2  ) { 
 		FIELD_ITEM fldList[]={
-			_(ncp,1,M),		    
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,1,M),
 			_(ncpPr,mxKnotNum+1,M),				
 			_(cpOccPr,N,M),				
 			_(order,N,M),						
@@ -327,7 +335,7 @@ static void* __BEAST2_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 		case 3:	ROW=io->dims[0],COL=io->dims[1]; break;
 		}
 		FIELD_ITEM fldList[]={
-			_(ncp,ROW,COL),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,ROW,COL),
 			_(ncpPr,mxKnotNum+1,ROW,COL),
 			_(cpOccPr,N,ROW,COL),			
 			_(order,N,ROW,COL),
@@ -383,7 +391,7 @@ static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 	I32         nfields=0;
 	if (io->ndim==1||io->ndim==2  ) { 
 		FIELD_ITEM fldList[]={
-			_(ncp,1,M),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,1,M),
 			_(ncpPr,mxKnotNum+1,M),
 			_(cpOccPr,N,M),
 			_2(cp,cpPr,mxKnotNum,M),
@@ -410,7 +418,7 @@ static void* __BEAST2_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 			case 3:	ROW=io->dims[0],COL=io->dims[1]; break;
 		}
 		FIELD_ITEM fldList[]={		
-			_(ncp,ROW,COL),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,ROW,COL),
 			_(ncpPr,mxKnotNum+1,ROW,COL),
 			_3(cpOccPr,Y,SD,N,ROW,COL),
 			_(CI,N,2,ROW,COL),
@@ -489,9 +497,10 @@ void*  BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)
 		#ifdef __DEBUG__
         {"R2",dtype,2,{(N+7)/8 * 8,300,},&mat->R2},
 		{"RMSE",dtype,2,{(N+7)/8 * 8,300,},&mat->RMSE},
-	    #endif
+	    #else
 		{"R2",dtype,2,{ROW,COL,},&mat->R2},
 		{"RMSE",dtype,2,{ROW,COL,},&mat->RMSE},
+		#endif
 	    {"sig2",dtype,2,{ROW,COL,},&mat->sig2},
 		{"trend",DATA_STRUCT,0,{0,},(void**)trend},
 		{"season",DATA_STRUCT,0,{0,},(void**)season},
@@ -566,6 +575,9 @@ void BEAST2_Result_AllocMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,MemPointer
 	result->RMSE=MEM->alloc(MEM,sizeof(F32) * q,0);
 	if (hasSeasonCmpnt) {
 		result->sncp=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->sncp_median=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->sncp_mode=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->sncp_pct90=MEM->alloc(MEM,sizeof(F32) * 1,0);
 		result->sncpPr=MEM->alloc(MEM,sizeof(I32) * (seasonMaxKnotNum+1),64);
 		result->scpOccPr=MEM->alloc(MEM,sizeof(I32) * N,64);
 		result->sY=MEM->alloc(MEM,sizeof(F32) * Nq,64);
@@ -578,6 +590,9 @@ void BEAST2_Result_AllocMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,MemPointer
 	}
 	if (hasTrendCmpnt) {
 		result->tncp=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->tncp_median=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->tncp_mode=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->tncp_pct90=MEM->alloc(MEM,sizeof(F32) * 1,0);
 		result->tncpPr=MEM->alloc(MEM,sizeof(I32) * (trendMaxKnotNum+1),64);
 		result->tcpOccPr=MEM->alloc(MEM,sizeof(I32) * N,64);
 		result->tY=MEM->alloc(MEM,sizeof(F32) * Nq,64);
@@ -591,25 +606,28 @@ void BEAST2_Result_AllocMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,MemPointer
 	}
 	if (hasOutlierCmpnt) {
 		result->oncp=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->oncp_median=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->oncp_mode=MEM->alloc(MEM,sizeof(F32) * 1,0);
+		result->oncp_pct90=MEM->alloc(MEM,sizeof(F32) * 1,0);
 		result->oncpPr=MEM->alloc(MEM,sizeof(I32) * (outlierMaxKnotNum+1),64);
 		result->ocpOccPr=MEM->alloc(MEM,sizeof(I32) * N,64);
 		result->oY=MEM->alloc(MEM,sizeof(F32) * Nq,64);
 		result->oSD=MEM->alloc(MEM,sizeof(F32) * Nq,64);
 	}
 	if (opt->extra.computeCredible){
-		if (hasSeasonCmpnt) result->sCI=MEM->alloc(MEM,sizeof(F32) * Nq * 2,64);
-		if (hasTrendCmpnt)  result->tCI=MEM->alloc(MEM,sizeof(F32) * Nq * 2,64);
+		if (hasSeasonCmpnt)  result->sCI=MEM->alloc(MEM,sizeof(F32) * Nq * 2,64);
+		if (hasTrendCmpnt)   result->tCI=MEM->alloc(MEM,sizeof(F32) * Nq * 2,64);
 		if (hasOutlierCmpnt) result->oCI=MEM->alloc(MEM,sizeof(F32) * Nq * 2,64);
 	}
 	if (opt->extra.computeSeasonChngpt && hasSeasonCmpnt) {
 		result->scp=MEM->alloc(MEM,sizeof(U32) * seasonMaxKnotNum,64),
 		result->scpPr=MEM->alloc(MEM,sizeof(U32) * seasonMaxKnotNum,64),
-		result->scpAbruptChange=MEM->alloc(MEM,sizeof(U32) * seasonMaxKnotNum,64),
+		result->scpAbruptChange=MEM->alloc(MEM,sizeof(U32) * seasonMaxKnotNum*q,64),
 		result->scpCI=MEM->alloc(MEM,sizeof(U32) * seasonMaxKnotNum * 2,64);	}	
 	if (opt->extra.computeTrendChngpt && hasTrendCmpnt)
 		result->tcp=MEM->alloc(MEM,sizeof(U32) * trendMaxKnotNum,64),
 		result->tcpPr=MEM->alloc(MEM,sizeof(U32) * trendMaxKnotNum,64),
-		result->tcpAbruptChange=MEM->alloc(MEM,sizeof(U32) * trendMaxKnotNum,64),
+		result->tcpAbruptChange=MEM->alloc(MEM,sizeof(U32) * trendMaxKnotNum*q,64),
 		result->tcpCI=MEM->alloc(MEM,sizeof(U32) * trendMaxKnotNum * 2,64);
 	if (opt->extra.computeOutlierChngpt && hasOutlierCmpnt)
 		result->ocp=MEM->alloc(MEM,sizeof(U32) * outlierMaxKnotNum,64),
@@ -693,6 +711,9 @@ void BEAST2_Result_FillMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,const F32 n
 	f32_fill_val(nan,result->RMSE,q);
 	if (hasSeasonCmpnt) {
 			*result->sncp=nan;
+			*result->sncp_median=nan;
+			*result->sncp_mode=nan;
+			*result->sncp_pct90=nan;
 			f32_fill_val(nan,result->sncpPr,seasonMaxKnotNum+1);
 			f32_fill_val(nan,result->scpOccPr,N);
 			f32_fill_val(nan,result->sY,Nq);
@@ -706,6 +727,9 @@ void BEAST2_Result_FillMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,const F32 n
 	}
 	if (hasTrendCmpnt) {
 			*result->tncp=nan;
+			*result->tncp_median=nan;
+			*result->tncp_mode=nan;
+			*result->tncp_pct90=nan;
 			f32_fill_val(nan,result->tncpPr,trendMaxKnotNum+1);
 			f32_fill_val(nan,result->tcpOccPr,N);
 			f32_fill_val(nan,result->tY,Nq);
@@ -720,6 +744,9 @@ void BEAST2_Result_FillMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,const F32 n
 	}
 	if (hasOutlierCmpnt) {
 		*result->oncp=nan;
+		*result->oncp_median=nan;
+		*result->oncp_mode=nan;
+		*result->oncp_pct90=nan;
 		f32_fill_val(nan,result->oncpPr,outlierMaxKnotNum+1);
 		f32_fill_val(nan,result->ocpOccPr,N);
 		f32_fill_val(nan,result->oY,Nq);
@@ -733,19 +760,19 @@ void BEAST2_Result_FillMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,const F32 n
 	if (flag->computeSeasonChngpt && hasSeasonCmpnt) 	{
 		f32_fill_val(nan,result->scp,seasonMaxKnotNum);
 		f32_fill_val(nan,result->scpPr,seasonMaxKnotNum);
-		f32_fill_val(nan,result->scpAbruptChange,seasonMaxKnotNum);
+		f32_fill_val(nan,result->scpAbruptChange,seasonMaxKnotNum*q);
 		f32_fill_val(nan,result->scpCI,2*seasonMaxKnotNum); 
 	}
 	if (flag->computeTrendChngpt && hasTrendCmpnt) {
-		f32_fill_val(nan,result->tcp,trendMaxKnotNum * q);
-		f32_fill_val(nan,result->tcpPr,trendMaxKnotNum * q);
+		f32_fill_val(nan,result->tcp,trendMaxKnotNum );
+		f32_fill_val(nan,result->tcpPr,trendMaxKnotNum );
 		f32_fill_val(nan,result->tcpAbruptChange,trendMaxKnotNum * q);
-		f32_fill_val(nan,result->tcpCI,2* trendMaxKnotNum * q);
+		f32_fill_val(nan,result->tcpCI,2* trendMaxKnotNum );
 	}
 	if (flag->computeOutlierChngpt&& hasOutlierCmpnt) {
-		f32_fill_val(nan,result->ocp,outlierMaxKnotNum * q);
-		f32_fill_val(nan,result->ocpPr,outlierMaxKnotNum * q);
-		f32_fill_val(nan,result->ocpCI,2* outlierMaxKnotNum * q);
+		f32_fill_val(nan,result->ocp,outlierMaxKnotNum );
+		f32_fill_val(nan,result->ocpPr,outlierMaxKnotNum );
+		f32_fill_val(nan,result->ocpCI,2* outlierMaxKnotNum );
 	}
 	if (flag->tallyPosNegSeasonJump && hasSeasonCmpnt)  {
 		f32_fill_val(nan,result->spos_ncp,1*q);
@@ -811,9 +838,7 @@ void BEAST2_Result_FillMEM(A(RESULT_PTR)  result,A(OPTIONS_PTR)  opt,const F32 n
 	}
 }
 static INLINE I32 __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist,I32 N,I32 q) {
-	static char* nms[]={ "Y1","Y2","Y3","Y4","Y5","Y6","Y7",
-					   "Y8","Y9","Y10","Y11","Y12","Y13","Y14",
-						"Y15","Y16","Y17","Y18","Y19","Y20" };
+	char* nms[]={ "Y1","Y2","Y3","Y4","Y5","Y6","Y7"};
 	I32 nptr=0;
 	I32 nptr_dummy=0;
 	for (int i=0; i < N; i++) {
@@ -821,7 +846,7 @@ static INLINE I32 __MR_ExtendFieldsToMultiVaraiteTS(FIELD_ITEM *flist,I32 N,I32 
 		nptr_dummy++;
 		FIELD_ITEM qList[100]={ {0,},};
 		for (int j=0; j < q; j++) {
-			strcpy(qList[j].name,nms[j]);
+			sprintf(qList[j].name,"Y%d",j);
 			qList[j].type=flist[i].type;
 			qList[j].ndim=flist[i].ndim;
 			memcpy(&qList[j].dims,&flist[i].dims,sizeof(I32) * 5);
@@ -869,11 +894,12 @@ static void* __MR_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 	I32         nfields=0;
 	if (io->ndim==1||io->ndim==2  ) { 
 		FIELD_ITEM fldList[]={
-			_(ncp,1,M),		    
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,1,M),		    
 			_(ncpPr,mxKnotNum+1,M),				
 			_(cpOccPr,N,M),				
 			_(order,N,M),						
-			_3(cp,cpPr,cpAbruptChange,mxKnotNum,M    ),
+			_2(cp,cpPr,mxKnotNum,M    ),
+			_q(cpAbruptChange,mxKnotNum,M),
 			_(cpCI,mxKnotNum,2,M ),
 			_q2(Y,SD,N,M),
 			_q(CI,N,2,M),
@@ -904,7 +930,7 @@ static void* __MR_Output_AllocMEM_Trend(A(OPTIONS_PTR)  opt) {
 		case 3:	ROW=io->dims[0],COL=io->dims[1]; break;
 		}
 		FIELD_ITEM fldList[]={
-			_(ncp,ROW,COL),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,ROW,COL),
 			_(ncpPr,mxKnotNum+1,ROW,COL),
 			_(cpOccPr,N,ROW,COL),
 			_(order,N,ROW,COL),
@@ -981,11 +1007,12 @@ static void* __MR_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 	I32         nfields=0;
 	if (io->ndim==1||io->ndim==2  ) { 
 		FIELD_ITEM fldList[]={
-			_(ncp,1,M),		    
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,1,M),
 			_(ncpPr,mxKnotNum+1,M),				
 			_(cpOccPr,N,M),				
-			_(order,N,M),						
-			_3(cp,cpPr,cpAbruptChange,mxKnotNum,M    ),
+			_(order,N,M),									
+			_2(cp,cpPr,mxKnotNum,M),
+			_q(cpAbruptChange,mxKnotNum,M),
 			_(cpCI,mxKnotNum,2,M ),
 			_q2(Y,SD,N,M),
 			_q(CI,N,2,M),
@@ -1010,7 +1037,7 @@ static void* __MR_Output_AllocMEM_Season(A(OPTIONS_PTR)  opt)
 		case 3:	ROW=io->dims[0],COL=io->dims[1]; break;
 		}
 		FIELD_ITEM fldList[]={
-			_(ncp,ROW,COL),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,ROW,COL),
 			_(ncpPr,mxKnotNum+1,ROW,COL),
 			_(cpOccPr,N,ROW,COL),			
 			_(order,N,ROW,COL),
@@ -1082,7 +1109,7 @@ static void* __MR_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 	I32         nfields=0;
 	if (io->ndim==1||io->ndim==2  ) { 
 		FIELD_ITEM fldList[]={
-			_(ncp,1,M),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,1,M),
 			_(ncpPr,mxKnotNum+1,M),
 			_(cpOccPr,N,M),
 			_2(cp,cpPr,mxKnotNum,M),
@@ -1109,7 +1136,7 @@ static void* __MR_Output_AllocMEM_Outlier(A(OPTIONS_PTR)  opt)
 			case 3:	ROW=io->dims[0],COL=io->dims[1]; break;
 		}
 		FIELD_ITEM fldList[]={		
-			_(ncp,ROW,COL),
+			_4(ncp,ncp_median,ncp_mode,ncp_pct90,ROW,COL),
 			_(ncpPr,mxKnotNum+1,ROW,COL),
 			_3(cpOccPr,Y,SD,N,ROW,COL),
 			_(CI,N,2,ROW,COL),
@@ -1193,8 +1220,8 @@ void *  MR_Output_AllocMEM(BEAST2_OPTIONS_PTR  opt)
 		{"data",dtype,-1,{-1,-1,},&mat->data,.extra=1}, 
 		{"marg_lik",dtype,2,{ROW,COL,},&mat->marg_lik },
 		#ifdef __DEBUG__
-        {"R2",dtype,2,{(N+7)/8 * 8,300,},&mat->R2},
-		{"RMSE",dtype,2,{(N+7)/8 * 8,300,},&mat->RMSE},
+        {"R2",dtype,2,{(N+7)/8 * 8,300,},&mat->R2,.extra=1},
+		{"RMSE",dtype,2,{(N+7)/8 * 8,300,},&mat->RMSE,.extra=1},
 	    #else
 		{"R2",dtype,2,{ROW,COL,},&mat->R2,.extra=1},
 		{"RMSE",dtype,2,{ROW,COL,},&mat->RMSE,.extra=1},

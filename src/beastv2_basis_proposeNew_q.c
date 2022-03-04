@@ -30,6 +30,7 @@ static INLINE void  __CalcAbsDeviation(F32PTR  deviation,F32PTR avgDeviation,PRO
 				avgDeviation[col]=sumError/info->yInfo->n;
 				Y+=N;  
 				Ypred1+=N;
+				deviation+=N;
 		}
 ;
 	} 
@@ -52,6 +53,7 @@ static INLINE void  __CalcAbsDeviation(F32PTR  deviation,F32PTR avgDeviation,PRO
 			Y+=N;  
 			Ypred1+=N;
 			Ypred2+=N;
+			deviation+=N;
 		}
 	} 
 	else  {
@@ -75,6 +77,19 @@ static INLINE void  __CalcAbsDeviation(F32PTR  deviation,F32PTR avgDeviation,PRO
 			Ypred1+=N;
 			Ypred2+=N;
 			Ypred3+=N;
+			deviation+=N;
+		}
+	}
+	if (q > 1) {
+		deviation=deviation - N * q;
+		for (int i=0; i < q;++i) {
+			f32_mul_val_inplace(1./avgDeviation[i],(deviation+i * N),N);
+		}
+		for (int i=1; i < q;++i) {
+			F32PTR deviation2=deviation+i * N;
+			for (int j=0; j < N;++j) {
+				deviation[j]=max(deviation[j],deviation2[j]);
+			}
 		}
 	}
 }
@@ -93,7 +108,10 @@ static INLINE void _CalcDevExtremPos(PROP_DATA_PTR info ) {
 	BEAST2_MODEL_PTR model=info->model;
 	I32              NumBasis=model->NUMBASIS;
 	__CalcAbsDeviation( model->deviation,model->avgDeviation,info,NumBasis);
-	__CalcExtremKnotPos_ST_BirthOnly(model->extremePosVec,model->deviation,info->N,(model->avgDeviation[0]* info->sigFactor));
+	F32 threshold=info->yInfo->q==1
+		? (model->avgDeviation[0] * info->sigFactor)   
+		: ( info->sigFactor);          
+	__CalcExtremKnotPos_ST_BirthOnly(model->extremePosVec,model->deviation,info->N,threshold);
 }
 static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR info)
 {	
@@ -110,7 +128,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		if (MINKNOTNUM !=MAXKNOTNUM) {
 				if (rnd < basis->propprob.birth) { 
 					flag=BIRTH;
-					if (nKnot >=MAXKNOTNUM||goodNum==0)	flag=MOVE;
+					if (nKnot   >=MAXKNOTNUM||goodNum==0)	flag=MOVE;
 					if (Ktotal  >=MAX_K_StopAddingNewTerms  )  flag=(nKnot==0) ? BIRTH : MOVE;
 				}
 				else if (rnd < basis->propprob.move)   
@@ -122,7 +140,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 						flag=BIRTH;
 					else {
 						if (nKnot >=2) flag=MERGE;
-						else  			  flag=nKnot==0 ? BIRTH : DEATH;
+						else  			flag=nKnot==0 ? BIRTH : DEATH;
 					}				
 				}
 				else {                                 
@@ -130,13 +148,17 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 					else                                    flag=(nKnot==MINKNOTNUM) ? BIRTH : MOVE;
 				}
 		}
-		else
-		{ 	
-			if (MAXKNOTNUM==0) { 
-				flag=ChORDER; 
+		else { 	
+			if (MINKNOTNUM==0) {
+				if (basis->propprob.merge==255)   
+				{
+					flag=NoChangeFixGlobal; 
+				}
+				else
+					flag=ChORDER; 
 			} else {
-				if (basis->propprob.merge==255) 				
-					flag=MOVE;				
+				if (basis->propprob.merge==255) 	 
+					flag=MOVE;	 
 				else
 					flag=rnd > 128 ? MOVE : ChORDER;
 			}
@@ -275,6 +297,20 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 		new->nKnot_new=nKnot;
 		break;
 	}
+	case NoChangeFixGlobal: {
+		new->numSeg=0;
+		new->newKnot=-9999;
+		new->SEG[0].R1=0x0fffffff;
+		new->SEG[0].R2=0x0fffffff;
+		new->SEG[1].R1=0x0fffffff;
+		new->SEG[1].R2=0x0fffffff;
+		new->SEG[0].ORDER2=0x0fff;
+		new->SEG[1].ORDER2=0x0fff;
+		endIdx=newIdx=1;
+		new->newIdx=0x0fff;
+		new->nKnot_new=nKnot;
+		break;
+	} 
 	}
 	if (flag !=ChORDER) {
 		TORDER startOrder=(basis->type==TRENDID) ? 0 : 1;
@@ -283,8 +319,13 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR i
 	I16PTR  KS_old=basis->ks;
 	I16PTR  KE_old=basis->ke;
 	if (flag !=ChORDER) {
-		new->k1_old=KS_old[(newIdx)-1];
-		new->k2_old=KE_old[(endIdx)-1];
+		if (flag==NoChangeFixGlobal) {
+			new->k1_old=basis->K+1;
+			new->k2_old=basis->K;
+		}	else {
+			new->k1_old=KS_old[(newIdx)-1];
+			new->k2_old=KE_old[(endIdx)-1];
+		}
 	}
 	else { 
 		if (new->newOrder <=new->oldOrder) { 
@@ -308,19 +349,23 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
 		I32       nKnot=model->b[J].nKnot;
 		if (model->b[J].type==OUTLIERID) {
 			for (int i=0; i < nKnot;++i) goodvec[KNOT[i] - 1]=0;		
-		} 
-		else {
+		} else {
 			for (int i=0; i < nKnot; i++) {
 				I32 idx=KNOT[i] - 1;
 				goodvec[idx]=0;
 				goodvec[max(idx - 1,0)]=0;
 				goodvec[min(idx+1,N - 1)]=0;
 			}
-		}		
+		}		 
 	} 
+	I32PTR IndicesLargeDeviation=info->mem;   
+	I32    numLargeDev=0;
 	F32PTR deviation=model->deviation;
+	F32    threshold=info->yInfo->q==1
+							   ? model->avgDeviation[0]*3.0f
+							   :  3.0;
 	F32 maxValue=0;
-	I32 maxIdx=-1;
+	I32 maxIdx=-1;	
 	for (I32 i=0; i < N; i++) {
 		F32 value=deviation[i];
 		if (goodvec[i]==0||value !=value) {
@@ -331,6 +376,14 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
 			maxValue=value;
 			maxIdx=i;
 		}
+		if (value > threshold) {
+			IndicesLargeDeviation[numLargeDev++]=i;
+		}
+	}
+	if (numLargeDev > 1) {
+		BEAST2_RANDSEEDPTR PRND=info->pRND;
+		I32 rndIdx=RANDINT(1,(U16)numLargeDev,*(PRND->rnd16)++);
+		maxIdx=IndicesLargeDeviation[rndIdx - 1];
 	}
 	if (maxIdx < 0) {
 		r_printf("maxIdx=-1: there must be something wrong!");

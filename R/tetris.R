@@ -649,7 +649,7 @@ tetris <- function(height=25, width=14, speed=0.6) {
     
   }  
   
-  instructStr ='Tetris in R:\n(1) LEFT arrow: move left\n(2) RIGHT arrow: move rigth \n(3) Up: rotate \n(4) Down: speed up\n(4) Space: sink to the bottom\n'
+  instructStr ='Tetris in R:\n(1) LEFT arrow: move left\n(2) RIGHT arrow: move rigth \n(3) Up: rotate \n(4) Down: speed up\n(5) Space: sink to the bottom\n'
   cat(instructStr)
   getGraphicsEvent('Rtetris-Rbeast', onMouseDown = mousedown, onMouseUp = mouseup,onKeybd =NULL);  
   invisible(NA)

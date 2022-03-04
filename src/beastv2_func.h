@@ -5,7 +5,7 @@
 #include "abc_mem.h"
 #include "abc_blas_lapack_lib.h"
 #include "beastv2_header.h"
-extern int  GetMedianNcp(F32PTR prob,I32 N);
+extern F32  GetPercentileNcp(F32PTR prob,I32 N,F32 pctile);
 extern void SetupPointersForCoreResults(CORESULT* coreResults,BEAST2_BASIS_PTR b,I32 NumBasis,BEAST2_RESULT* resultChain);
 extern void CvtKnotsToBinVec(BEAST2_BASIS_PTR b,I32 NUMBASIS,I32 N,BEAST2_YINFO_PTR yInfo);
 extern void GenarateRandomBasis(BEAST2_BASIS_PTR basis,I32 NUMBASIS,I32 N,BEAST2_RNDSTREAM* PRAND);

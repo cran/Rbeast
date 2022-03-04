@@ -50,7 +50,7 @@
   
   \item{deltat}{ numeric (default to 1.0); the time interval between consecutive data points. Its unit should be consisent with \code{start}. If \code{start} takes a numeric scalar, the unit is arbitrary and irrelevant to beast (e.g., 2021.3 can be of any unit). If \code{start} is a vector of Year, Month, and Day or an R's Date, \code{deltat} has the unit of YEAR. For example, if \code{start=c(2021,1,24)} for a monthly time series, \code{start} is converted to a fractional year 2021+(24-0.5)/365=2021.0644 and \code{deltat=1/12} needs to be set to specify the monthly interval.}
 
-  \item{season}{ characters (default to 'harmonic'); speficy if \code{y} has a periodic component or not. Three strings are possible.
+  \item{season}{ characters (default to 'harmonic'); speficy if \code{y} has a periodic component or not. Four strings are possible.
 				\itemize{
 					\item  \code{'none'}: \code{y} is trend-only; no periodic components are present in the time series. The args for the seasonal component (i.e.,\code{sorder.minmax}, \code{scp.minmax} and \code{sseg.max}) will be irrelevant and ignored. 
 					
@@ -118,11 +118,20 @@
   \item{sig2}{numeric; the estimated variance of the model error.}
   \item{trend}{a list object numeric consisting of various outputs related to the estimated trend component:
   	\itemize{
-		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of trend changepoints.
+		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of trend changepoints. Individual models sampled by BEAST has a varying dimension (e.g., number of changeponts or knots), so several alternative statistics (e.g., \code{ncp_mode}, \code{ncp_median}, and \code{ncp_pct90}) are also given to summariize the number of changepoints. For example, if \code{mcmc$samples=10}, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2),  the mode is 1, and the 90th percetile (ncp_pct90) is 6.5. 
+		 \item \code{ncp_mode}: [Number of ChangePoints]. a numeric scalar; the mode for number of changepoints. See the above for explanatatons.
+		 \item \code{ncp_median}: [Number of ChangePoints]. a numeric scalar; the median for number of changepoints. See the above for explanatatons.
+		 \item \code{ncp_pct90}: [Number of ChangePoints]. a numeric scalar; the 90th percetile for number of changepoints. See the above for explanatatons.
+		 
+ 
+		 
+		 
 		 \item \code{ncpPr}: [Probability of the Number of ChangePoints]. A vector of length \code{(tcp.minmax[2]+1)=tcp.max+1}. It gives a probability distribution of having a certain number of trend changepoints over the range of [0,tcp.max]; for example, \code{ncpPr[1]} is the probability of having no trend changepoint; \code{ncpPr[i]} is the probability of having (i-1) changepoints: Note that it is \code{ncpPr[i]} not \code{ncpPr[i-1]} because ncpPr[1] is used for having zero changepoint.
 		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the trend at each point of time. Plotting \code{cpOccPr} will depict a continous curve of probability-of-being-changepoint. \emph{ \bold{ Of particular note, in the curve, a higher peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time and does not neccessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window \code{c(0.1,0.2,0.21,0.2,0.1)} (i.e., the peak prob is 0.21 but the summed prob is 0.71}}).
 		 \item \code{order}: a vector of length N; the average polynomial order needed to approximate the fitted trend. As an average over many sampled individual piece-wise polynomial trends, \code{order} is not neccessarly an integer.
-		 \item \code{cp}: [Changepoints] a vector of length \code{tcp.max=tcp.minmax[2]}; the most possible changepoint locations in the trend component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {tseg.min} and then picking up to a total \code{ncp} of the highest peaks in the filterd curve. If \code{ncp<tcp.max}, the remaining of the vector is filled with NaNs.
+
+		 \item \code{cp}: [Changepoints] a vector of length \code{tcp.max=tcp.minmax[2]}; the most possible changepoint locations in the trend component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {tseg.min} and then picking up to a total \code{prior$MaxKnotNum}/\code{tcp.max} of the highest peaks in the filterd curve.  NaNs are possible if no enough changepoints are identified. \code{cp} records all the possible changepoints identified and many of them are bound to be false postives. Do not bindely treat all of them as actual changepoints.
+
 		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{tcp.max=tcp.minmax[2]}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaning elements if \code{ncp<tcp.max}.
 		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{tcp.max x 2}; the credibable intervals for the detected changepoints \code{cp}.
 		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{tcp.max}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
@@ -131,7 +140,7 @@
 		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated trend. One vector of the matrix is for the upper envelope and another for the lower envelope.
 		 \item \code{slp}: [Slope] a vector of length N;  the time-varying slope of the fitted trend component .
 		 \item \code{slpSD}: [Standar Deviation of Slope] a vector of length N;  the SD of the slope for the trend component.
-		 \item \code{slpSignPr}: [PRobability of slope having a postive sign] a vector of length N;  the probabity of the slope being positive (i.e., increasing trend) for the trend component. For example, if {slpSignPr=0.80} at a given point in time, it means that 80% of the individual trend models sampled in the MCMC chain has a positive slope at that point.
+		 \item \code{slpSignPr}: [PRobability of slope having a postive sign] a vector of length N;  the probabity of the slope being positive (i.e., increasing trend) for the trend component. For example, if {slpSignPr=0.80} at a given point in time, it means that 80\% of the individual trend models sampled in the MCMC chain has a positive slope at that point.
 
 		 \item \code{pos_ncp}: 
 		 \item \code{neg_ncp}:  
@@ -276,10 +285,10 @@ library(Rbeast)
 
 #################################Example 3############################################
 # Specify other arguments explicilty.  Default values are used for missing parameters.
-# Note that beast() and beast123() call the same internal C/C++ library, so in beast(), 
-# the input parameters will be converted to metadata, prior, mcmc, and extra parameters
-# as explained for the beast123() function. Or type 'View(beast)' to check the parameter
-# assignment in the code.
+# Note that beast(), beast.irreg(), and beast123() call the same internal C/C++ library,
+# so in beast(), the input parameters will be converted to metadata, prior, mcmc, and 
+# extra parameters as explained for the beast123() function. Or type 'View(beast)' to 
+# check the parameter assignment in the code.
   
  out = beast(Yellowstone, freq=24,season='dummy', mcmc.samples=5000, tseg.min=20)
  plot(out)
@@ -315,7 +324,8 @@ library(Rbeast)
 # only available on Win x64 machines, not Mac or Linux.
 
 \dontrun{
- beast(Yellowstone, freq=24, gui=TRUE) }
+ beast(Yellowstone, freq=24, gui=TRUE) 
+}
 
 ######################################################################################
 # Apply beast to trend-only data. 'Nile' is the ANNUAL river flow of the river
@@ -365,7 +375,7 @@ library(Rbeast)
 # beast can handle missing data. co2 is a monthly time series (i.e.,freq=12) starting
 # from Jan 1959. We generate some missing values at random indices
  
-\donttest{
+\dontrun{
 
  data(co2)  
  attributes(co2)                          # A ts object with time attributes (i.e., tsp)
@@ -468,7 +478,8 @@ library(Rbeast)
 # kept mainly to ensure the working of the sample code on Page 475 in the text
 # Ecological Metods by Drs. Southwood and Henderson.
 
-\donttest{
+\dontrun{
+
   # The interface as shown here will be deprecated and not recommended.
   beast(Yellowstone, 24)  #24 is the freq: number of datapoints per period
   

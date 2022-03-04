@@ -232,3 +232,7 @@
 #else
 	#error "Environment not 32 or 64-bit."
 #endif
+#define  CHANGE_TO_AVX_GCC  \
+          DIAG_DO_PRAGMA(GCC optimization_level 3) \
+          DIAG_DO_PRAGMA(GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")) \
+          DIAG_DO_PRAGMA(GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell"))  

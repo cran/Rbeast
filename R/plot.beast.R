@@ -9,16 +9,21 @@ plot.beast<-function(
   ylab  = NULL,
   cex.main =1,
   cex.lab  =1,
-  relative.heights=NULL,
-  interactive     =FALSE,
+  relative.heights= NULL,
+  interactive     = FALSE,
+  ncpStat   = c('mode','median','mean','pct90','max'),
+  
   ... ) 
 {
+
+  ncpStat=match.arg(ncpStat)
   
   if(interactive & base::interactive() ){  
-    plot.interactive(x, index)
+    plot.interactive(x, index,ncpStat)
     invisible(NULL)
   }
-  
+ 
+   
   #vars = c('st','s','scp','sorder','t','tcp','torder','error')  
   #vars = c('st','s','scp','sorder','samp','t','tcp','torder', 'tslp','o','ocp','error'),  
   #col  = NULL 
@@ -156,16 +161,21 @@ plot.beast<-function(
   Yerr  = 0
   
   get.Yts  = function(){
-    SD   = 0
+    SD2   = 0
     sig2 = x$sig2[1]
-    if (is.null(x$season))  {
-      Yts  <<- x$trend$Y
-      SD   =  sqrt(x$trend$SD^2+sig2)
-    } else {
-      Yts   <<- x$trend$Y+x$season$Y
-      SD    = sqrt(x$trend$SD^2+x$trend$SD^2+sig2)
-      
-    } 
+  
+    Yts   <<- x$trend$Y
+	SD2    = x$trend$SD^2 +sig2
+	
+    if (!is.null(x$season))  {
+      Yts  <<- Yts+x$season$Y
+      SD2   =  SD2+x$season$SD^2
+    }
+	if (!is.null(x$outlier))  {
+      Yts  <<- Yts+x$outlier$Y
+      SD2   =  SD2+x$outlier$SD^2
+    }	
+    SD=sqrt(SD2)
     YtsSD <<- c(Yts-SD, rev(Yts+SD) )  
     Yerr  <<- data-Yts
   }
@@ -184,14 +194,16 @@ plot.beast<-function(
   }
   
   get.tcp    = function(){
-    cp      <<- x$trend$cp;         
-    cpCI    <<- x$trend$cpCI;  
-    ncp     <<- sum(!is.nan(cp))
-    ncpPr   <<- x$trend$ncpPr
-    cpPr    <<- x$trend$cpPr
-    cpChange<<- x$trend$cpAbruptChange
+    cmpnt   =  x$trend
+    cp      <<- cmpnt$cp;         
+    cpCI    <<- cmpnt$cpCI;  
+    ncp     <<- switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,pct90=cmpnt$ncp_pct90,max=sum(!is.nan(cp)))
+	ncp     <<- base::round(ncp)
+    ncpPr   <<- cmpnt$ncpPr
+    cpPr    <<- cmpnt$cpPr
+    cpChange<<- cmpnt$cpAbruptChange
     
-    Prob    <<- x$trend$cpOccPr;    
+    Prob    <<- cmpnt$cpOccPr;    
     Prob1   <<- c(Prob,Prob-Prob)
   }
   
@@ -211,12 +223,14 @@ plot.beast<-function(
     
   }
   get.scp    = function(){
-    cp      <<-x$season$cp;         
-    cpCI    <<-x$season$cpCI;  
-    ncp     <<-sum(!is.nan(cp))
-    ncpPr   <<-x$season$ncpPr
-    cpPr    <<-x$season$cpPr
-    cpChange<<-x$season$cpAbruptChange
+    cmpnt   =  x$season
+    cp      <<-cmpnt$cp;         
+    cpCI    <<-cmpnt$cpCI;  
+    ncp     <<-switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,pct90=cmpnt$ncp_pct90,max=sum(!is.nan(cp)))
+	ncp     <<-base::round(ncp)
+    ncpPr   <<-cmpnt$ncpPr
+    cpPr    <<-cmpnt$cpPr
+    cpChange<<-cmpnt$cpAbruptChange
     
     Prob    <<-x$season$cpOccPr;    
     Prob1   <<-c(Prob,Prob-Prob)

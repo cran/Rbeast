@@ -6,7 +6,7 @@
 #ifdef  GCC_COMPILER
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
-     #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
+    #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
 #endif
 #define NF         8
 #define NF2        (NF*2)

@@ -7,6 +7,7 @@ beast.irreg <- function(
                     detrend=FALSE,
                     deseasonalize=FALSE,
                     mcmc.seed=0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
+					ci             = FALSE,
                     print.options=TRUE,
                     print.progress  =TRUE,					
                     gui=FALSE,...)
@@ -55,15 +56,19 @@ beast.irreg <- function(
    metadata$time             = time
    #metadata$startTime       = start
    metadata$deltaTime        = deltat
-   if ( !(season=='none')){
-   metadata$period           = deltat*freq;
+   if ( season!='none'){
+	metadata$period           = deltat*freq;
    }   
    #metadata$whichDimIsTime   = 1
    metadata$deseasonalize     =deseasonalize
    metadata$detrend           =detrend
    metadata$missingValue      = NaN
    metadata$maxMissingRate    = 0.7500
-   
+   if ( hasArg('hasOutlier') ) {   
+        hasOutlier =list(...)[['hasOutlier']]
+		metadata$hasOutlierCmpnt=as.logical(hasOutlier)		           
+   }
+		  
 #......End of displaying MetaData ......
    prior = list()
    prior$modelPriorType	  = 1   
@@ -79,6 +84,11 @@ beast.irreg <- function(
    prior$trendMinKnotNum  = tcp.minmax[1]
    prior$trendMaxKnotNum  = tcp.minmax[2]
    if (!is.null(tseg.min) && !is.na(tseg.min))   prior$trendMinSepDist = tseg.min
+   if ( hasArg('ocp') ) {    
+        
+		metadata$hasOutlierCmpnt = TRUE	
+        prior$outlierMaxKnotNum	 =list(...)[['ocp']] 
+   }  
    prior$K_MAX            = 300
    prior$precValue        = 1.500000
    prior$precPriorType    = 'uniform'
@@ -101,7 +111,7 @@ beast.irreg <- function(
    extra = list()
    extra$dumpInputData        = TRUE
    #extra$whichOutputDimIsTime = 1
-   extra$computeCredible      = TRUE
+   extra$computeCredible      = ci
    extra$fastCIComputation    = TRUE
    extra$computeSeasonOrder   = TRUE
    extra$computeTrendOrder    = TRUE
@@ -118,11 +128,20 @@ beast.irreg <- function(
    #extra$numThreadsPerCPU     = 2
    #extra$numParThreads        = 0
  
+  if (gui && !base::interactive()) {
+	warning('R is not running in the inteactive mode. Resetting gui to FALSE.');
+	gui = FALSE
+ }
  
- funstr=ifelse(!gui,"beastv4","beastv4demo")
-  
-  ANS=.Call(BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   
-		   
+ funstr=ifelse(!gui,"beastv4","beastv4demo")  
+  if ( hasArg("cputype") )  {
+    cputype = list(...)[['cputype']]  
+	cputype = switch(cputype, sse=1, avx2=2, avx512=3);	
+	ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra,cputype),   212345)   		   
+ } else {
+	ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
+ }
+ 		   
  invisible(return(ANS))
     
 }
