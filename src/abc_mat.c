@@ -694,4 +694,83 @@ void linear_regression(F32PTR Y,F32PTR X,int ldx,int N,int K,F32PTR B,F32PTR Yfi
 	if (Yerror)
 		r_ippsSub_32f(Yfit,Y,Yerror,N); 
 }
+void update_XtX_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR XtX,F32PTR XtXnew,NEWCOLINFO * new ) {
+	I32 k1=new->k1;
+	I32 k2_old=new->k2_old;
+	I32 k2_new=new->k2_new;
+	I32 Knewterm=new->Knewterm; 
+	I32 KOLD=new->KOLD;
+	I32 KNEW=new->KNEW;
+	I32 N=new->N;
+	I32 Nlda=new->Nlda;
+	for (I32 i=1; i < k1; i++) SCPY(i,XtX+(i - 1L) * KOLD,XtXnew+(i - 1L) * KNEW);
+	if (Knewterm !=0) {
+		FILL0(XtXnew+(k1 - 1) * KNEW,(KNEW - k1+1) * KNEW); 
+		if (k1 > 1) {
+			r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,k1 - 1,Knewterm,N,1.0f,
+				X,Nlda,
+				Xnewterm,Nlda,0.f,
+				XtXnew+(k1 - 1L) * KNEW,KNEW);
+		}
+		r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,
+			Knewterm,Knewterm,N,1.0,
+			Xnewterm,Nlda,
+			Xnewterm,Nlda,0.f,
+			XtXnew+(k1 - 1) * KNEW+k1 - 1,KNEW);
+	}
+	if (k2_old !=KOLD) {
+		for (I32 kold=k2_old+1,knew=k2_new+1; kold <=KOLD; kold++,knew++) {
+			F32PTR ColStart_old=XtX+(kold - 1) * KOLD;
+			F32PTR ColStart_new=XtX+(knew - 1) * KNEW;
+			SCPY(k1 - 1,ColStart_old,ColStart_new); 
+			SCPY(kold - k2_old,ColStart_old+(k2_old+1) - 1,ColStart_new+(k2_new+1) - 1); 
+		}
+		if (Knewterm !=0) {
+			r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,
+				Knewterm,(KOLD - k2_old),N,1.0,
+				Xnewterm,Nlda,
+				X+(k2_old+1 - 1) * Nlda,Nlda,0.0,
+				XtXnew+(k2_new+1 - 1) * KNEW+k1 - 1,KNEW);
+		}
+	}
+}
+void update_XtY_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR Y,F32PTR XtY,F32PTR XtYnew,NEWCOLINFO* new,I32 q) {
+	I32 k1=new->k1;
+	I32 k2_old=new->k2_old;
+	I32 k2_new=new->k2_new;
+	I32 Knewterm=new->Knewterm;
+	I32 N=new->N;
+	I32 Nlda=new->Nlda;
+	I32 KOLD=new->KOLD;
+	I32 KNEW=new->KNEW;
+	if (q==1) {
+		if (k1 > 1)       SCPY(k1 - 1,XtY,XtYnew);
+		if (Knewterm > 0) { 
+				r_cblas_sgemv(CblasColMajor,CblasTrans,N,Knewterm,1.f,
+						Xnewterm,Nlda,
+						Y,1L,0.f,
+						XtY+k1 - 1,1L); 
+		}
+		if (k2_old !=KOLD) SCPY(KNEW - k2_new,XtY+(k2_old+1L) - 1L,XtYnew+(k2_new+1) - 1);
+	}
+	else {
+		if (k1 > 1) {
+			for (I32 c=0; c < q;++c) {
+				SCPY(k1 - 1,XtY+KOLD * c,XtYnew+KNEW * c);
+			}
+		}
+		if (Knewterm > 0) {
+			r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans, 
+				Knewterm,q,N,1.f, 
+				Xnewterm,Nlda,
+				Y,N,0.f,
+				XtYnew+k1 -1,KNEW);
+		}
+		if (k2_old !=KOLD) {
+			for (I32 c=0; c < q;++c) {
+				SCPY(KNEW - k2_new,XtY+(k2_old+1L) - 1L+KOLD * c,XtYnew+(k2_new+1) - 1+KNEW * c);
+			}
+		}
+	}
+}
 #include "abc_000_warning.h"

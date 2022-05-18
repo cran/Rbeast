@@ -35,7 +35,7 @@ void printProgress(F32 pct,I32 width,char * buf,I32 firstTimeRun)
 	if (firstTimeRun==1)
 	{
 		r_printf("\r\n");
-		r_printf("%s",buf);
+		r_printf("%s",buf);		
 		matlab_IOflush();
 	}
 	else
@@ -168,7 +168,8 @@ I32 GetCharVecElem(void* ptr,int idx,char* dst,int n) {
 }
 I32  GetNumberOfFields(const void* structVar) { return Rf_length (structVar); }
 void * GetField(const void * structVar,char *fname) {
-	if (!structVar) return NULL;
+	if (structVar==NULL||structVar==R_NilValue )
+		return NULL;
 	void * elem=(void*)getListElement(structVar,fname);
 	if (elem==NULL) {
 		elem=(void*)getListElement_CaseIn(structVar,fname);
@@ -249,7 +250,8 @@ int IsClass(void* ptr,char* class) {
 }
 int IsCell(void* ptr)    { return 0L; }
 int IsChar(void* ptr)    { return TYPEOF((SEXP)ptr)==STRSXP; }
-int IsStruct(void* ptr)  { return isNewList((SEXP)ptr);       }
+int IsEmpty(void* ptr)   { return ptr==R_NilValue||GetNumberOfElements(ptr)==0; }
+int IsStruct(void* ptr)  { return isNewList((SEXP)ptr)||ptr==R_NilValue;       }
 int IsNumeric(void* ptr) { return isNumeric((SEXP)ptr); }
 int IsDouble(void* ptr)  { return TYPEOF((SEXP)ptr)==REALSXP; }
 int IsSingle(void* ptr)  { return 0; }
@@ -519,6 +521,9 @@ I32 GetCharVecElem(void* ptr,int idx,char* dst,int n) {
 	}
 }
 void * GetField(const void * structVar,char *fname) {	
+	if (structVar==NULL||mxIsEmpty(structVar)) {
+		return NULL;
+	}
 	VOIDPTR ptr=(VOIDPTR) mxGetField(structVar,0,fname);
 	if (ptr !=NULL) {
 		return ptr;
@@ -533,6 +538,9 @@ void * GetField(const void * structVar,char *fname) {
 	return NULL;	
 }
 void* GetField123(const void* structVar,char* fname,int nPartial) {
+	if (structVar==NULL||mxIsEmpty(structVar)) {
+		return NULL;
+	}
 	VOIDPTR ptr=(VOIDPTR)mxGetField(structVar,0,fname);
 	if (ptr !=NULL) {
 		return ptr;
@@ -577,9 +585,10 @@ int IsChar(void* ptr)    {
 	}
 }
 int IsClass(void* ptr,char* class) { return 0; }
-int IsStruct(void* ptr)  { return mxIsStruct(ptr); }
+int IsEmpty(void* ptr) { return mxIsEmpty(ptr); }
+int IsStruct(void* ptr)  { return mxIsStruct(ptr)||mxIsEmpty(ptr); } 
 int IsCell(void* ptr)    { return mxIsCell(ptr); }
-int IsNumeric(void* ptr) { return mxIsNumeric(ptr); }
+int IsNumeric(void* ptr) { return mxIsNumeric(ptr) && !mxIsEmpty(ptr); } 
 int IsDouble(void* ptr)  { return mxIsDouble(ptr); }
 int IsSingle(void* ptr)  { return mxIsSingle(ptr); }
 int IsInt32(void* ptr)   { return mxIsInt32(ptr); }
@@ -590,53 +599,51 @@ void * CreateStructVar(FIELD_ITEM *fieldList,int nfields)
 { 
 	mxArray * _restrict out;
 	{
-		char *fildNames[100];
-		for (I64 i=0; i < nfields; i++)	
-			fildNames[i]=fieldList[i].name;		
+		char * fldNames[100];		
+		for (int i=0; i < nfields; i++) { fldNames[i]=fieldList[i].name; }					
 		mwSize dims_2d[2]={ 1,1 };
-		out=mxCreateStructArray(2,dims_2d,nfields,fildNames);
+		out=mxCreateStructArray(2,dims_2d,nfields,fldNames);
 	}
-	for (rI64 i=0; i < nfields; i++)
-	{	 
+	for (int i=0; i < nfields; i++){	 
 		if (fieldList[i].ptr==NULL) continue;
 		if (fieldList[i].type==DATA_STRUCT){
-			mxSetField(out,0L,fieldList[i].name,fieldList[i].ptr);
+			mxSetField(out,0L,fieldList[i].name,(mxArray *) fieldList[i].ptr);
 			continue;
 		}
 		mxClassID fieldDataType;
-		switch (fieldList[i].type)
-		{
-		case DATA_FLOAT: 
-			fieldDataType=mxSINGLE_CLASS;		break;
-		case DATA_DOUBLE:
-			fieldDataType=mxDOUBLE_CLASS;		break;
-		case DATA_INT32:
-			fieldDataType=mxINT32_CLASS;		break;
-		default:
-			fieldDataType=mxSINGLE_CLASS;			
+		switch (fieldList[i].type)	{
+			case DATA_FLOAT: 	fieldDataType=mxSINGLE_CLASS;		break;
+			case DATA_DOUBLE:   fieldDataType=mxDOUBLE_CLASS;		break;
+			case DATA_INT32:    fieldDataType=mxINT32_CLASS;		break;
+			default:			fieldDataType=mxSINGLE_CLASS;			
 		}
-		mxArray * _restrict mxPointer;
-		if ( fieldList[i].ndim==2)
-		{
-			mxPointer=mxCreateNumericMatrix(fieldList[i].dims[0],fieldList[i].dims[1],fieldDataType,mxREAL);
-			mxSetField(out,0L,fieldList[i].name,mxPointer);
-			*(fieldList[i].ptr)=mxGetData(mxPointer);			
+		mxArray * _restrict mxptr=NULL;
+		if (fieldList[i].ndim==1) { 
+			mxptr=mxCreateNumericMatrix(fieldList[i].dims[0],1L,fieldDataType,mxREAL);
+		}else if ( fieldList[i].ndim==2) {
+			mxptr=mxCreateNumericMatrix(fieldList[i].dims[0],fieldList[i].dims[1],fieldDataType,mxREAL);
+		} else if (fieldList[i].ndim >=3)	{
+			mwSize DIMS[4]={fieldList[i].dims[0],fieldList[i].dims[1],fieldList[i].dims[2],fieldList[i].dims[3] };
+			mxptr=mxCreateNumericArray(fieldList[i].ndim,DIMS,fieldDataType,mxREAL);
 		}
-		else if (fieldList[i].ndim >=3)
-		{
-			mwSize DIMS[4]={ fieldList[i].dims[0],fieldList[i].dims[1],fieldList[i].dims[2],fieldList[i].dims[3] };
-			mxPointer=mxCreateNumericArray(fieldList[i].ndim,DIMS,fieldDataType,mxREAL);
-			mxSetField(out,0,fieldList[i].name,mxPointer);	
-			*(fieldList[i].ptr)=mxGetData(mxPointer);
-		}
+		mxSetField(out,0L,fieldList[i].name,mxptr);
+		*(fieldList[i].ptr)=mxGetData(mxptr);
 	}
 	return (void*)out;
 }
 void  DestoryStructVar(VOID_PTR strutVar) {
 		mxDestroyArray(strutVar);
 }
-void AddStringAttribute(VOID_PTR listVar,const char* field,const char* value) {}
-void AddIntegerAttribute(VOID_PTR listVar,const char* field,I32 value) {}
+void AddStringAttribute(VOID_PTR listVar,const char* field,const char* value) {
+	mxArray* tmp=mxCreateString(value);
+	mxAddField(listVar,field);	
+	mxSetField(listVar,0,field,tmp);
+}
+void AddIntegerAttribute(VOID_PTR listVar,const char* field,I32 value) {
+	mxArray* tmp=mxCreateDoubleScalar(value);
+	mxAddField(listVar,field);
+	mxSetField(listVar,0,field,tmp);
+}
 void RemoveAttribute(VOID_PTR listVar,const char* field) {
 }
 I32 GetConsoleWidth()
@@ -673,8 +680,7 @@ int GetDataType(VOID_PTR Y) {
 	else if (IsSingle(Y))   		return DATA_FLOAT;
 	else                                        return DATA_UNKNOWN;
 }
-F64  GetNumericElement(const void* Y,I32 idx)
-{
+F64  GetNumericElement(const void* Y,I32 idx) {
 	if (!IsNumeric(Y)) {
 		return getNaN();
 	}
@@ -690,9 +696,25 @@ F64  GetNumericElement(const void* Y,I32 idx)
 			else if (IsDouble(Y))  		return *((F64PTR)y+idx);
 			else if (IsSingle(Y))   		return *((F32PTR)y+idx);
 			else                                        return getNaN();
-		}		else {
+		}	else {
 			return getNaN();
 		}
+	}
+}
+void* GetField123Check(const void* structVar,char* fname,int nPartial) {
+	VOID_PTR p=GetField123(structVar,fname,nPartial);
+	if (p==NULL||IsEmpty(p))
+		return NULL;
+	else {
+		return p;
+	}
+}
+void* GetFieldCheck(const void* structVar,char* fname) {
+	VOID_PTR p=GetField(structVar,fname);
+	if (p==NULL||IsEmpty(p))
+		return NULL;
+	else {
+		return p;
 	}
 }
 #include "abc_000_warning.h"

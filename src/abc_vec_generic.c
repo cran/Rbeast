@@ -458,6 +458,24 @@ void gen_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
 	}
 	for (; i < N;++i) if (cond[i] > 0)++x[i]; 
 }
+void gen_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N) {
+	const int regularPart=N & (-UNROLL_NUMBER); 
+	I32 i=0;
+	for (; i < regularPart; i+=UNROLL_NUMBER) {
+		if (cond[i]   > 1e-10)++*(x+i);
+		if (cond[i+1] > 1e-10)++*(x+i+1);
+		if (cond[i+2] > 1e-10)++*(x+i+2);
+		if (cond[i+3] > 1e-10)++*(x+i+3);
+		if (cond[i]     < 1e-10 && cond[i]>-1e-10)++* (y+i);
+		if (cond[i+1] < 1e-10 && cond[i+1] > -1e-10)++* (y+i+1);
+		if (cond[i+2] < 1e-10 && cond[i+2] > -1e-10)++* (y+i+2);
+		if (cond[i+3] < 1e-10 && cond[i+3] > -1e-10)++* (y+i+3);
+	}
+	for (; i < N;++i) {
+		if (cond[i] > 1e-10)++x[i];
+		if (cond[i] < 1e-10 && cond[i]>-1e-10)++*(y+i);
+	}
+}
 I32 gen_i08_sum_binvec(U08PTR binvec,I32 N) {
 	I32   SUM=0;
 	I32	  i=0;
@@ -876,6 +894,62 @@ void gen_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const 
 		x[i]=x[i] * gain+offset;
 	}
 }
+void gen_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
+	#define UNROLL_NUMBER  4
+	const int regularPart=N & (-UNROLL_NUMBER); 
+    int  i=0;
+    for (; i < regularPart; i+=UNROLL_NUMBER) {
+		Y[i]=X[i]   >=knot ? X[i]-knot:0;
+		Y[i+1]=X[i+1] >=knot ? X[i+1] - knot : 0;
+		Y[i+2]=X[i+2] >=knot ? X[i+2] - knot : 0;
+		Y[i+3]=X[i+3] >=knot ? X[i+3] - knot : 0;
+    }   
+	for (; i < N;++i) {
+		Y[i]=X[i] >=knot ? X[i] - knot : 0;
+	}
+}
+void gen_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
+	#define UNROLL_NUMBER  4
+	const int regularPart=N & (-UNROLL_NUMBER); 
+    int  i=0;
+    for (; i < regularPart; i+=UNROLL_NUMBER) {
+		Y[i]=X[i]   <=knot ? knot- X[i] :0;
+		Y[i+1]=X[i+1] <=knot ? knot - X[i+1] : 0;
+		Y[i+2]=X[i+2] <=knot ? knot - X[i+2] : 0;
+		Y[i+3]=X[i+3] <=knot ? knot - X[i+3] : 0;
+    }   
+	for (; i < N;++i) {
+		Y[i]=X[i] <=knot ? knot - X[i] : 0;
+	}
+}
+void gen_f32_step_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
+	#define UNROLL_NUMBER  4
+	const int regularPart=N & (-UNROLL_NUMBER); 
+    int  i=0;
+    for (; i < regularPart; i+=UNROLL_NUMBER) {
+		Y[i]=X[i]   >=knot ? 1 : 0;
+		Y[i+1]=X[i+1] >=knot ? 1 : 0;
+		Y[i+2]=X[i+2] >=knot ? 1 : 0;
+		Y[i+3]=X[i+3] >=knot ? 1 : 0;
+    }   
+	for (; i < N;++i) {
+		Y[i]=X[i] >=knot ? 1 : 0;
+	}
+}
+void gen_f32_step_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
+#define UNROLL_NUMBER  4
+	const int regularPart=N & (-UNROLL_NUMBER); 
+	int  i=0;
+	for (; i < regularPart; i+=UNROLL_NUMBER) {
+		Y[i]=X[i] >=knot ? 1 : 0;
+		Y[i+1]=X[i+1] >=knot ? 0 : 1;
+		Y[i+2]=X[i+2] >=knot ? 0 : 1;
+		Y[i+3]=X[i+3] >=knot ? 0 : 1;
+	}
+	for (; i < N;++i) {
+		Y[i]=X[i] >=knot ? 0 : 1;
+	}
+}
 #include "abc_vec.h"
 void SetupVectorFunction_Generic() {
     i32_add_val_inplace=&gen_i32_add_val_inplace;;
@@ -913,6 +987,7 @@ void SetupVectorFunction_Generic() {
 	f64_to_f32_inplace=&gen_f64_to_f32_inplace;
     i32_to_f32_scaleby_inplace=&gen_i32_to_f32_scaleby_inplace;
     i32_increment_bycond_inplace=&  gen_i32_increment_bycond_inplace;
+	i32_increment_vec2_bycond_inplace=gen_i32_increment_vec2_bycond_inplace;
     i08_sum_binvec=& gen_i08_sum_binvec;
 	f32_gemm_XtY2x1=NULL;
     f32_gemm_XtY2x2=gen_f32_gemm_XtY2x2;
@@ -926,5 +1001,9 @@ void SetupVectorFunction_Generic() {
     f32_gatherVec_scatterVal_byindex=gen_f32_gatherVec_scatterVal_byindex;
     f32_gather2Vec_scatterVal_byindex=gen_f32_gather2Vec_scatterVal_byindex;
 	f32_scale_inplace=gen_f32_scale_inplace;
+	f32_hinge_pos=gen_f32_hinge_pos;
+	f32_hinge_neg=gen_f32_hinge_neg;
+	f32_step_pos=gen_f32_step_pos;
+	f32_step_neg=gen_f32_step_neg;
 }
 #include "abc_000_warning.h"

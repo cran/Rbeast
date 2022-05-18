@@ -15,7 +15,7 @@
 #include "abc_pthread.h"
 #include "abc_timer.h"
 #include "beastv2_io.h"
-#if !defined(R_RELEASE)
+#if !defined(R_RELEASE) && !defined(M_RELEASE) 
 #include "mrbeast_header.h"
 #include "mrbeast_io.h" 
 #include "sbmfast.h"
@@ -167,7 +167,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 	GetCharArray(prhs[0],algorithm,STRING_LEN);
 	void * ANS=NULL;
 	int    nptr=0;
-	if (IS_STRING_EQUAL(algorithm,"beastv4Demo"))
+	if      (IS_STRING_EQUAL(algorithm,"beastv4Demo"))
 	{
 		BEAST2_OPTIONS      option={ {{0,},},}; 
 		option.io.out.result=NULL;		
@@ -205,10 +205,8 @@ void * mainFunction(void *prhs[],int nrhs) {
 			option.extra.tallyPosNegSeasonJump=0;
 			option.extra.computeTrendChngpt=1;
 			option.extra.computeSeasonChngpt=1;
-			option.extra.computeOutlierChngpt=1;
-			BEAST2_print_options(&option);
-			void* MR_Output_AllocMEM(BEAST2_OPTIONS_PTR  opt);
-			ANS=PROTECT(MR_Output_AllocMEM(&option)); nptr++;
+			BEAST2_print_options(&option); 
+			ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
 		}
 		GLOBAL_OPTIONS=(BEAST2_OPTIONS_PTR)&option;
 		if (option.io.numOfPixels==1) {
@@ -255,7 +253,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 			 #else
 				pthread_create(&thread_id[i],&attr,beast2_main_corev4_mthrd,(void*)NULL);
 			 #endif
-				r_printf("Parallel computing: thread#%-d generated ... \n",i+1);
+				r_printf("Parallel computing: thread#%-02d generated ... \n",i+1);
 			}
 			r_printf("Rbeast: Waiting on %d threads...\n",NUM_THREADS);
 			pthread_attr_destroy(&attr);
@@ -279,13 +277,14 @@ void * mainFunction(void *prhs[],int nrhs) {
 						r_printf("Quitting due to unexpected user interruption...\n");
 					}
 				}
-				if (IDE_USER_INTERRUPT==0) printProgress2(1.0,0,option.extra.consoleWidth,BUF,0);
-				r_printf("\n");
+				if (IDE_USER_INTERRUPT==0) printProgress2(1.0,0,option.extra.consoleWidth,BUF,0);				
 				free(BUF);
 			}  
+			r_printf("\nFinalizing ... \n");
 			for (I32 i=0; i < NUM_THREADS; i++) {
 				I64 ret=0;
 				pthread_join(thread_id[i],&ret);
+				r_printf("Rbeast: Thread #%-02d finished ... \n",i);
 			}
 			if (IDE_USER_INTERRUPT==0)
 				r_printf("\nRbeast: Waited on %d threads. Done.\n",NUM_THREADS);
@@ -297,8 +296,8 @@ void * mainFunction(void *prhs[],int nrhs) {
 			BEAST2_DeallocateTimeSeriesIO(&(option.io));
 		}
 	}
-	#if !defined(R_RELEASE)
-	else if   (IS_STRING_EQUAL(algorithm,"mrbeast"))
+	#if !defined(R_RELEASE) &&  !defined(M_RELEASE)
+	else if  (IS_STRING_EQUAL(algorithm,"mrbeast"))
 	{
 		MV_OPTIONS         option;
 		MV_IO              io;
@@ -322,6 +321,15 @@ void * mainFunction(void *prhs[],int nrhs) {
 		MV_DeallocateTimeSeriesIO(option.io);
 	} 
 	#endif
+	else if (IS_STRING_EQUAL(algorithm,"tsextract")) {
+		extern void* BEAST2_TsExtract(void* o,void* pindex);
+		ANS=PROTECT(BEAST2_TsExtract(prhs[1],prhs[2]));
+		nptr++;
+	}
+	else if (IS_STRING_EQUAL(algorithm,"print")) {
+		extern void* BEAST2_PrintResult(void* o,void* pindex);
+		BEAST2_PrintResult(prhs[1],prhs[2]); 
+	}
 	UNPROTECT(nptr);
 	return ANS==NULL ? IDE_NULL : ANS;	
 }
@@ -370,7 +378,7 @@ void  R_init_Rbeast(DllInfo *dll)
 }
 #elif M_INTERFACE==1
 #include "abc_date.h"
-void DllExport mexFunction(int nlhs,mxArray * _restrict plhs[],int nrhs,const mxArray * _restrict prhs[]) {
+void DllExport mexFunction(int nlhs,mxArray* plhs[],int nrhs,const mxArray* prhs[]) {
 	mxArray * ans=mainFunction(prhs,nrhs);
 	plhs[0]=ans;
 	return;

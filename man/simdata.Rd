@@ -3,7 +3,7 @@
 \docType{data}
 \title{Simulated time series to test BEAST}
 \description{
-  \code{simdata} is a 300 x 3 matrix, consiting three time series of length 300. Currently, the three time series are the same. It is used to illustrate BEAST can handle multiple time series at a singel function call.
+  \code{simdata} is a 300 x 3 matrix, consisting three time series of length 300. Currently, the three time series are the same. It is used to illustrate BEAST can handle multiple time series at a single function call.
  of BEAST.  
 }
 \usage{

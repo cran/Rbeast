@@ -11,7 +11,7 @@
 
   \item{x}{a "beast" object returned  by \code{\link[Rbeast]{beast}}, \code{\link[Rbeast]{beast.irreg}}, or \code{\link[Rbeast]{beast123}}. It may contain one or many time series.}
   
-  \item{index}{an integer (default to 1 ) or a vector of two integers to specify the index of the time series to extract if \code{x} contains results for multiple time series. If \code{x} has 1 time series, \code{index} should be always 1. If \code{x} is returned by \code{\link[Rbeast]{beast123}} applied to a 2D input,\code{index} should be a single index. If \code{x} is from \code{\link[Rbeast]{beast123}} appied to 3D arrays of time series (e.g., stacked satellite images), \code{index} can be a linear index or two subscripts to specify the row and column of the desired pixel/grid.}
+  \item{index}{an integer (default to 1 ) or a vector of two integers to specify the index of the time series to extract if \code{x} contains results for multiple time series. If \code{x} has 1 time series, \code{index} should be always 1. If \code{x} is returned by \code{\link[Rbeast]{beast123}} applied to a 2D input,\code{index} should be a single index. If \code{x} is from \code{\link[Rbeast]{beast123}} applied to 3D arrays of time series (e.g., stacked satellite images), \code{index} can be a linear index or two subscripts to specify the row and column of the desired pixel/grid.}
   
 }
   

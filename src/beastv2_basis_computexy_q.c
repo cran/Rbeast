@@ -64,14 +64,12 @@ static void OO_0(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad)
 }
 static void OO_1(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad)
 {
-	X+=basis->Kbase * Npad;
+	memset(Y,0,sizeof(F32) * Npad);
 	beta+=basis->Kbase;
-	I32 K=basis->K;
-	if (K==0)
-		memset(Y,0,sizeof(F32) * Npad);
-	else
-		r_cblas_sgemv(CblasColMajor,CblasNoTrans,Npad,K,1.f,X,Npad,\
-						beta,1L,0.f,Y,1L);
+	TKNOT_PTR	knotList=basis->KNOT;
+	for (I32 i=0; i < basis->nKnot; i++) {
+		Y[knotList[i] - 1]=beta[i] ;
+	}
 }
 void* Get_ComputeY(I08 id,BEAST2_OPTIONS_PTR opt) {
 	switch (id) {
@@ -80,10 +78,8 @@ void* Get_ComputeY(I08 id,BEAST2_OPTIONS_PTR opt) {
 		case SEASONID:  return ANY; 
 		case TRENDID:   return ANY; 
 		case OUTLIERID: {
-			if (opt->prior.outlierBasisFuncType==0)
-				return OO_0;
-			else if (opt->prior.outlierBasisFuncType==1)
-				return OO_1;
+			if      (opt->prior.outlierBasisFuncType==0)    return OO_0;
+			else if (opt->prior.outlierBasisFuncType==1)	return OO_1;
 		}
 	}
 	return NULL;

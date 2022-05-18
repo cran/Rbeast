@@ -11,7 +11,7 @@ typedef struct PREC_FUNC {
 	void (*IncreasePrecValues)(        BEAST2_MODEL_PTR model);
 	void (*GetNumTermsPerPrecGrp)(     BEAST2_MODEL_PTR model);
 	void (*GetXtXPrecDiag)(            BEAST2_MODEL_PTR model);
-	void (*UpdateXtXPrec_nTermsPerGrp)(BEAST2_MODEL_PTR model,BEAST2_BASIS_PTR basis,NEWTERM_PTR new);
+	void (*UpdateXtXPrec_nTermsPerGrp)(BEAST2_MODEL_PTR model,BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR newcol);
 	void (*ComputeMargLik)(            BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,BEAST2_YINFO_PTR yInfo,BEAST2_HyperPar_PTR hyperPar);
 	void (*ResamplePrecValues)(        BEAST2_MODEL_PTR model,BEAST2_HyperPar*hyperPar,VOID_PTR stream);
 	void (*chol_addCol)(               F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1);

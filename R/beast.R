@@ -6,9 +6,11 @@ beast <- function(  y,
 					tcp.minmax=c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
 					detrend   = FALSE, deseasonalize=FALSE,
 					mcmc.seed =0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
-					ci             = TRUE,
-					print.options  =TRUE,
-					print.progress =TRUE,
+					ci             = FALSE,
+					precValue      = 1.5,
+					precPriorType  = c('componentwise','uniform','constant','orderwise'),
+					print.options  = TRUE,
+					print.progress = TRUE,
  					gui = FALSE,...)
 {
 
@@ -21,13 +23,16 @@ beast <- function(  y,
   #mcmc.seed=0;  mcmc.burin=200; mcmc.chains=3; mcmc.thin=5; mcmc.samples=8000
   #gui=FALSE
   
-  season = match.arg(season)
+  season        = match.arg(season)
+  precPriorType = match.arg(precPriorType)
   
-  if ( !hasArg("y") || is.list(y) )  {
   # list is supported in this version for the multivariate cases
+  #if ( !hasArg("y") || is.list(y) )  {  
+  if ( !hasArg("y") )  {  
     stop("Something is wrong with the input 'y'. Make sure that y is a vector")
     invisible(return(NULL))         
   }  
+  
   if ( is.matrix(y) )  {
     dims=dim(y)
 	if (dims[1]>1 && dims[2]>1) {	
@@ -46,10 +51,10 @@ beast <- function(  y,
 		  deltat = (end-start)/(length(y)-1)
 		  freq   = tsp[3]
 		  if (  freq==1 && season!='none'){
-		    warning("The input is a object of class ts with a frequency of 1 (trend-only data), season='none' is used instead.");
+		    warning("The input is a object of class 'ts' with a frequency of 1 -- trend-only data with no periodic component; season='none' is used instead.");
 		    season = 'none'
 		  } else if (freq >1 && season=='none'){
-			msg=sprintf("The input is a object of class ts with a frequency of %d (with a periodic component), season='harmonic' is used instead.", freq)
+			msg=sprintf("The input is a object of class 'ts' with a frequency of %d (i.e., with a periodic component); season='harmonic' is used instead.", freq)
 			warning(msg);
 			season='harmonic'
 		  }
@@ -155,11 +160,8 @@ beast <- function(  y,
    if ( hasArg('ocp') ) {    
 		metadata$hasOutlierCmpnt= TRUE	
         prior$outlierMaxKnotNum	= list(...)[['ocp']] 
-   }  
-   
-   prior$K_MAX            = 500
-   prior$precValue        = 1.500000
-   prior$precPriorType    = 'uniform'
+   }     
+   prior$K_MAX            = 500   
    
 #......End of displaying pripr ......
 
@@ -194,13 +196,22 @@ beast <- function(  y,
    extra$printProgressBar     = TRUE
    extra$printOptions         = TRUE
    extra$consoleWidth         = 0
+   if ( hasArg('randcoeff') ) {    
+        extra$useMeanOrRndBeta	= list(...)[['randcoeff']] 
+   }  else {
+        extra$useMeanOrRndBeta=TRUE
+   }
+      
    #extra$numThreadsPerCPU     = 2
    #extra$numParThreads        = 0
  
  
  if (gui && !base::interactive()) {
-  warning('R is not running in the inteactive mode. Resetting gui to FALSE.');
-  gui = FALSE
+	warning('R is not running in the inteactive mode. Resetting gui to FALSE.');
+	gui = FALSE
+ }
+ if (is.list(y)){
+	gui = FALSE
  }
  
  funstr = ifelse(!gui,"beastv4","beastv4demo") 

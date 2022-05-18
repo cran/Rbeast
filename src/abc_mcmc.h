@@ -12,12 +12,13 @@ typedef struct _CRED_INTERVAL {
 	I32PTR whichStripHasMax;    
 	F32PTR result;     
 	F32PTR newDataRow; 
+	U32    N;
+	U32    samplesInserted; 
 } CI_RESULT;
 typedef struct _CI {
 	U16       subsampleFraction_x_INT16MAX;
 	U32       nSamples;
 	U32       nStrips;
-	U32       N;
 	I32PTR    SamplesPerStrip;
 	I32PTR    OffsetsPerStrip;
 } CI_PARAM;
@@ -27,7 +28,6 @@ void ConstructCIStruct(
 	F32 alpahLevel,I32 MCMC_SAMPLES,I32 N,I32 numCIVars,MemPointers* MEM,
 	U08PTR _inout_  fastCIComputation,CI_PARAM* _out_ ciInfo,CI_RESULT* _out_ CI);
 extern void InsertNewRowToUpdateCI(CI_PARAM* _restrict info,CI_RESULT* _restrict ci);
-extern void InsertInitialRows(CI_PARAM* _restrict info,CI_RESULT* _restrict ci,I32 subSampleIndex);
 #define  RANDINTEGER(x0,x1,SEED)             ((x0)+(SEED)%( (x1)- (x0)+1))
 #define  RANDINT(x0,x1,SEED)                 ((x0)+(SEED)%( (x1) -(x0)+1))
 #define  RANDI08(a,b)						 RANDINTEGER(a,b,*rnd08++)

@@ -1,40 +1,25 @@
-\name{ohio}
-\alias{ohio}
-\alias{Ohio}
+\name{googletrend_beach}
+\alias{googletrend_beach}
+\alias{googletrend_beach}
 \docType{data}
-\title{An irregular Landsat NDVI time series at an Ohio site}
+\title{A monthly Google Trend time series of the US search interest in the word "beach"}
 \description{
-  \code{ohio} is a data.frame object comprising decades of Landsat-observed surface reflectances and NDVI at an Ohio site
+  \code{googletrend_beach} is a ts object comprising monthly search interest in "beach" from the United States, as reported from Google Trends. Sudden changes in the search trend are attributed to extreme weather events or the covid19 outbreak
 }
 \usage{
-    data(ohio)
+    data(googletrend_beach)
 }
 \source{
-  Landsat images courtesy of the U.S. Geological Survey
+  https://trends.google.com/trends/explore?date=all&geo=US&q=beach
 }
  
 \examples{
  library(Rbeast)
- data(ohio) # Landsat surface references and NDVI at a single pixel observed over time
- str(ohio)
- 
-\dontrun{
- # ohio$ndvi is a single irregular time series
- y = ohio$ndvi
- o = beast.irreg(y, time=ohio$time,deltat=1/12) 
+ data(googletrend_beach) # A monthly ts starting from Jan 2004
+ \donttest{
+ o = beast(googletrend_beach )  
  plot(o)
- print(o)
- 
- # ohio also contains irregular time series of individual spectral bands
- # Below, run the multivariate version of the BEAST algorithm to decompose
- # the 5 time series and detect common changepoints altogether
- 
- y = list(ohio$blue, ohio$green, ohio$red, ohio$nir, ohio$swir1);
- o = beast.irreg(y, time=ohio$time,deltat=1/12, freq=12) 
- plot(o)
- print(o) 
-}
-
+ }
 }
 \keyword{misc}
 

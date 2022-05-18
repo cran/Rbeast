@@ -11,17 +11,17 @@
 
   \item{lon}{numeric within [-180,180]}
   \item{lat}{numeric within [-90,  90]}
-  \item{radius}{a postive number ( <=500 meters ); the radius of a buffer around the given latitude and longtiude for aggregation. If \code{radius=0}, the single pixel at the lat and lon will be retrived}
+  \item{radius}{a positive number ( <=500 meters ); the radius of a buffer around the given latitude and longitude for aggregation. If \code{radius=0}, the single pixel at the lat and lon will be retrieved}
   \item{stat}{character; if \code{radius>0}, used to specify the spatial aggregation method for pixels in the buffer. Possible values are 'mean','min','max', or 'median'.}
   \item{timeout}{integer; the seconds elapsed to wait for connection timeout. See the note for an explanation.}
 }
   
 \value{
-    a data.frame object consiting of dates, sensor type, reflectances, and NDVI for the requested location. It contains only valid and clear-sky values as obtained by referring to the standard clouds flags.
+    a data.frame object consisting of dates, sensor type, reflectances, and NDVI for the requested location. It contains only valid and clear-sky values as obtained by referring to the standard clouds flags.
    }
  
 \note{
-    As a poor man's scheme to interact with Google Earth Engine, \code{geeLandsat} should be used only for occassional retrieval of Landsat time series at a few sites, NOT for batch downloading for thousands of sites in a R loop. This procedure is provided to get example time series for testing BEAST. Behind the scene, this function calls to a free Python-based server using my own GEE credential. Normally it takes several seconds to retrive one time series, but as a free cloud service, the Python server only offers 100 seconds of free CPU time per day, with throttlling applied. So it may take up to a few mins to get a time series on your end. It may fail due to connection timeout; if so, give it a few tries. If you need to retrieve data for thousands or millions of sites, please contact the author.
+    As a poor man's scheme to interact with Google Earth Engine, \code{geeLandsat} should be used only for occasional retrieval of Landsat time series at a few sites, NOT for batch downloading for thousands of sites in a R loop. This procedure is provided to get example time series for testing BEAST. Behind the scene, this function calls to a free Python-based server using my own GEE credential. Normally it takes several seconds to retrieve one time series, but as a free cloud service, the Python server only offers 100 seconds of free CPU time per day, with throttling applied. So it may take up to a few mins to get a time series on your end. It may fail due to connection timeout; if so, give it a few tries. If you need to retrieve data for thousands or millions of sites, please contact the author.
    }
  
 \seealso{

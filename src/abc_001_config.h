@@ -10,14 +10,14 @@
     #endif
 	#define INCLUDE_PTHREAD(_X_) QUOTE_IT(C:/USERS/zehaokg/Documents/Visual Studio 2013/Projects/Matlab_Mex_Test/Pthread_IncludeLib/_X_ )
 	#define INCLUDE_MATLAB(_X_)  QUOTE_IT(C:/Program Files/MATLAB/R2019a/extern/include/_X_ )
-	#define INCLUDE_MKL(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/mkl/2021.2.0/include/_X_ )
-	#define INCLUDE_IPP(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/ipp/2021.2.0/include/_X_ )
+	#define INCLUDE_MKL(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/mkl/latest/include/_X_ )
+	#define INCLUDE_IPP(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/ipp/latest/include/_X_ )
 	#define INCLUDE_R(_X_)       QUOTE_IT(C:/Program Files/R/R-3.6.2/include/_X_ )
 	#define LIB_PTHREAD(_X_) QUOTE_IT(C:/USERS/zhaokg/Documents/Visual Studio 2013/Projects/Matlab_Mex_Test/Pthread_IncludeLib/_X_ )
 	#define LIB_MATLAB(_X_)  QUOTE_IT(C:/Program Files/MATLAB/R2019a/extern/lib/win64/microsoft/_X_ )
 	#define LIB_TBB(_X_)     QUOTE_IT(C:/Program Files (x86)/IntelSWTools/compilers_and_libraries/windows/tbb/lib/intel64_win/vc_mt/_X_ )
-	#define LIB_MKL(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/mkl/2021.2.0/lib/intel64/_X_ )
-	#define LIB_IPP(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/ipp/2021.2.0/lib/intel64/_X_ )
+	#define LIB_MKL(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/mkl/latest/lib/intel64/_X_ )
+	#define LIB_IPP(_X_)     QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/ipp/latest/lib/intel64/_X_ )
     #define LIB_OpenMP(_X_)  QUOTE_IT(C:/Program Files (x86)/IntelSWTools/compilers_and_libraries/windows/compiler/lib/intel64_win/_X_ )
 	#define LIB_MyLIB(_X_)   QUOTE_IT(C:/Share/Fortran_blas_lib/_X_ )
 #ifdef TARGET_32
@@ -25,7 +25,7 @@
 #else
 	#define LIB_R(_X_)       QUOTE_IT(C:/Program Files/R/R-4.1.0/implib/_X_ )
 #endif
-	#define LIB_FORTRAN(_X_) QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/compiler/2021.2.0/windows/compiler/lib/intel64_win/_X_ )
+	#define LIB_FORTRAN(_X_) QUOTE_IT(C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win/_X_ )
 	#if R_INTERFACE==1
 		#pragma comment( lib,LIB_R(R.lib)       )
 		#pragma comment( lib,LIB_R(Rblas.lib)   )
@@ -33,7 +33,9 @@
 	#endif
 #elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)
 	#define  DllExport  
-	#define _GNU_SOURCE
+	#ifndef _GNU_SOURCE
+		#define _GNU_SOURCE
+	#endif
 	#include <fenv.h>	
 #endif
 #define PTHREAD_INOUT 0
@@ -76,7 +78,7 @@
 	#pragma comment(lib,LIB_MATLAB(libmx.lib) )
 	#pragma comment(lib,LIB_MATLAB(libmex.lib) )
 	#pragma comment(lib,LIB_MATLAB(libmat.lib) )
-    #pragma comment(lib,LIB_MATLAB(libmwservices.lib) )	
+    #pragma comment(lib,LIB_MATLAB(libmwservices.lib) )	 
     #pragma comment(lib,LIB_MATLAB(libut.lib) ) 
 #endif
 #if R_INTERFACE==1

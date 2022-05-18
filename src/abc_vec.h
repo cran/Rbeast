@@ -40,6 +40,7 @@ extern "C" {
 	extern void (*f64_to_f32_inplace)(F64PTR data64,int N);
 	extern void (*i32_to_f32_scaleby_inplace)(I32PTR X,int N,F32 scale);
 	extern void (*i32_increment_bycond_inplace)(I32PTR x,F32PTR cond,int N);
+	extern void (*i32_increment_vec2_bycond_inplace)(I32PTR x,I32PTR y,F32PTR cond,int N);
 	extern I32(*i08_sum_binvec)(U08PTR binvec,I32 N);
 	extern void f32_cumsum_inplace(const F32PTR X,int N);
 	extern void f32_cumsumsqr_inplace(const F32PTR X,int N);
@@ -67,7 +68,11 @@ extern "C" {
 	extern void f32_mat_multirows_set_by_submat(F32PTR X,I32 ROW,I32 COL,F32PTR Xcopy,I32PTR RowIndices,I32 nRows);
 	extern void f32_normalize_inplace(F32PTR X,I32 N);
 	extern void f32_normalize_x_factor_inplace(F32PTR X,I32 N,F32 factor);
-	I32  f32_find_nans(const F32PTR X,int N,I32PTR index);
+	extern I32  f32_find_nans(const F32PTR X,int N,I32PTR index);
+	extern void  (*f32_hinge_neg)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
+	extern void  (*f32_hinge_pos)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
+	extern void  (*f32_step_neg)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
+	extern void  (*f32_step_pos)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
 #define f32_copy(src,dst,N)  memcpy(dst,src,sizeof(F32)*N)
 	extern void (*f32_gemm_XtY2x1)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
 	extern void (*f32_gemm_XtY2x2)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);

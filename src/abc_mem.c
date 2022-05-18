@@ -1,4 +1,5 @@
-#include <stdlib.h>
+#include <stdlib.h>  
+#include <string.h>  
 #include "abc_000_warning.h"
 #include "abc_ide_util.h"
 #include "abc_001_config.h"
@@ -29,9 +30,9 @@
 		 } 
 		 if (self->checkHeader) {	 
 			 U64PTR   oldHeader=self->memHeaderBackup; 
-			 self->memHeaderBackup=(U64PTR)malloc(sizeof(64) * self->nptsMax);
+			 self->memHeaderBackup=(U64PTR)malloc(sizeof(U64) * self->nptsMax);
 			 if (oldHeader) {
-				 memcpy((const void*)self->memHeaderBackup,(const void*)oldHeader,sizeof(64) * oldMax);				 
+				 memcpy((const void*)self->memHeaderBackup,(const void*)oldHeader,sizeof(U64) * oldMax);
 				 free((void*)oldHeader);
 			 }
 		 }
@@ -97,7 +98,7 @@ static I32  verify_header(MemPointers* _restrict self) {
 	int badHeaderNum=0;
 	for (int i=0; i < self->npts;++i) {
 		U64 curheader=*(U64PTR)((uintptr_t)self->memPointer[i] - self->memAlignOffset[i] - 8);
-		if (curheader !=self->memHeaderBackup[i]) {
+		if ((curheader & 0xffff0000ffffffff) !=(self->memHeaderBackup[i] & 0xffff0000ffffffff)) {
 			badHeaderNum++;
 		}
 	}

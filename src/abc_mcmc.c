@@ -4,7 +4,7 @@
 #include "abc_mem.h"
 #include "abc_blas_lapack_lib.h"
 #include "abc_mat.h" 
-static void PrepareCiInfo(CI_PARAM *cinfo,U32 nSamples,U32 N_rowLength,MemPointers * MEM)
+static void PrepareCiInfo(CI_PARAM *cinfo,U32 nSamples,MemPointers * MEM)
 {
  	    U32 stripWidth;
 		U32 nStrips;
@@ -19,14 +19,14 @@ static void PrepareCiInfo(CI_PARAM *cinfo,U32 nSamples,U32 N_rowLength,MemPointe
 			stripCumNum+=stripWidth;
 		cinfo->nSamples=nSamples;
 		cinfo->nStrips=nStrips;
-		cinfo->N=N_rowLength;
 }
-static void AllocateMemForCISorting(CI_PARAM * cinfo,CI_RESULT *CI,int NUM_VARS,MemPointers* MEM)
+static void AllocateMemForCISorting(CI_PARAM * cinfo,CI_RESULT *CI,int Nrowlength,int NUM_VARS,MemPointers* MEM)
 {
-	U32  N=cinfo->N;
 	U32  nSamples=cinfo->nSamples;
 	U32  nStrips=cinfo->nStrips;
 	for (I32 i=0; i < NUM_VARS; i++) {
+		U32  N=Nrowlength;
+		CI[i].N=N;
 		CI[i].CI95=MyALLOC((*MEM),N*nSamples,F32,0);
 		CI[i].minIdxPerStrip=MyALLOC((*MEM),N*nStrips,int,0);
 		CI[i].minValPerStrip=MyALLOC((*MEM),N*nStrips,F32,0);
@@ -55,11 +55,10 @@ void ConstructCIStruct(F32 alpahLevel,I32 MCMC_SAMPLES,I32 N,I32 numCIVars,MemPo
 		if (!(*fastCIComputation)) {
 			nSamples=(F32) MCMC_SAMPLES * alpha;
 		}
-		PrepareCiInfo(ciInfo,nSamples,N,MEM);
-		AllocateMemForCISorting(ciInfo,CI,numCIVars,MEM); 
+		PrepareCiInfo(ciInfo,nSamples,MEM);
+		AllocateMemForCISorting(ciInfo,CI,N,numCIVars,MEM); 
 }
 static void CalcInitialCI(CI_PARAM* _restrict info,CI_RESULT* _restrict ci) {
-	I64     N=info->N;
 	I64     nStrips=info->nStrips;
 	I64     nSamples=info->nSamples;
 	F32PTR CI95=ci->CI95;
@@ -68,6 +67,7 @@ static void CalcInitialCI(CI_PARAM* _restrict info,CI_RESULT* _restrict ci) {
 	F32PTR CI05=ci->CI05;
 	F32PTR maxValPerStrip=ci->maxValPerStrip;
 	I32PTR maxIdxPerStrip=ci->maxIdxPerStrip;
+	I64     N=ci->N;
 	for (I64 i=0; i < N; i++)
 	{ 
 		for (U32 j=0; j < nStrips; j++) {
@@ -86,29 +86,28 @@ static void CalcInitialCI(CI_PARAM* _restrict info,CI_RESULT* _restrict ci) {
 		maxIdxPerStrip+=nStrips;
 	}
 }
-void InsertInitialRows(CI_PARAM* _restrict info,CI_RESULT* _restrict ci,I32 subSampleIndex)
-{
-	I32 N=info->N;
-	I64 offset=(subSampleIndex - 1) * N;
-	F32PTR  newDataRow=ci->newDataRow	;
-	r_cblas_scopy(N,newDataRow,1,ci->CI95+offset,1); 
-	I32 nSamples=info->nSamples;
-	if (subSampleIndex==nSamples) {
-		r_mkl_simatcopy('C','T',N,nSamples,1,ci->CI95,N,nSamples);
-		r_cblas_scopy(N*nSamples,ci->CI95,1L,ci->CI05,1L);
-		CalcInitialCI(info,ci);
-	}
-}
 void InsertNewRowToUpdateCI(CI_PARAM* _restrict info,CI_RESULT* _restrict ci)
 {
+	I64     N=ci->N;
 	F32PTR  newDataRow=ci->newDataRow;
+	if (ci->samplesInserted < info->nSamples) {
+		I64 offset=ci->samplesInserted * N;
+		r_cblas_scopy(N,newDataRow,1,ci->CI95+offset,1); 
+		ci->samplesInserted++;
+		I32 nSamples=info->nSamples;
+		if (ci->samplesInserted==nSamples) {
+			r_mkl_simatcopy('C','T',N,nSamples,1,ci->CI95,N,nSamples);
+			r_cblas_scopy(N * nSamples,ci->CI95,1L,ci->CI05,1L);
+			CalcInitialCI(info,ci);
+		}
+		return;
+	}
 	F32PTR CI95=ci->CI95;
 	I32PTR minIdxPerStrip=ci->minIdxPerStrip;
 	F32PTR minValPerStrip=ci->minValPerStrip;
 	F32PTR CI05=ci->CI05;
 	I32PTR maxIdxPerStrip=ci->maxIdxPerStrip;
 	F32PTR maxValPerStrip=ci->maxValPerStrip;
-	I64     N=info->N;
 	I64     nStrips=info->nStrips;
 	for (I64 i=0; i < N; i++) {
 		F32 newY=newDataRow[i];

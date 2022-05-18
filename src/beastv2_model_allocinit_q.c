@@ -84,8 +84,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
  			TREND->COEFF_B=MyALLOC(*MEM,N,F32,0),
 			TREND->TERMS=MyALLOC(*MEM,N*(MAX_ORDER+1L),F32,64);
 			preCalc_terms_trend(TREND->TERMS,TREND->INV_SQR,N,MAX_ORDER);
-			if (opt->prior.trendBasisFuncType==4)
-				preCalc_XmarsTerms_extra_fmt4(TREND->COEFF_A,TREND->COEFF_B,N);
+			if (opt->prior.trendBasisFuncType==3)
+				preCalc_XmarsTerms_extra_fmt3(TREND->COEFF_A,TREND->COEFF_B,N);
 			else
 				preCalc_XmarsTerms_extra(TREND->COEFF_A,TREND->COEFF_B,N);
 			I32 tMAXNUMKNOT=basis->prior.maxKnotNum;
@@ -130,7 +130,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			SEASON_CONST* SEASON=&basis->bConst;
 			SEASON->TERMS=MyALLOC(*MEM,N * sMAXORDER * 2L,F32,64),
 			SEASON->SQR_CSUM=MyALLOC(*MEM,(N+1L)*sMAXORDER * 2L,F32,64) ;  
-			preCalc_terms_season(SEASON->TERMS,SEASON->SQR_CSUM,N,opt->io.meta.period,sMAXORDER);	 
+			SEASON->SCALE_FACTOR=MyALLOC(*MEM,sMAXORDER * 2L,F32,0);
+			preCalc_terms_season(SEASON->TERMS,SEASON->SQR_CSUM,SEASON->SCALE_FACTOR,N,opt->io.meta.period,sMAXORDER);
 			I32 sMAXNUMKNOT=basis->prior.maxKnotNum;
 			I32 sMINSEPDIST=basis->prior.minSepDist;
 			F32PTR scaleFactor=MyALLOC(*MEM,sMAXNUMKNOT+1,F32,0);
@@ -181,7 +182,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			if (opt->io.meta.deseasonalize) 	{
 				I32 sMAXORDER=opt->io.meta.period/2;
 				DUMMY->TERMS=MyALLOC(*MEM,N * sMAXORDER * 2L,F32,64), 
-				preCalc_terms_season(DUMMY->TERMS,NULL,N,opt->io.meta.period,sMAXORDER);
+				preCalc_terms_season(DUMMY->TERMS,NULL,NULL,N,opt->io.meta.period,sMAXORDER);
 			}
 			I32 sMAXNUMKNOT=basis->prior.maxKnotNum;
 			I32 sMINSEPDIST=basis->prior.minSepDist;

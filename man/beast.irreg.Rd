@@ -23,6 +23,8 @@
        mcmc.thin    = 5,
        mcmc.samples = 8000,
        ci             = FALSE,	
+       precValue      = 1.5,
+       precPriorType  = c('componentwise','uniform','constant','orderwise'),
        print.options  = TRUE,
        print.progress = TRUE,
        gui            = FALSE,
@@ -37,15 +39,16 @@
 				\item  If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
  
             }  
+			If a list of multiple time series is provided for \code{y}, the multivariate version of the BEAST algorithm will be invoked to decompose the multiple time series and detect common changepoints altogether. This feature is \code{experimental} only and under further development. Check \code{\link[Rbeast]{ohio}} for a working example.
   }
 
-  \item{time}{ a vector of the same length as \code{y}; the time vector of datapoints of \code{y}. It can be a numeric vector or a vector of Dates. If your time is formated as strings or vectors of year, months, and days, use \code{beast123()} instead where more formats are supported.}
+  \item{time}{ a vector of the same length as \code{y}; the time vector of datapoints of \code{y}. It can be a numeric vector or a vector of Dates. If your time is formatted as strings or vectors of year, months, and days, use \code{beast123()} instead where more formats are supported.}
   
-  \item{deltat}{ numeric; a user-specified time interval to aggregate \code{y} based on \code{time} into a regular time series. The BEAST model is currently formulated for regular data only, so internally, the \code{beast.irreg} function will aggregate/re-bin irregular data into regular ones; for the aggregation, the  \code{deltat} MUST be provided to specify the desired bin size or time interval. The unit of delta needs to be consisent with \code{time}. If \code{time} takes a numeric vector, the unit is arbitrary and irrelevant to beast. If \code{time} takes a vector of Dates, the unit  is assumed to YEAR; for example, if the desired time interval is 1 month (or 1 day), deltat should be 1/12 (or 1/365).}  
+  \item{deltat}{ numeric; a user-specified time interval to aggregate \code{y} based on \code{time} into a regular time series. The BEAST model is currently formulated for regular data only, so internally, the \code{beast.irreg} function will aggregate/re-bin irregular data into regular ones; for the aggregation, the  \code{deltat} MUST be provided to specify the desired bin size or time interval. The unit of delta needs to be consistent with \code{time}. If \code{time} takes a numeric vector, the unit is arbitrary and irrelevant to beast. If \code{time} takes a vector of Dates, the unit  is assumed to YEAR; for example, if the desired time interval is 1 month (or 1 day), deltat should be 1/12 (or 1/365).}  
 
   \item{freq}{ numeric. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and ignored for trend-only data (i.e., \code{season='none'}). It specifies the number of samples/datapoints per cycle (e.g, a time series of monthly observations with an annual period has a frequency of 12); it may be a decimal real number (e.g., a time series of bi-hourly observations with a period of 37.5 hrs has a freq of 37.5/2=18.75). The period of the cyclic component in the unit of time is \code{period=deltat*freq}. \code{freq} is not a model parameter of BEAST and it has to be specified by the user. If \code{freq} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model, but in this case, \code{freq} is assumed to be an integer. }
   
-  \item{season}{ characters (default to 'harmonic'); speficy if \code{y} has a periodic component or not. Three strings are possible.
+  \item{season}{ characters (default to 'harmonic'); specify if \code{y} has a periodic component or not. Three strings are possible.
 				\itemize{
 					\item  \code{'none'}: \code{y} is trend-only; no periodic components are present in the time series. The args for the seasonal component (i.e.,sorder.minmax, scp.minmax and sseg.max) will be ignored. 
 					
@@ -62,7 +65,7 @@
   \item{sorder.minmax}{ a vector of 2 integers (>=1); the min and max harmonic orders considered to fit the seasonal component. \code{sorder.minmax} is used only used if the time series has a seasonal component (i.e., \code{season='harmonic'}) and ignored for trend-only data or when \code{season='dummy'}. If the min and max orders are equal (\code{sorder.minmax[1]=sorder.minmax[2]}), BEAST assumes a constant harmonic order used and won't infer the posterior probability of harmonic orders.
   }
   
-  \item{scp.minmax}{ a vector of 2 integers (>=0); the min and max number of seasonal changepints (scp) allowed in segmenting the seasonal component. \code{scp.minmax} is used only if \code{y} has a seasonal component (i.e., \code{season='harmonic' or 'dummy' }) and ignored for trend-only data. If the min and max changepoint numbers are equal, BEAST assumes a constant number of scp and won't infer the posterior probability of the number of changepoints, but it still estimates the occurance probability of the changepoints over time (i.e., the most likely times at which these changepoints occur). If both the min and max numbers are set to 0, no changepoints are allowed; then a global harmonic model is used to fit the seasonal component, but still, the most likley harmonic order will be inferred if sorder.minmax[1] is not equal to sorder.minmax[2].}
+  \item{scp.minmax}{ a vector of 2 integers (>=0); the min and max number of seasonal changepoints (scp) allowed in segmenting the seasonal component. \code{scp.minmax} is used only if \code{y} has a seasonal component (i.e., \code{season='harmonic' or 'dummy' }) and ignored for trend-only data. If the min and max changepoint numbers are equal, BEAST assumes a constant number of scp and won't infer the posterior probability of the number of changepoints, but it still estimates the occurrence probability of the changepoints over time (i.e., the most likely times at which these changepoints occur). If both the min and max numbers are set to 0, no changepoints are allowed; then a global harmonic model is used to fit the seasonal component, but still, the most likely harmonic order will be inferred if sorder.minmax[1] is not equal to sorder.minmax[2].}
     
 
   \item{sseg.min}{ an integer; the min segment length allowed between two neighboring season changepoints. That is, when fitting a piecewise harmonic seasonal model, no two changepoints are allowed to occur within a time window of length \code{sseg.min}. \code{sseg.min} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{sseg.min*deltat}. \code{sseg.min} defaults to NULL and its value will be given a default value in reference to \code{freq}.  }	
@@ -71,7 +74,7 @@
   
    \item{torder.minmax}{ a vector of 2 integers (>=0); the min and max orders of the polynomials considered to fit the trend component. The 0-th order corresponds to a constant term/a flat line and the 1st order is a line. If \code{torder.minmax[1]=torder.minmax[2]}, BEAST assumes a constant polynomial order used and won't infer the posterior probability of polynomial orders.  }
   
-  \item{tcp.minmax}{ a vector of 2 integers; the min and max number of trend changepints (tcp) allowed in segmenting the trend component. If the min and max changepoint numbers are equal, BEAST assumes a constant number of changepoints and won't infer the posterior probability of the number of changepoints for the trend, but it still estimates the occurance probability of the changepoints over time (i.e., the most likely times at which these changepoints occur in the trend). If both the min and max numbers are set to 0, no changepoints are allowed; then a global polynomial trend is used to fit the trend component, but still, the most likley polynomial order will be inferred if torder.minmax[1] is not equal to torder.minmax[2].}
+  \item{tcp.minmax}{ a vector of 2 integers; the min and max number of trend changepoints (tcp) allowed in segmenting the trend component. If the min and max changepoint numbers are equal, BEAST assumes a constant number of changepoints and won't infer the posterior probability of the number of changepoints for the trend, but it still estimates the occurrence probability of the changepoints over time (i.e., the most likely times at which these changepoints occur in the trend). If both the min and max numbers are set to 0, no changepoints are allowed; then a global polynomial trend is used to fit the trend component, but still, the most likely polynomial order will be inferred if torder.minmax[1] is not equal to torder.minmax[2].}
     
 	
   \item{tseg.min}{ an integer; the min segment length allowed between two neighboring trend changepoints. That is, when fitting a piecewise polynomial trend model, no two changepoints are allowed to occur within a time window of length tseg.min. \code{tseg.min} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{tseg.min*deltat}. \code{tseg.min} defaults to NULL and its value will be given a default value in reference to \code{freq} if the time series has a cyclic component.}	
@@ -82,7 +85,7 @@
   
   \item{deseasonalize}{ logical; If \code{TRUE}, a global seasonal model is first fitted and removed from the time series before running BEAST; after BEAST finishes, the global seasonal curve is added back to the BEAST result. \code{deseasonalize} is ignored if \code{season='none'} (i.e., trend-only data). }	
   
-  \item{mcmc.seed}{ integer (>=0); the seed for the random number generator used for Monte Carlo Markove Chain (mcmc).  If \code{mcmc.seed=0}, an arbitrary seed is picked and the fitting results vary across runs. If fixed to the same non-zero integer, the result can be re-produced for different runs. But the results from the same seed may still vary if run on different computers because the random generator libray depends on CPU's instruction sets.}	 
+  \item{mcmc.seed}{ integer (>=0); the seed for the random number generator used for Monte Carlo Markov Chain (mcmc).  If \code{mcmc.seed=0}, an arbitrary seed is picked and the fitting results vary across runs. If fixed to the same non-zero integer, the result can be re-produced for different runs. But the results from the same seed may still vary if run on different computers because the random generator library depends on CPU's instruction sets.}	 
  
   \item{mcmc.chains}{ integer (>0); the number of  MCMC chains.}
   
@@ -93,39 +96,50 @@
   \item{mcmc.samples}{ integer (>=0); the number of samples collected per MCMC chain. The total number of iterations is \code{(burnin+samples*thin)*chains}.}		  
   
   \item{ci}{ boolean; If \code{TRUE}, credible intervals (i.e., out$season$CI or out$trend$CI) will be computed for the estimated seasonal and trend components. Computing CI is time-consuming, due to sorting, so set \code{ci} to FALSE if a symmetric credible interval (i.e., out$trend$SD and out$season$SD) suffices.}	
+
+  \item{precValue}{  numeric (>0); the hyperparameter of the precision prior; the default value is 1.5. \code{precValue} is useful only when \code{precPriorType}='constant', as further explained below}
+  \item{precPriorType}{ characters. It takes one of 'constant', 'uniform',  'componentwise' (the default), and 'orderwise'. Below are the differences between them.
+            \enumerate{
+                 \item \code{'constant'}:  the precision parameter used to parameterize the model coefficients is fixed to a constant specified by \code{precValue}. In other words, \code{precValue} is a user-defined hyperparameter and the fitting result may be sensitive to the chosen values of \code{precValue}.
+                 \item \code{'uniform'}:  the precision parameter used to parameterize the model coefficients is a random variable; its initial value is specified by \code{precValue}. In other words, \code{precValue} will be inferred by the MCMC, so the fitting result will be insensitive to the choice in \code{precValue}.
+                 \item \code{'componentwise'}: multiple precision parameters are used to parameterize the model coefficients for individual components (e.g., one for season and another for trend); their initial values is specified by \code{precValue}. In other words, \code{precValue} will be inferred by the MCMC, so the fitting result will be insensitive to the choice in \code{precValue}.
+                 \item \code{'orderwise'}: multiple precision parameters are used to parameterize the model coefficients not just for individual components but also for individual orders of each component; their initial values is specified by \code{precValue}. In other words, \code{precValue} will be inferred by the MCMC, so the fitting result will be insensitive to the choice in \code{precValue}.
+          } %componentwise
+  }
+
   
-  \item{print.options}{ boolean. If \code{TRUE},the full list of input parameters to BEAST  will be printed out prior to the MCMC inference; the naming for this list (e.g., metadata, prior, and mcmc) differs slightly from the input to \code{beast}, but there is a one-to-one correspondence (e.g., prior$trendMinSepDist=tseg.min). Internaly, beast convers the input parameters to the forms of metadata, prior,and mcmc. Type 'View(beast)' to see the details or check the \code{beast123} function. }	
+  \item{print.options}{ boolean. If \code{TRUE},the full list of input parameters to BEAST  will be printed out prior to the MCMC inference; the naming for this list (e.g., metadata, prior, and mcmc) differs slightly from the input to \code{beast}, but there is a one-to-one correspondence (e.g., prior$trendMinSepDist=tseg.min). Internally, beast converts the input parameters to the forms of metadata, prior,and mcmc. Type 'View(beast)' to see the details or check the \code{beast123} function. }	
   
   \item{print.progress}{ boolean;If \code{TRUE}, a progressbar will be displayed. }	
   
   
-  \item{gui}{ boolean. If \code{TRUE}, BEAST will be run in a GUI demostration mode, with a GUI window to show an animation of the MCMC sampling in the model space step by step. Note that "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac systems.}	
+  \item{gui}{ boolean. If \code{TRUE}, BEAST will be run in a GUI demonstration mode, with a GUI window to show an animation of the MCMC sampling in the model space step by step. Note that "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac systems.}	
  	
-  \item{\dots}{additional parameters. There are many more settings for the implemenation but not made available in the beast() interface; please use the function \code{beast123()} instead }
+  \item{\dots}{additional parameters. There are many more settings for the implementation but not made available in the beast() interface; please use the function \code{beast123()} instead }
  
 }
 
 \value{
-  The output is an object of class "beast". It is a list, consisting of the following variables. In the explantions below, we assume the input \code{y} is a single time series of length \code{N}:
+  The output is an object of class "beast". It is a list, consisting of the following variables. In the explanations below, we assume the input \code{y} is a single time series of length \code{N}:
 
-  \item{time}{a vector of size \code{1xN}: the times at the \code{N} sampled locatons. By default, it is simply set to \code{1:N}}
-  \item{data}{a vector, matrix, or 3D array; this is a copy of the input \code{data} if extra$dumpInputData = TRUE. If extra$dumpInputData=FALSE, it is set to NULL. If the orignal input \code{data} is irregular, the copy here is the regular version aggragted from the original at the time interval specified by metadata$deltaTime. }
-  \item{marg_lik}{numeric; the average of the model marginal likhood; the larger marg_lik, the better the fitting for a given time series.}
-  \item{R2}{numeric; the R-square of the model fiting.}
-  \item{RMSE}{numeric; the RMSE of the model fiting.}
+  \item{time}{a vector of size \code{1xN}: the times at the \code{N} sampled locations. By default, it is simply set to \code{1:N}}
+  \item{data}{a vector, matrix, or 3D array; this is a copy of the input \code{data} if extra$dumpInputData = TRUE. If extra$dumpInputData=FALSE, it is set to NULL. If the original input \code{data} is irregular, the copy here is the regular version aggregated from the original at the time interval specified by metadata$deltaTime. }
+  \item{marg_lik}{numeric; the average of the model marginal likelihood; the larger marg_lik, the better the fitting for a given time series.}
+  \item{R2}{numeric; the R-square of the model fitting.}
+  \item{RMSE}{numeric; the RMSE of the model fitting.}
   \item{sig2}{numeric; the estimated variance of the model error.}
-  \item{trend}{a list object numeric consisting of various outputs related to the estimated trend component:
+  \item{trend}{a list object consisting of various outputs related to the estimated trend component:
   	\itemize{
-		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of trend changepoints. Individual models sampled by BEAST has a varying dimension (e.g., number of changeponts or knots), so several alternative statistics (e.g., \code{ncp_mode}, \code{ncp_median}, and \code{ncp_pct90}) are also given to summariize the number of changepoints. For example, if \code{mcmc$samples=10}, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2),  the mode is 1, and the 90th percetile (ncp_pct90) is 6.5. 
-		 \item \code{ncp_mode}: [Number of ChangePoints]. a numeric scalar; the mode for number of changepoints. See the above for explanatatons.
-		 \item \code{ncp_median}: [Number of ChangePoints]. a numeric scalar; the median for number of changepoints. See the above for explanatatons.
-		 \item \code{ncp_pct90}: [Number of ChangePoints]. a numeric scalar; the 90th percetile for number of changepoints. See the above for explanatatons.
+		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of trend changepoints. Individual models sampled by BEAST has a varying dimension (e.g., number of changepoints or knots), so several alternative statistics (e.g., \code{ncp_mode}, \code{ncp_median}, and \code{ncp_pct90}) are also given to summarize the number of changepoints. For example, if \code{mcmc$samples=10}, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2),  the mode is 1, and the 90th percentile (ncp_pct90) is 6.5. 
+		 \item \code{ncp_mode}: [Number of ChangePoints]. a numeric scalar; the mode for number of changepoints. See the above for explanations.
+		 \item \code{ncp_median}: [Number of ChangePoints]. a numeric scalar; the median for number of changepoints. See the above for explanations.
+		 \item \code{ncp_pct90}: [Number of ChangePoints]. a numeric scalar; the 90th percentile for number of changepoints. See the above for explanations.
 		 \item \code{ncpPr}: [Probability of the Number of ChangePoints]. A vector of length \code{(tcp.minmax[2]+1)=tcp.max+1}. It gives a probability distribution of having a certain number of trend changepoints over the range of [0,tcp.max]; for example, \code{ncpPr[1]} is the probability of having no trend changepoint; \code{ncpPr[i]} is the probability of having (i-1) changepoints: Note that it is \code{ncpPr[i]} not \code{ncpPr[i-1]} because ncpPr[1] is used for having zero changepoint.
-		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the trend at each point of time. Plotting \code{cpOccPr} will depict a continous curve of probability-of-being-changepoint. Of particular note, in the curve, a higher peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time and does not neccessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window \code{c(0.1,0.2,0.21,0.2,0.1)} (i.e., the peak prob is 0.21 but the summed prob is 0.71).
-		 \item \code{order}: a vector of length N; the average polynomial order needed to approximate the fitted trend. As an average over many sampled individual piece-wise polynomial trends, \code{order} is not neccessarly an integer.
-		 \item \code{cp}: [Changepoints] a vector of length \code{tcp.max=tcp.minmax[2]}; the most possible changepoint locations in the trend component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {tseg.min} and then picking up to a total \code{prior$MaxKnotNum}/\code{tcp.max} of the highest peaks in the filterd curve.  NaNs are possible if no enough changepoints are identified. \code{cp} records all the possible changepoints identified and many of them are bound to be false postives. Do not bindely treat all of them as actual changepoints.
+		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the trend at each point of time. Plotting \code{cpOccPr} will depict a continious curve of probability-of-being-changepoint. Of particular note, in the curve, a higher peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time and does not necessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window \code{c(0.1,0.2,0.21,0.2,0.1)} (i.e., the peak prob is 0.21 but the summed prob is 0.71).
+		 \item \code{order}: a vector of length N; the average polynomial order needed to approximate the fitted trend. As an average over many sampled individual piece-wise polynomial trends, \code{order} is not necessarily an integer.
+		 \item \code{cp}: [Changepoints] a vector of length \code{tcp.max=tcp.minmax[2]}; the most possible changepoint locations in the trend component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {tseg.min} and then picking up to a total \code{prior$MaxKnotNum}/\code{tcp.max} of the highest peaks in the filtered curve.  NaNs are possible if no enough changepoints are identified. \code{cp} records all the possible changepoints identified and many of them are bound to be false positives. Do not blindly treat all of them as actual changepoints.
 		 
-		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{tcp.max=tcp.minmax[2]}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaning elements if \code{ncp<tcp.max}.
+		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{tcp.max=tcp.minmax[2]}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaining elements if \code{ncp<tcp.max}.
 		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{tcp.max x 2}; the credibable intervals for the detected changepoints \code{cp}.
 		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{tcp.max}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
 		 \item \code{Y}: a vector of length N; the estimated trend component. It is the Bayesian model averaging of all the individual sampled trend.
@@ -133,8 +147,9 @@
 		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated trend. One vector of the matrix is for the upper envelope and another for the lower envelope.
 		 \item \code{slp}: [Slope] a vector of length N;  the time-varying slope of the fitted trend component .
 		 \item \code{slpSD}: [Standar Deviation of Slope] a vector of length N;  the SD of the slope for the trend component.
-		 \item \code{slpSignPr}: [PRobability of slope having a postive sign] a vector of length N;  the probabity of the slope being positive (i.e., increasing trend) for the trend component. For example, if {slpSignPr=0.80} at a given point in time, it means that 80\% of the individual trend models sampled in the MCMC chain has a positive slope at that point.
-
+		 \item \code{slpSgnPosPr}: [PRobability of slope having a positive sign] a vector of length N;  the probability of the slope being positive (i.e., increasing trend) for the trend component. For example, if {slpSgnPosPr=0.80} at a given point in time, it means that 80\% of the individual trend models sampled in the MCMC chain has a positive slope at that point.
+		 \item \code{slpSgnZeroPr}: [PRobability of slope being zero] a vector of length N;  the probability of the slope being zero (i.e., a flat constant line) for the trend component. For example, if {slpSgnZeroPr=0.10} at a given point in time, it means that 10\% of the individual trend models sampled in the MCMC chain has a zero slope at that point.  The probability of slope being negative can be obtained from \code{1}-\code{slpSgnZeroPr}-\code{slpSgnPosPr}.
+		 
 		 \item \code{pos_ncp}: 
 		 \item \code{neg_ncp}:  
 		 \item \code{pos_ncpPr}:
@@ -148,7 +163,7 @@
 		 \item \code{pos_cpAbruptChange}:
 		 \item \code{neg_cpAbruptChange}:
 		 \item \code{pos_cpCI}:
-		 \item \code{neg_cpCI}:  The above variables have the same outputs as those variables without the prefix 'pos' and 'neg', except that we differentiate the changepoints with a POStive jump in the trend from those changepoints with a NEGative jump. For example, \code{pos_ncp} refers to the average number of trend changepoints that jump up (i.e., postively) in the trend.
+		 \item \code{neg_cpCI}:  The above variables have the same outputs as those variables without the prefix 'pos' and 'neg', except that we differentiate the changepoints with a POStive jump in the trend from those changepoints with a NEGative jump. For example, \code{pos_ncp} refers to the average number of trend changepoints that jump up (i.e., positively) in the trend.
 		 \item \code{inc_ncp}: 
 		 \item \code{dec_ncp}:  
 		 \item \code{inc_ncpPr}:
@@ -162,7 +177,7 @@
 		 \item \code{inc_cpAbruptChange}:
 		 \item \code{dec_cpAbruptChange}:
 		 \item \code{inc_cpCI}:
-		 \item \code{dec_cpCI}:  The above variables have the same outputs as those variables without the prefix 'inc' and 'dec', except that we differentiate the changepoints at which the trend slope increases from those changepoints at which the trend slope decreaes. For example, if the trend slopes before and after a chngpt is 0.4 and 2.5, then the changepont is counted toward \code{inc_ncp}.
+		 \item \code{dec_cpCI}:  The above variables have the same outputs as those variables without the prefix 'inc' and 'dec', except that we differentiate the changepoints at which the trend slope increases from those changepoints at which the trend slope decreases. For example, if the trend slopes before and after a chngpt is 0.4 and 2.5, then the changepoint is counted toward \code{inc_ncp}.
 
  
 	} %\itemize
@@ -171,14 +186,14 @@
  
  
 
- \item{season}{a list object numeric consisting of various outputs related to the estimated seasonal/periodic component:
+ \item{season}{a list object consisting of various outputs related to the estimated seasonal/periodic component:
   	\itemize{
 		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of seasonal changepoints.
 		 \item \code{ncpPr}: [Probability of the Number of ChangePoints]. A vector of length \code{(scp.minmax[2]+1)=scp.max+1}. It gives a probability distribution of having a certain number of seasonal changepoints over the range of [0,scp.max]; for example, \code{ncpPr[1]} is the probability of having no seasonal changepoint; \code{ncpPr[i]} is the probability of having (i-1) changepoints: Note that  the index is i rather than (i-1) because ncpPr[1] is used for having zero changepoint.
-		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the seasonal component at each point of time. Plotting \code{cpOccPr} will depict a continous curve of probability-of-being-changepoint over the time. Of particular note, in the curve, a higher value at a peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time, and does not neccessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window values \code{c(0.1,0.2,0.3,0.2,0.1)} (i.e., the peak prob is 0.3 but the summed prob is 0.8).
-		 \item \code{order}: a vector of length N; the average harmonic order needed to approximate the seasonal component. As an average over many sampled individual piece-wise harmonic curves, \code{order} is not neccessarly an integer.
-		 \item \code{cp}: [Changepoints] a vector of length \code{scp.max=scp.minmax[2]}; the most possible  changepoint locations in the seasonal component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {sseg.min} and then picking up to a total \code{ncp} of the highest peaks in the filterd curve. If \code{ncp<scp.max}, the remaining of the vector is filled with NaNs.
-		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{scp.max}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaning elements if \code{ncp<scp.max}.
+		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the seasonal component at each point of time. Plotting \code{cpOccPr} will depict a continious curve of probability-of-being-changepoint over the time. Of particular note, in the curve, a higher value at a peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time, and does not necessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window values \code{c(0.1,0.2,0.3,0.2,0.1)} (i.e., the peak prob is 0.3 but the summed prob is 0.8).
+		 \item \code{order}: a vector of length N; the average harmonic order needed to approximate the seasonal component. As an average over many sampled individual piece-wise harmonic curves, \code{order} is not necessarily an integer.
+		 \item \code{cp}: [Changepoints] a vector of length \code{scp.max=scp.minmax[2]}; the most possible  changepoint locations in the seasonal component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {sseg.min} and then picking up to a total \code{ncp} of the highest peaks in the filtered curve. If \code{ncp<scp.max}, the remaining of the vector is filled with NaNs.
+		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{scp.max}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaining elements if \code{ncp<scp.max}.
 		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{scp.max x 2}; the credibable intervals for the detected changepoints \code{cp}.
 		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{scp.max}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
 		 \item \code{Y}: a vector of length N; the estimated trend component. It is the Bayesian model averaging of all the individual sampled trend.
@@ -201,7 +216,7 @@
 		 \item \code{pos_cpAbruptChange}:
 		 \item \code{neg_cpAbruptChange}:
 		 \item \code{pos_cpCI}:
-		 \item \code{neg_cpCI}:  The above variables have the same outputs as those variables without the prefix 'pos' and 'neg', except that we differentiate the changepoints with a POStive jump in the trend from those changepoints with a NEGative jump. For example, \code{pos_ncp} refers to the average number of trend changepoints that jump up (i.e., postively) in the trend.
+		 \item \code{neg_cpCI}:  The above variables have the same outputs as those variables without the prefix 'pos' and 'neg', except that we differentiate the changepoints with a POStive jump in the trend from those changepoints with a NEGative jump. For example, \code{pos_ncp} refers to the average number of trend changepoints that jump up (i.e., positively) in the trend.
  
 
  

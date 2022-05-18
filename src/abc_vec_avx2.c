@@ -987,6 +987,37 @@ void avx2_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
     }
     _mm256_zeroupper();
 }
+void avx2_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N) {
+    __m256   C0=set0();
+    __m256   Ceplison1=set1(1e-10);
+    __m256   Ceplison2=set1(-1e-10);
+    __m256i  C1=set1_i32(1);
+    int i=0;
+    for (; i < N - (NF - 1); i+=NF) {         
+        __m256  data=load(cond+i);
+        __m256i mask1=_mm256_castps_si256(  _mm256_cmp_ps(data,Ceplison1,_CMP_GT_OQ) );
+        __m256i vec1=maskloadi(x+i,mask1);
+        vec1=addi32(vec1,C1);     maskstorei(x+i,mask1,vec1);
+        __m256i mask2=_mm256_castps_si256( _mm256_and_ps( _mm256_cmp_ps(Ceplison1,data,_CMP_GT_OQ),_mm256_cmp_ps(data,Ceplison2,_CMP_GT_OQ)) );
+        __m256i vec2=maskloadi(y+i,mask2);
+        vec2=addi32(vec2,C1);     maskstorei(y+i,mask2,vec2);
+    }
+    int n=N - i;
+    if (n > 0) 
+    {
+        __m256i loadmask=GetMoveMask(n);
+        __m256  data=maskload(cond+i,loadmask);
+        __m256i mask1=_mm256_castps_si256(  _mm256_cmp_ps(data,Ceplison1,_CMP_GT_OQ) );
+        mask1=_mm256_and_si256(mask1,loadmask);
+        __m256i vec1=maskloadi(x+i,mask1);
+        vec1=addi32(vec1,C1);     maskstorei(x+i,mask1,vec1);
+        __m256i mask2=_mm256_castps_si256( _mm256_and_ps( _mm256_cmp_ps(Ceplison1,data,_CMP_GT_OQ),_mm256_cmp_ps(data,Ceplison2,_CMP_GT_OQ)) );
+        mask2=_mm256_and_si256(mask2,loadmask);
+        __m256i vec2=maskloadi(y+i,mask2);
+        vec2=addi32(vec2,C1);     maskstorei(y+i,mask2,vec2);        
+    }
+    _mm256_zeroupper();
+}
 I32  avx2_i08_sum_binvec(U08PTR binvec,I32 N) {
 	I32   SUM=0;
 	I32	  i=0;
@@ -1654,6 +1685,84 @@ void avx2_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const
         maskstore(x+i,GetMoveMask(n),add(mul(load(x+i),G),O) );
     _mm256_zeroupper();
 }
+void avx2_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N){    
+    __m256  O=set0();
+    __m256  C=set1(knot);
+    int i=0;
+    for (; i < N - (NF4 - 1); i+=NF4) {
+        __m256 d1=sub(load(X+i),C);   store(Y+i,_mm256_blendv_ps(O,d1,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+        __m256 d2=sub(load(X+i+NF),C);   store(Y+i+NF,_mm256_blendv_ps(O,d2,_mm256_cmp_ps(d2,O,_CMP_GE_OQ))); 
+        __m256 d3=sub(load(X+i+NF2),C);  store(Y+i+NF2,_mm256_blendv_ps(O,d3,_mm256_cmp_ps(d3,O,_CMP_GE_OQ))); 
+        __m256 d4=sub(load(X+i+NF3),C);  store(Y+i+NF3,_mm256_blendv_ps(O,d4,_mm256_cmp_ps(d4,O,_CMP_GE_OQ))); 
+    }
+    for (; i < N - (NF - 1); i+=NF) {
+        __m256 d1=sub(load(X+i),C);   store(Y+i,_mm256_blendv_ps(O,d1,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    int n=N - i;
+    if (n > 0) {
+        __m256 d1=sub(load(X+i),C);   maskstore(Y+i,GetMoveMask(n),_mm256_blendv_ps(O,d1,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    _mm256_zeroupper();    
+}
+void avx2_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N){    
+    __m256  O=set0();
+    __m256  C=set1(knot);
+    int i=0;
+    for (; i < N - (NF4 - 1); i+=NF4) {
+        __m256 d1=sub(C,load(X+i));      store(Y+i,_mm256_blendv_ps(O,d1,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+        __m256 d2=sub(C,load(X+i+NF));   store(Y+i+NF,_mm256_blendv_ps(O,d2,_mm256_cmp_ps(d2,O,_CMP_GE_OQ))); 
+        __m256 d3=sub(C,load(X+i+NF2));  store(Y+i+NF2,_mm256_blendv_ps(O,d3,_mm256_cmp_ps(d3,O,_CMP_GE_OQ))); 
+        __m256 d4=sub(C,load(X+i+NF3));  store(Y+i+NF3,_mm256_blendv_ps(O,d4,_mm256_cmp_ps(d4,O,_CMP_GE_OQ))); 
+    }
+    for (; i < N - (NF - 1); i+=NF) {
+        __m256 d1=sub(C,load(X+i));   store(Y+i,_mm256_blendv_ps(O,d1,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    int n=N - i;
+    if (n > 0) {
+        __m256 d1=sub(load(X+i),C);   maskstore(Y+i,GetMoveMask(n),_mm256_blendv_ps(O,d1,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    _mm256_zeroupper();    
+}
+void avx2_f32_step_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N){    
+    __m256  O=set0();
+    __m256  I=set1(1.0);
+    __m256  C=set1(knot);
+    int i=0;
+    for (; i < N - (NF4 - 1); i+=NF4) {
+        __m256 d1=sub(load(X+i),C);   store(Y+i,_mm256_blendv_ps(O,I,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+        __m256 d2=sub(load(X+i+NF),C);   store(Y+i+NF,_mm256_blendv_ps(O,I,_mm256_cmp_ps(d2,O,_CMP_GE_OQ))); 
+        __m256 d3=sub(load(X+i+NF2),C);  store(Y+i+NF2,_mm256_blendv_ps(O,I,_mm256_cmp_ps(d3,O,_CMP_GE_OQ))); 
+        __m256 d4=sub(load(X+i+NF3),C);  store(Y+i+NF3,_mm256_blendv_ps(O,I,_mm256_cmp_ps(d4,O,_CMP_GE_OQ))); 
+    }
+    for (; i < N - (NF - 1); i+=NF) {
+        __m256 d1=sub(load(X+i),C);   store(Y+i,_mm256_blendv_ps(O,I,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    int n=N - i;
+    if (n > 0) {
+        __m256 d1=sub(load(X+i),C);   maskstore(Y+i,GetMoveMask(n),_mm256_blendv_ps(O,I,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    _mm256_zeroupper();    
+}
+void avx2_f32_step_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N){
+    __m256  O=set0();
+    __m256  I=set1(1.0);
+    __m256  C=set1(knot);
+    int i=0;
+    for (; i < N - (NF4 - 1); i+=NF4) {
+        __m256 d1=sub(load(X+i),C);   store(Y+i,_mm256_blendv_ps(I,O,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+        __m256 d2=sub(load(X+i+NF),C);   store(Y+i+NF,_mm256_blendv_ps(I,O,_mm256_cmp_ps(d2,O,_CMP_GE_OQ))); 
+        __m256 d3=sub(load(X+i+NF2),C);  store(Y+i+NF2,_mm256_blendv_ps(I,O,_mm256_cmp_ps(d3,O,_CMP_GE_OQ))); 
+        __m256 d4=sub(load(X+i+NF3),C);  store(Y+i+NF3,_mm256_blendv_ps(I,O,_mm256_cmp_ps(d4,O,_CMP_GE_OQ))); 
+    }
+    for (; i < N - (NF - 1); i+=NF) {
+        __m256 d1=sub(load(X+i),C);   store(Y+i,_mm256_blendv_ps(I,O,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    int n=N - i;
+    if (n > 0) {
+        __m256 d1=sub(load(X+i),C);   maskstore(Y+i,GetMoveMask(n),_mm256_blendv_ps(I,O,_mm256_cmp_ps(d1,O,_CMP_GE_OQ))); 
+    }
+    _mm256_zeroupper();     
+}
 void SetupVectorFunction_AVX2() {
     FillMaskTempalte();
     i32_add_val_inplace=&avx2_i32_add_val_inplace;;
@@ -1691,6 +1800,7 @@ void SetupVectorFunction_AVX2() {
     f64_to_f32_inplace=&avx2_f64_to_f32_inplace;
     i32_to_f32_scaleby_inplace=&avx2_i32_to_f32_scaleby_inplace;
     i32_increment_bycond_inplace=&  avx2_i32_increment_bycond_inplace;
+    i32_increment_vec2_bycond_inplace=&avx2_i32_increment_vec2_bycond_inplace;
     i08_sum_binvec=&avx2_i08_sum_binvec;
     f32_gemm_XtY2x1=avx2_f32_gemm_XtY2x1;
     f32_gemm_XtY2x2=avx2_f32_gemm_XtY2x2;
@@ -1704,6 +1814,10 @@ void SetupVectorFunction_AVX2() {
     f32_gatherVec_scatterVal_byindex=avx2_f32_gatherVec_scatterVal_byindex;
     f32_gather2Vec_scatterVal_byindex=&avx2_f32_gather2Vec_scatterVal_byindex;
     f32_scale_inplace=avx2_f32_scale_inplace;
+    f32_hinge_pos=avx2_f32_hinge_pos;
+    f32_hinge_neg=avx2_f32_hinge_neg;
+     f32_step_pos=avx2_f32_step_pos;
+	f32_step_neg=avx2_f32_step_neg;
 }
 #else
 static char a='a';

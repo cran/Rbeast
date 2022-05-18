@@ -2,10 +2,11 @@
 #include "abc_000_macro.h"
 #include "abc_datatype.h"   
 #include "abc_ide_util.h"
-#if  R_INTERFACE==1
-#ifdef beta
-#undef beta  
-#endif
+#include "abc_mat.h"   
+#if R_INTERFACE==1 
+	#ifdef beta
+		#undef beta  
+	#endif
 #endif
 #define _IN_ 
 #define _OUT_
@@ -50,19 +51,22 @@ typedef struct BEAST2_HyperPar {
 	F32 alpha_1,alpha_2,del_1,del_2;
 } BEAST2_HyperPar,* _restrict BEAST2_HyperPar_PTR;
 typedef struct BEAST2_PRIOR {
-	I08				basisType[MAX_NUM_BASIS];			
-	I08				numBasis;
-	U08				seasonBasisFuncType;
-	U08				trendBasisFuncType;
-	U08				outlierBasisFuncType;
-	U08				modelPriorType;
-	PRECPRIOR_TYPE  precPriorType;
-	U08   seasonMinOrder,seasonMaxOrder,trendMinOrder,trendMaxOrder;
+	I08	  basisType[MAX_NUM_BASIS];			
+	I08	  numBasis;
+	U08	  seasonBasisFuncType;
+	U08	  trendBasisFuncType;
+	U08	  outlierBasisFuncType;
+	U08	  modelPriorType;
+	U08   precPriorType;
+	U08   seasonMinOrder,seasonMaxOrder;
+    U08   trendMinOrder,trendMaxOrder;
 	I16   trendMinSepDist,seasonMinSepDist;
 	U16   trendMinKnotNum,seasonMinKnotNum;
 	U16   trendMaxKnotNum,seasonMaxKnotNum;
 	I16   outlierMaxKnotNum;
 	U16   K_MAX;
+	F32   sigFactor;
+	F32   outlierSigFactor;
 	F32   sig2;
 	F32	  precValue;
 	F32   alpha1,alpha2,delta1,delta2;
@@ -77,7 +81,6 @@ typedef struct BEAST2_MCMC {
 	U32   burnin,samples,chainNumber;
 	U16   thinningFactor;
 } BEAST2_MCMC,* _restrict BEAST2_MCMC_PTR;
-typedef enum { StatMEAN,StatMEDIAN,StatMODE } StatMethod;
 typedef struct BEAST2_EXTRA {
 	I08   smoothCpOccPrCurve;
 	I08   useMeanOrRndBeta;
@@ -87,6 +90,7 @@ typedef struct BEAST2_EXTRA {
 	U16   numCPUCoresToUse;
 	U16   consoleWidth;
 	I08   whichOutputDimIsTime;
+	I08   removeSingletonDims;
 	I08   ncpStatMethod;
 	bool  computeCredible;
 	bool  fastCIComputation;
@@ -145,22 +149,23 @@ typedef struct BEAST2_RESULT {
 	F32PTR  time;
 	F32PTR  data;
 	F32PTR  marg_lik,sig2,R2,RMSE;
-	F32PTR  sncp,sncp_median,sncp_mode,sncp_pct90;
+	F32PTR  sncp,sncp_median,sncp_mode,sncp_pct90,sncp_pct10;
 	I32PTR  sncpPr,scpOccPr;
 	F32PTR  sY,sSD;
 	F32PTR  sCI;            
 	I32PTR  sorder;         
 	F32PTR  samp,sampSD;   
 	F32PTR  scp,scpCI,scpPr,scpAbruptChange; 
-	F32PTR  tncp,tncp_median,tncp_mode,tncp_pct90;
+	F32PTR  tncp,tncp_median,tncp_mode,tncp_pct90,tncp_pct10;
 	I32PTR  tncpPr,tcpOccPr;
 	F32PTR  tY,tSD;
 	F32PTR  tCI;            
 	I32PTR  torder;         
 	F32PTR  tslp,tslpSD;   
-	I32PTR  tslpSignPr;   
+	I32PTR  tslpSgnPosPr;   
+	I32PTR  tslpSgnZeroPr;   
 	F32PTR  tcp,tcpCI,tcpPr,tcpAbruptChange; 
-	F32PTR  oncp,oncp_median,oncp_mode,oncp_pct90;
+	F32PTR  oncp,oncp_median,oncp_mode,oncp_pct90,oncp_pct10;
 	I32PTR  oncpPr,ocpOccPr;
 	F32PTR  oY,oSD;
 	F32PTR  oCI;                 
@@ -198,10 +203,10 @@ typedef struct CORESULT {
 	F32PTR x,xSD;
 } CORESULT,* _restrict CORESULT_PTR;
 typedef struct BEAST2_RNDSTREAM {
+	F32PTR  rndgamma;
 	U32PTR  rnd32;
 	U16PTR  rnd16;
-	U08PTR  rnd08;
-	F32PTR  rndgamma;
+	U08PTR  rnd08;	
 } BEAST2_RNDSTREAM,* _restrict BEAST2_RANDSEEDPTR;
 struct BEAST2_BASIS;
 struct BEAST2_MODEL;
@@ -217,6 +222,7 @@ typedef struct PROPOSE_STRUCT {
 	I32                nSample_ExtremVecNeedUpdate;
 	I32                N,Npad16;
 	F32                sigFactor;	
+	F32                outlierSigFactor;
 } PROP_DATA,*_restrict PROP_DATA_PTR;
 typedef struct BEAST2_BASESEG {
 	I32 R1,R2,K;
@@ -229,18 +235,15 @@ typedef struct _NEWTERM {
 			TORDER oldOrder,newOrder; 
 	I16 nKnot_new;
 	I16 newIdx;
-		I16 k1;
-		I16 k1_old;
-		I16 k1_new;
-	I16 k2_old,k2_new;
+	NEWCOLINFO xcols;
 	U08 numSeg;
 	I08 jumpType;
 } NEWTERM,* _restrict NEWTERM_PTR;
 typedef struct DUMMY_CONS { F32PTR TERMS; F32PTR SQRT_N_div_n; I32 period; }          DUMMY_CONST;
-typedef struct SVD_CONS {  F32PTR TERMS; F32PTR SQR_CSUM;}          SVD_CONST;
-typedef struct SEASON_CONST { F32PTR TERMS,SQR_CSUM;}				    SEASON_CONST;
-typedef struct TREND_CONS   { F32PTR TERMS,COEFF_A,COEFF_B,INV_SQR;}	TREND_CONST;
-typedef struct OUTLIER_CONS { F32    SQRTN,SQRTN_1; }		OUTLIER_CONST;
+typedef struct SVD_CONS {  F32PTR TERMS; F32PTR SQR_CSUM;}                            SVD_CONST;
+typedef struct SEASON_CONST { F32PTR TERMS,SQR_CSUM,SCALE_FACTOR;}				    SEASON_CONST;
+typedef struct TREND_CONS   { F32PTR TERMS,COEFF_A,COEFF_B,INV_SQR;}	               TREND_CONST;
+typedef struct OUTLIER_CONS { F32    SQRTN,SQRTN_1; }		                           OUTLIER_CONST;
 typedef union  {
 	SVD_CONST     svd;
 	DUMMY_CONST   dummy;
@@ -253,12 +256,12 @@ typedef struct PROP_PROB_STRUCT {U08 birth,death,merge,move;} PROP_PROB_STRUCT;
 typedef struct BEAST2_BASIS {
 	BASIS_CONST  bConst;
 	struct {
-		void        (*Propose)(BEAST2_BASIS_PTR,NEWTERM_PTR,PROP_DATA*);
+		void        (*Propose)(BEAST2_BASIS_PTR,NEWTERM_PTR,NEWCOLINFO_PTR,PROP_DATA*);
 		pfnGenTerms GenTerms;
 		int         (*CalcBasisKsKeK_TermType)(BEAST2_BASIS_PTR  basis);
-		void        (*UpdateGoodVec)(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 Npad16_not_used);
+		void        (*UpdateGoodVec)(BEAST2_BASIS_PTR basis,NEWTERM_PTR new1,I32 Npad16_not_used);
 		void        (*ComputeY)(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad);
-		F32         (*ModelPrior)(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N);
+		F32         (*ModelPrior)(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new1);
 	};	
 	F32PTR   scalingFactor;
 	F64PTR   priorMat;
@@ -276,7 +279,7 @@ typedef struct BEAST2_BASIS {
 	TORDER_PTR	ORDER;  
 	I16PTR     ks,ke;
 	U08PTR     termType;
-	U08PTR     goodvec;
+	U08PTR08   goodvec;
 	I16      nPrec;
 	I16      offsetPrec;
 	I32      goodNum;
@@ -287,7 +290,7 @@ typedef struct BEAST2_BASIS {
 typedef struct {
 	F32PTR XtX,XtY,cholXtX,beta_mean;
 	F32PTR precXtXDiag;
-	I08PTR nTermsPerPrecGrp;
+	I16PTR nTermsPerPrecGrp;
 	union {
 		F32      alpha2_star;
 		F32PTR   alphaQ_star; 
@@ -302,21 +305,15 @@ typedef struct BEAST2_MODEL {
 		F32	    sig2;
 		F32PTR  SIG2; 
 	};
-	I08PTR extremePosVec;
-	F32PTR deviation;
-	F32PTR avgDeviation;  
-	I32    extremPosNum;
-	F32    baseSig;
-	F32PTR basePrec;
-	I16    nPrec;	
-	union {
-		F32     precVal;
-		F32PTR  precVec;	
-	};
-	union {
-		F32     logPrecVal;
-		F32PTR  logPrecVec;
-	};
+	I08PTR08 extremePosVec;
+	F32PTR   deviation;
+	F32PTR   avgDeviation;  
+	I32      extremPosNum;
+	I16     nPrec;
+	F32PTR  precVec;
+	F32PTR  logPrecVec;
+	F32     precVal;        
+	F32     logPrecVal;     
 	BEAST2_MODELDATA curr,prop;
 	I08          NUMBASIS;
 	I08          vid,did,sid,tid,oid;

@@ -1,5 +1,8 @@
-CHANGES IN Rbeast 0.9.3:
+CHANGES IN Rbeast 0.9.4:
 
+May 15,2021 * Fix multiple bugs and add new features, thanks to many users.
+             Special thanks go to Wenpeng Zhao, Josué M. POLANCO-MARTINEZ, Adam Canning, 
+			 and Shelby McNeill, among others.
 Mar 19,2021 * Fix multiple bugs for edge cases
 Jan 19,2021 * Fix multiple bugs for edge cases
 Dec 19,2021 * Fix multiple donttest errors reported at CRAN

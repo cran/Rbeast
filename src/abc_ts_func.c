@@ -11,7 +11,7 @@
 	#undef PI	
 #endif
 #define PI   (3.141592653589793)
-void preCalc_terms_season(F32PTR SEASON_TERMS,F32PTR SEASON_SQR_CSUM,int N,F32 PERIOD,int maxSeasonOrder)
+void preCalc_terms_season(F32PTR SEASON_TERMS,F32PTR SEASON_SQR_CSUM,F32PTR SCALE_FACTOR,int N,F32 PERIOD,int maxSeasonOrder)
 {
 	if (SEASON_TERMS==NULL) 	return;	
 	F32   freq_factor=2.0f *  3.141592653589793f/PERIOD;
@@ -23,14 +23,18 @@ void preCalc_terms_season(F32PTR SEASON_TERMS,F32PTR SEASON_SQR_CSUM,int N,F32 P
 		f32_mul_val_inplace(freq_factor * (F32)order,ptr,N);
 		f32_copy(ptr,ptr+N,N);
 		f32_sincos_vec_inplace(ptr+N,ptr,N); 
-		F32 dotProduct;
-		dotProduct=DOT(N,ptr,ptr);   		f32_mul_val_inplace(1/sqrtf(dotProduct/N),ptr,N);		
-		dotProduct=DOT(N,ptr+N,ptr+N);	f32_mul_val_inplace(1/sqrtf(dotProduct/N),ptr+N,N);
+		F32 dotProduct,scale1,scale2;
+		dotProduct=DOT(N,ptr,ptr);   	   scale1=1/sqrtf(dotProduct/N);	f32_mul_val_inplace(scale1,ptr,N);
+		dotProduct=DOT(N,ptr+N,ptr+N); scale2=1/sqrtf(dotProduct/N);	f32_mul_val_inplace(scale2,ptr+N,N);
+		if (SCALE_FACTOR) {
+			SCALE_FACTOR[(order-1)*2   ]=scale1;
+			SCALE_FACTOR[(order-1)*2+1L]=scale2;
+		}
 		if (SEASON_SQR_CSUM) {
 			*ptr1=0.f;
 			*ptr2=0.f;
-			f32_copy(ptr,ptr1+1,N);      f32_cumsumsqr_inplace(ptr1+1,N);
-			f32_copy(ptr+N,ptr2+1,N);      f32_cumsumsqr_inplace(ptr2+1,N);
+			f32_copy(ptr,ptr1+1L,N);      f32_cumsumsqr_inplace(ptr1+1L,N);
+			f32_copy(ptr+N,ptr2+1L,N);      f32_cumsumsqr_inplace(ptr2+1L,N);
 			ptr+=2 * N;
 			ptr1+=2 * (N+1);
 			ptr2+=2 * (N+1);
@@ -74,7 +78,7 @@ void preCalc_XmarsTerms_extra(F32PTR COEFF_A,F32PTR COEFF_B,I32 N)
 		}
 	}
 }
-void preCalc_XmarsTerms_extra_fmt4(F32PTR COEFF_A,F32PTR COEFF_B,I32 N)
+void preCalc_XmarsTerms_extra_fmt3(F32PTR COEFF_A,F32PTR COEFF_B,I32 N)
 {
 	if (COEFF_A !=NULL &&  COEFF_B !=NULL) {
 		COEFF_B[1 - 1]=0;

@@ -21,9 +21,10 @@
  \dontrun{
  newcases = covid19$newcases
  
- # This ts varies periodically every 7 days. 7 days can't be precisely represented 
- # in  the unit of year bcz some years has 365 days and others has 366. So, here we 
- # use  the date number as the time unit--the num of days lapsed since 1970-01-01. 
+ # This time series has a periodical variation of 7 days. 7 days can't be precisely 
+ # represented in  the unit of year bcz some years has 365 days and others has 366. 
+ # So, here we use  the date number as the time unit (i.e., the numeber of days lapsed 
+ #  since 1970-01-01). 
  
  datenum = as.numeric(covid19$date) 
  o       = beast(newcases, start=min(datenum), deltat=1, freq=7) 

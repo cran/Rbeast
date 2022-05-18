@@ -3,7 +3,8 @@ beast123 <- function(Y, metadata=list(), prior=list(),
 {
  # tmplist=list(...)
 
-  if (!hasArg("Y") || is.list(Y) || length(Y)==1)  {
+  #if (!hasArg("Y") || is.list(Y) || length(Y)==1)  {
+  if (!hasArg("Y"))  {
     warning("Something is wrong with the input 'Y'. Make sure the Y par is a vector, a matrix, or an 3D array.")
     invisible(return(NULL))
   }

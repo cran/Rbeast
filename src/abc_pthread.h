@@ -164,7 +164,9 @@ static int  pthread_create(pthread_t* tid,const pthread_attr_t* attr,void* (*sta
     return 0;
 }
 #elif   defined(LINUX_OS)
-        #define _GNU_SOURCE
+	    #ifndef _GNU_SOURCE
+		    #define _GNU_SOURCE
+	    #endif
         #include <sched.h>  
 	    #include <pthread.h>
 #elif   defined(MAC_OS) 

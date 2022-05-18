@@ -60,10 +60,10 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 		meta->isMetaStruct=1;
 		VOIDPTR pmeta=prhs[2L];
 		VOIDPTR tmp;
-		meta->isRegularOrdered=(tmp=GetField123(pmeta,"isRegularOrdered",2)) ? GetScalar(tmp) : 1L;
+		meta->isRegularOrdered=(tmp=GetField123Check(pmeta,"isRegularOrdered",2)) ? GetScalar(tmp) : 1L;
 		if (tmp==NULL)
 			r_warning("WARNING: metadata$isRegularOrdered is not specified. A default 'metadata$isRegularOrdered=TRUE' is assumed.\n");
-		if ((tmp=GetField123(pmeta,"season",2)) !=NULL && IsChar(tmp)) {			
+		if ((tmp=GetField123Check(pmeta,"season",2)) !=NULL && IsChar(tmp)) {			
 			char season[20+1];
 			GetCharArray(tmp,season,20);
 			ToUpper(season);
@@ -77,21 +77,21 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 				meta->seasonForm='S';  
 				r_warning("WARNING: metadata$season=%s is specified but has an unrecongizable string. A default metadata$season='harmonic' is used instead.\n",season);
 			}
-			if (meta->seasonForm=='V') meta->svdTerms=GetField(pmeta,"svdTerms");
+			if (meta->seasonForm=='V') meta->svdTerms=GetFieldCheck(pmeta,"svdTerms");
 		} else  {
 			meta->hasSeasonCmpnt=1;
 			meta->seasonForm='S';
 			r_warning("WARNING: metadata$season is either missing or not given as a valid specifier string (e.g.,none,harmonic,or dummy). A default "
 				      "metadata$season='harmonic' is assumed.\n");
 		}	
-		meta->hasOutlierCmpnt=(tmp=GetField123(pmeta,"hasOutlierCmpnt",2)) ? GetScalar(tmp) : 0L;
-		meta->detrend=(tmp=GetField123(pmeta,"detrend",3)) ?        GetScalar(tmp) : 0L;
-		meta->deseasonalize=(tmp=GetField123(pmeta,"deseasonalize",3)) ?  GetScalar(tmp) : 0L;
-		meta->period=(tmp=GetField123(pmeta,"period",2)) ? GetScalar(tmp) : getNaN();
+		meta->hasOutlierCmpnt=(tmp=GetField123Check(pmeta,"hasOutlierCmpnt",2)) ? GetScalar(tmp) : 0L;
+		meta->detrend=(tmp=GetField123Check(pmeta,"detrend",3)) ?  GetScalar(tmp) : 0L;
+		meta->deseasonalize=(tmp=GetField123Check(pmeta,"deseasonalize",3)) ?  GetScalar(tmp) : 0L;
+		meta->period=(tmp=GetField123Check(pmeta,"period",2)) ? GetScalar(tmp) : getNaN();
 		if (!meta->hasSeasonCmpnt && tmp !=NULL)
 			r_warning("WARNING: For metadata$season='none' (i.e.,no periodic component in the time series),metadata$period is ignored!\n");
 		I08 isDefaultStartTime=0;
-		tmp=GetField123(pmeta,"startTime",2);
+		tmp=GetField123Check(pmeta,"startTime",2);
 		if     (tmp && IsClass(tmp,"Date")) 		{
 			int   days=GetScalar(tmp);
 			meta->startTime=fractional_civil_from_days(days);
@@ -129,7 +129,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 			isDefaultStartTime=1L;
 		}
 		I08 isDefaultDeltaTime=0;
-		meta->deltaTime=(tmp=GetField123(pmeta,"deltaTime",3)) ? GetScalar(tmp) : getNaN();			
+		meta->deltaTime=(tmp=GetField123Check(pmeta,"deltaTime",3)) ? GetScalar(tmp) : getNaN();			
 		if (!meta->isRegularOrdered && IsNaN(meta->deltaTime) ) {
 			r_error("ERROR: when metadata$isRegualrOrdered=FALSE,the input data is considered irregular/unordered in time AND "
 			 	   "metadata$deltaTime must be specified for BEAST to pre-process and aggregate the irregular input to a regular time series spaced at deltaTime.\n");
@@ -160,7 +160,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 					" value 1 is used!\n");	
 			}			
 		}
-		meta->rawTimeVec=(tmp=GetField123(pmeta,"time",2)) ? tmp : NULL;
+		meta->rawTimeVec=(tmp=GetField123Check(pmeta,"time",2)) ? tmp : NULL;
 		if (meta->isRegularOrdered && tmp)
 			r_warning("WARNING: metadata$time is specified but ignored. For regular ordered time series,'metadata$startTime=%f' and 'metadata$deltaTime=%f' "
 					  "alone are enough to determine the times for all data points. \n",meta->startTime,meta->deltaTime);
@@ -169,9 +169,9 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 				     "also supplied to specify the times at which individual data points are collected.\n");
 			return 0;
 		}
-		meta->missingValue=(tmp=GetField123(pmeta,"missingValue",2))   ? GetScalar(tmp) : getNaN();
-		meta->maxMissingRate=(tmp=GetField123(pmeta,"maxMissingRate",2)) ? GetScalar(tmp) : 0.75;
-		meta->whichDimIsTime=(tmp=GetField123(pmeta,"whichDimIsTime",2)) ? GetScalar(tmp) : -1;
+		meta->missingValue=(tmp=GetField123Check(pmeta,"missingValue",2))   ? GetScalar(tmp) : getNaN();
+		meta->maxMissingRate=(tmp=GetField123Check(pmeta,"maxMissingRate",2)) ? GetScalar(tmp) : 0.75;
+		meta->whichDimIsTime=(tmp=GetField123Check(pmeta,"whichDimIsTime",2)) ? GetScalar(tmp) : -1;
 		metaProcessed=1;
 	} 
 	if (metaProcessed==0 ) {
@@ -182,7 +182,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 		meta->period=meta->period/meta->deltaTime;
 		F32 period=meta->period;
 		if (period==0) {
-			r_error("ERROR: Your input parameters are \"metadata$period=0\" and \"metadata$season='%s'\". BEAST cann't handle a time series with no perodicity. "
+			r_error("ERROR: Your input parameters are \"metadata$period=0\" and \"metadata$season='%s'\". BEAST can't handle a time series with no perodicity. "
 				"If you mean to handle a trend-only time series,please use the trend-only version of the BEAST algorithm by specifying metadata$season='none'."
 				,meta->seasonForm=='S' ? "harmonic" : "dummy" );
 			return 0;
@@ -198,7 +198,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_METADATA_PTR meta
 	return 1;
 }
 static INLINE I32 __GetRawTimeDimension(BEAST2_IO_PTR io) {
-	         return io->dims[io->meta.whichDimIsTime - 1];
+	 return io->dims[io->meta.whichDimIsTime - 1];
 }
 static int  ___PraseMetaData_RegularTS_Dim123(A(METADATA_PTR) meta,BEAST2_IO_PTR io) {
 	if (meta->nrhs < 3 && io->ndim >=2 ) {
@@ -241,10 +241,10 @@ int __ReadRawTime(F32PTR time,VOID_PTR timeField,const I32 Nraw) {
 			}
 		}
 	}
-	VOIDPTR yr=GetField123(timeField,"year",1);
-	VOIDPTR mn=GetField123(timeField,"month",1);
-	VOIDPTR day=GetField123(timeField,"day",3);
-	VOIDPTR doy=GetField123(timeField,"doy",3);
+	VOIDPTR yr=GetField123Check(timeField,"year",1);
+	VOIDPTR mn=GetField123Check(timeField,"month",1);
+	VOIDPTR day=GetField123Check(timeField,"day",3);
+	VOIDPTR doy=GetField123Check(timeField,"doy",3);
 	int isTimeProcessed=0;
 	if (!isTimeProcessed && yr && mn && IsNumeric(yr) && IsNumeric(mn)  && GetNumberOfElements(yr)==Nraw && GetNumberOfElements(mn)==Nraw) 	{
 		F32PTR yr32=time;
@@ -315,8 +315,8 @@ int __ReadRawTime(F32PTR time,VOID_PTR timeField,const I32 Nraw) {
 		free(doy32);
 		return 1L;
 	}
-	VOIDPTR datestr=GetField123(timeField,"dateStr",3);
-	VOIDPTR strfmt=GetField123(timeField,"strFmt",3); 
+	VOIDPTR datestr=GetField123Check(timeField,"dateStr",3);
+	VOIDPTR strfmt=GetField123Check(timeField,"strFmt",3); 
 	if (!isTimeProcessed && datestr && strfmt && IsChar(datestr) && IsChar(strfmt) && GetNumberOfElements(datestr)==Nraw ) 	{		
 		char STRFmt[255+1];
 		GetCharArray(strfmt,STRFmt,255);
@@ -561,7 +561,7 @@ static int ParseInputData( BEAST2_IO_PTR _OUT_ io){
 		return 1;
 }
 static int __GetPrecPriorType( VOID_PTR S ) {
-	VOID_PTR  tmp=GetField123(S,"precPriorType",5);
+	VOID_PTR  tmp=GetField123Check(S,"precPriorType",5);
 	if (tmp==NULL)
 		return UniformPrec;
 	if (IsNumeric(tmp)) {
@@ -600,6 +600,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 		U08   modelPriorType;
 		U08   precPriorType;
 		U08   K_MAX;
+		U08   sigFactor;
+		U08   outlierSigFactor;
 		U08   sig2;
 		U08   precValue;
 		U08   alpha1,alpha2,delta1,delta2;
@@ -615,28 +617,30 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 		}
 		else {
 			VOIDPTR tmp;
-			o.seasonMinOrder=(tmp=GetField123(S,"seasonMinOrder",10)) ?   GetScalar(tmp) : (m.seasonMinOrder=1);
-			o.seasonMaxOrder=(tmp=GetField123(S,"seasonMaxOrder",10)) ?   GetScalar(tmp) : (m.seasonMaxOrder=1);
-			o.trendMinOrder=(tmp=GetField123(S,"trendMinOrder",10)) ?    GetScalar(tmp) : (m.trendMinOrder=1);
-			o.trendMaxOrder=(tmp=GetField123(S,"trendMaxOrder",10)) ?    GetScalar(tmp) : (m.trendMaxOrder=1);
-			o.trendMinSepDist=(tmp=GetField123(S,"trendMinSepDist",10)) ?  GetScalar(tmp) : (m.trendMinSepDist=1);
-			o.seasonMinSepDist=(tmp=GetField123(S,"seasonMinSepDist",10)) ? GetScalar(tmp) : (m.seasonMinSepDist=1);
-			o.trendMinKnotNum=(tmp=GetField123(S,"trendMinKnotNum",10)) ?  GetScalar(tmp) : (m.trendMinKnotNum=1);
-			o.seasonMinKnotNum=(tmp=GetField123(S,"seasonMinKnotNum",10)) ? GetScalar(tmp) : (m.seasonMinKnotNum=1);
-			o.trendMaxKnotNum=(tmp=GetField123(S,"trendMaxKnotNum",10)) ?  GetScalar(tmp) : (m.trendMaxKnotNum=1);
-			o.seasonMaxKnotNum=(tmp=GetField123(S,"seasonMaxKnotNum",10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum=1);
-			o.outlierMaxKnotNum=(tmp=GetField123(S,"outlierMaxKnotNum",10))? GetScalar(tmp) : (m.outlierMaxKnotNum=1);
-			o.K_MAX=(tmp=GetField123(S,"K_MAX",1)) ?			GetScalar(tmp) : (m.K_MAX=1);
-			o.sig2=(tmp=GetField123(S,"sig2",2)) ?				GetScalar(tmp) : (m.sig2=1);
-			o.precValue=(tmp=GetField123(S,"precValue",5)) ?		GetScalar(tmp) : (m.precValue=1);
-			o.alpha1=(tmp=GetField123(S,"alpha1",0)) ?			GetScalar(tmp) : (m.alpha1=1);
-			o.alpha2=(tmp=GetField123(S,"alpha2",0)) ?			GetScalar(tmp) : (m.alpha2=1);
-			o.delta1=(tmp=GetField123(S,"delta1",0)) ?			GetScalar(tmp) : (m.delta1=1);
-			o.delta2=(tmp=GetField123(S,"delta2",0)) ?			GetScalar(tmp) : (m.delta2=1);
-			o.seasonBasisFuncType=(tmp=GetField123(S,"seasonBasisFuncType",10)) ?  GetScalar(tmp) : (m.seasonBasisFuncType=1);
-			o.trendBasisFuncType=(tmp=GetField123(S,"trendBasisFuncType",10)) ?   GetScalar(tmp) : (m.trendBasisFuncType=1);
-			o.outlierBasisFuncType=(tmp=GetField123(S,"outlierBasisFuncType",10)) ? GetScalar(tmp) : (m.outlierBasisFuncType=1);
-			o.modelPriorType=(tmp=GetField123(S,"modelPriorType",10)) ?		GetScalar(tmp) : (m.modelPriorType=1);
+			o.seasonMinOrder=(tmp=GetField123Check(S,"seasonMinOrder",10)) ?    GetScalar(tmp) : (m.seasonMinOrder=1);
+			o.seasonMaxOrder=(tmp=GetField123Check(S,"seasonMaxOrder",10)) ?   GetScalar(tmp) : (m.seasonMaxOrder=1);
+			o.trendMinOrder=(tmp=GetField123Check(S,"trendMinOrder",10)) ?    GetScalar(tmp) : (m.trendMinOrder=1);
+			o.trendMaxOrder=(tmp=GetField123Check(S,"trendMaxOrder",10)) ?    GetScalar(tmp) : (m.trendMaxOrder=1);
+			o.trendMinSepDist=(tmp=GetField123Check(S,"trendMinSepDist",10)) ?  GetScalar(tmp) : (m.trendMinSepDist=1);
+			o.seasonMinSepDist=(tmp=GetField123Check(S,"seasonMinSepDist",10)) ? GetScalar(tmp) : (m.seasonMinSepDist=1);
+			o.trendMinKnotNum=(tmp=GetField123Check(S,"trendMinKnotNum",10)) ?  GetScalar(tmp) : (m.trendMinKnotNum=1);
+			o.seasonMinKnotNum=(tmp=GetField123Check(S,"seasonMinKnotNum",10)) ? GetScalar(tmp) : (m.seasonMinKnotNum=1);
+			o.trendMaxKnotNum=(tmp=GetField123Check(S,"trendMaxKnotNum",10)) ?  GetScalar(tmp) : (m.trendMaxKnotNum=1);
+			o.seasonMaxKnotNum=(tmp=GetField123Check(S,"seasonMaxKnotNum",10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum=1);
+			o.outlierMaxKnotNum=(tmp=GetField123Check(S,"outlierMaxKnotNum",10))? GetScalar(tmp) : (m.outlierMaxKnotNum=1);
+			o.K_MAX=(tmp=GetField123Check(S,"K_MAX",1)) ?			GetScalar(tmp) : (m.K_MAX=1);
+			o.sigFactor=(tmp=GetFieldCheck(S,"sigFactor")) ?			GetScalar(tmp) : (m.sigFactor=1);
+			o.outlierSigFactor=(tmp=GetFieldCheck(S,"outlierSigFactor")) ?	GetScalar(tmp) : (m.outlierSigFactor=1);
+			o.sig2=(tmp=GetField123Check(S,"sig2",2)) ?				GetScalar(tmp) : (m.sig2=1);
+			o.precValue=(tmp=GetField123Check(S,"precValue",5)) ?		GetScalar(tmp) : (m.precValue=1);
+			o.alpha1=(tmp=GetField123Check(S,"alpha1",0)) ?			GetScalar(tmp) : (m.alpha1=1);
+			o.alpha2=(tmp=GetField123Check(S,"alpha2",0)) ?			GetScalar(tmp) : (m.alpha2=1);
+			o.delta1=(tmp=GetField123Check(S,"delta1",0)) ?			GetScalar(tmp) : (m.delta1=1);
+			o.delta2=(tmp=GetField123Check(S,"delta2",0)) ?			GetScalar(tmp) : (m.delta2=1);
+			o.seasonBasisFuncType=(tmp=GetField123Check(S,"seasonBasisFuncType",10)) ?  GetScalar(tmp) : (m.seasonBasisFuncType=1);
+			o.trendBasisFuncType=(tmp=GetField123Check(S,"trendBasisFuncType",10)) ?   GetScalar(tmp) : (m.trendBasisFuncType=1);
+			o.outlierBasisFuncType=(tmp=GetField123Check(S,"outlierBasisFuncType",10)) ? GetScalar(tmp) : (m.outlierBasisFuncType=1);
+			o.modelPriorType=(tmp=GetField123Check(S,"modelPriorType",10)) ?		GetScalar(tmp) : (m.modelPriorType=1);
 			o.precPriorType=__GetPrecPriorType(S);
 		}
 	} 
@@ -660,7 +664,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	if (m.seasonMaxOrder)    o.seasonMaxOrder=(period/2 - 1);      o.seasonMaxOrder=min(o.seasonMaxOrder,(period/2 - 1));  o.seasonMaxOrder=max(o.seasonMaxOrder,o.seasonMinOrder);
 	if (m.trendMinOrder)     o.trendMinOrder=0L;				   o.trendMinOrder=max(o.trendMinOrder,0L);
 	if (m.trendMaxOrder)     o.trendMaxOrder=1L;				   o.trendMaxOrder=max(o.trendMaxOrder,o.trendMinOrder);
-	if (m.seasonMinSepDist||o.seasonMinSepDist==0)   o.seasonMinSepDist=period/2;       o.seasonMinSepDist=max(o.seasonMinSepDist,o.seasonMaxOrder);		 o.seasonMinSepDist=min(o.seasonMinSepDist,N/2 - 1); 
+	if (m.seasonMinSepDist||o.seasonMinSepDist==0)				   o.seasonMinSepDist=period/2;       o.seasonMinSepDist=max(o.seasonMinSepDist,o.seasonMaxOrder);		 o.seasonMinSepDist=min(o.seasonMinSepDist,N/2 - 1); 
 	if (m.trendMinSepDist||o.trendMinSepDist==0)   o.trendMinSepDist=io->meta.hasSeasonCmpnt? period/2: 3 ;
 	o.trendMinSepDist=max(o.trendMinSepDist,(o.trendMaxOrder+1));
 	o.trendMinSepDist=min(o.trendMinSepDist,N/2 - 1);
@@ -668,18 +672,36 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	if (m.trendMinKnotNum)   o.trendMinKnotNum=0;	               o.trendMinKnotNum=max( min(o.trendMaxKnotNum,o.trendMinKnotNum),0);
 	if (m.seasonMaxKnotNum)  o.seasonMaxKnotNum=min(floor(N/(o.seasonMinSepDist+1) - 1.f),5);  o.seasonMaxKnotNum=min(o.seasonMaxKnotNum,floor(N/(o.seasonMinSepDist+1) - 1.f));
 	if (m.trendMaxKnotNum)   o.trendMaxKnotNum=min( floor(N/(o.trendMinSepDist+1) - 1.f),10); o.trendMaxKnotNum=min(o.trendMaxKnotNum,floor(N/(o.trendMinSepDist+1) - 1.f));	
-	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum=o.trendMaxKnotNum;
-	if (m.K_MAX )            o.K_MAX=300;                  
-	if (m.sig2 )             o.sig2=0.2f;             o.sig2=max(o.sig2,0.01);
-	if (m.precValue)         o.precValue=1.5f;             o.precValue=max(o.precValue,0.01);
+	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum=o.trendMaxKnotNum;                                  o.outlierMaxKnotNum=max(o.outlierMaxKnotNum,1L); 
+	if (m.K_MAX )            o.K_MAX=500;                  
+	if (m.sigFactor)         o.sigFactor=1.8;            o.sigFactor=min(o.sigFactor,1.02);
+	if (m.outlierSigFactor)  o.outlierSigFactor=2.5;            o.outlierSigFactor=max(o.outlierSigFactor,1.5);
+	if (m.sig2 )             o.sig2=0.2f;				  o.sig2=max(o.sig2,0.01);
+	if (m.precValue)         o.precValue=1.5f;				  o.precValue=max(o.precValue,0.01);
 	if (m.alpha1)		     o.alpha1=0.00000001f;
 	if (m.alpha2)		     o.alpha2=0.00000001f;
 	if (m.delta1)		     o.delta1=0.00000001f;
 	if (m.delta2)		     o.delta2=0.00000001f;
-	if (m.trendBasisFuncType)		o.trendBasisFuncType=0;
-	if (m.outlierBasisFuncType)		o.outlierBasisFuncType=0; 
-	if (m.modelPriorType)			o.modelPriorType=1L;
 	if (m.precPriorType)			o.precPriorType=UniformPrec;
+	if (m.seasonBasisFuncType) {
+		if      (o.precPriorType==UniformPrec)		o.seasonBasisFuncType=0;
+		else if (o.precPriorType==ConstPrec)          o.seasonBasisFuncType=0;
+		else if (o.precPriorType==ComponentWise)      o.seasonBasisFuncType=1;
+		else if (o.precPriorType==OrderWise)          o.seasonBasisFuncType=1;		
+	}
+	if (m.trendBasisFuncType) {
+		if      (o.precPriorType==UniformPrec)		o.trendBasisFuncType=0;
+		else if (o.precPriorType==ConstPrec)          o.trendBasisFuncType=0;
+		else if (o.precPriorType==ComponentWise)      o.seasonBasisFuncType=1;
+		else if (o.precPriorType==OrderWise)          o.trendBasisFuncType=1;
+	}	 
+	if (m.outlierBasisFuncType) {
+		if      (o.precPriorType==UniformPrec)		o.outlierBasisFuncType=0;
+		else if (o.precPriorType==ConstPrec)          o.outlierBasisFuncType=0;
+		else if (o.precPriorType==ComponentWise)      o.outlierBasisFuncType=1;
+		else if (o.precPriorType==OrderWise)          o.outlierBasisFuncType=1;
+	}	 
+	if (m.modelPriorType)			o.modelPriorType=1L;
 	return 1;
 #undef o
 }
@@ -705,16 +727,16 @@ static int  GetArg_3rd_MCMC___(VOIDPTR prhs[],int nrhs,BEAST2_MCMC_PTR mcmc,BEAS
 			memset(&m,1L,sizeof(struct MCMC_MISSING));
 		} else {
 			VOIDPTR tmp;
-			o.maxMoveStepSize=(tmp=GetField123(S,"maxMoveStepSize",2))? GetScalar(tmp) : (m.maxMoveStepSize=1);
-			o.samples=(tmp=GetField123(S,"samples",2)) ?        GetScalar(tmp) : (m.samples=1);
-			o.thinningFactor=(tmp=GetField123(S,"thinningFactor",2)) ? GetScalar(tmp) : (m.thinningFactor=1);
-			o.burnin=(tmp=GetField123(S,"burnin",2)) ?         GetScalar(tmp) : (m.burnin=1);
-			o.chainNumber=(tmp=GetField123(S,"chainNumber",2)) ?    GetScalar(tmp) : (m.chainNumber=1);
-			o.seed=(tmp=GetField123(S,"seed",2)) ?			GetScalar(tmp) : (m.seed=1);
-			o.ridgeFactor=(tmp=GetField123(S,"ridgeFactor",2)) ?	GetScalar(tmp) : (m.ridgeFactor=1);
-			o.trendResamplingOrderProb=(tmp=GetField123(S,"trendResamplingOrderProb",2)) ? GetScalar(tmp) : (m.trendResamplingOrderProb=1);
-			o.seasonResamplingOrderProb=(tmp=GetField123(S,"seasonResamplingOrderProb",2)) ? GetScalar(tmp) : (m.seasonResamplingOrderProb=1);
-			o.credIntervalAlphaLevel=(tmp=GetField123(S,"credIntervalAlphaLevel",2)) ? GetScalar(tmp) : (m.credIntervalAlphaLevel=1);
+			o.maxMoveStepSize=(tmp=GetField123Check(S,"maxMoveStepSize",2))? GetScalar(tmp) : (m.maxMoveStepSize=1);
+			o.samples=(tmp=GetField123Check(S,"samples",2)) ?        GetScalar(tmp) : (m.samples=1);
+			o.thinningFactor=(tmp=GetField123Check(S,"thinningFactor",2)) ? GetScalar(tmp) : (m.thinningFactor=1);
+			o.burnin=(tmp=GetField123Check(S,"burnin",2)) ?         GetScalar(tmp) : (m.burnin=1);
+			o.chainNumber=(tmp=GetField123Check(S,"chainNumber",2)) ?    GetScalar(tmp) : (m.chainNumber=1);
+			o.seed=(tmp=GetField123Check(S,"seed",2)) ?			GetScalar(tmp) : (m.seed=1);
+			o.ridgeFactor=(tmp=GetField123Check(S,"ridgeFactor",2)) ?	GetScalar(tmp) : (m.ridgeFactor=1);
+			o.trendResamplingOrderProb=(tmp=GetField123Check(S,"trendResamplingOrderProb",2)) ? GetScalar(tmp) : (m.trendResamplingOrderProb=1);
+			o.seasonResamplingOrderProb=(tmp=GetField123Check(S,"seasonResamplingOrderProb",2)) ? GetScalar(tmp) : (m.seasonResamplingOrderProb=1);
+			o.credIntervalAlphaLevel=(tmp=GetField123Check(S,"credIntervalAlphaLevel",2)) ? GetScalar(tmp) : (m.credIntervalAlphaLevel=1);
 		}
 	} 
 	if (m.maxMoveStepSize||o.maxMoveStepSize==0) o.maxMoveStepSize=opt->io.meta.hasSeasonCmpnt? opt->io.meta.period: (opt->prior.trendMinSepDist+1);
@@ -739,6 +761,7 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 		I08   numCPUCoresToUse;		
 		I08   consoleWidth;
 		I08   whichOutputDimIsTime;
+		I08   removeSingletonDims;
 		I08   dumpInputData;
 		I08   ncpStatMethod;
 		I08  smoothCpOccPrCurve;
@@ -769,14 +792,15 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 		}
 		else {
 			VOIDPTR tmp;
-			o.whichOutputDimIsTime=(tmp=GetField123(S,"whichOutputDimIsTime",2)) ?	GetScalar(tmp) : (m.whichOutputDimIsTime=1);
-			o.numThreadsPerCPU=(tmp=GetField123(S,"numThreadsPerCPU",4)) ? GetScalar(tmp) : (m.numThreadsPerCPU=1);
-			o.numParThreads=(tmp=GetField123(S,"numParThreads",4)) ?			GetScalar(tmp) : (m.numParThreads=1);
-			o.numCPUCoresToUse=(tmp=GetField123(S,"numCPUCoresToUse",4)) ?		GetScalar(tmp) : (m.numCPUCoresToUse=1);
-			o.consoleWidth=(tmp=GetField123(S,"consoleWidth",2)) ?			GetScalar(tmp) : (m.consoleWidth=1);
-			o.dumpInputData=(tmp=GetField123(S,"dumpInputData",2)) ? GetScalar(tmp) : (m.dumpInputData=1);
-			o.smoothCpOccPrCurve=(tmp=GetField123(S,"smoothCpOccPrCurve",2)) ? GetScalar(tmp) : (m.smoothCpOccPrCurve=1);
-			#define _1(x)       o.x=(tmp=GetField(S,#x))? GetScalar(tmp): (m.x=1)
+			o.whichOutputDimIsTime=(tmp=GetField123Check(S,"whichOutputDimIsTime",2)) ?	GetScalar(tmp) : (m.whichOutputDimIsTime=1);
+			o.removeSingletonDims=(tmp=GetField123Check(S,"removeSingletonDims",8)) ? GetScalar(tmp) : (m.removeSingletonDims=1);			
+			o.numThreadsPerCPU=(tmp=GetField123Check(S,"numThreadsPerCPU",4)) ? GetScalar(tmp) : (m.numThreadsPerCPU=1);
+			o.numParThreads=(tmp=GetField123Check(S,"numParThreads",4)) ?			GetScalar(tmp) : (m.numParThreads=1);
+			o.numCPUCoresToUse=(tmp=GetField123Check(S,"numCPUCoresToUse",4)) ?		GetScalar(tmp) : (m.numCPUCoresToUse=1);
+			o.consoleWidth=(tmp=GetField123Check(S,"consoleWidth",2)) ?			GetScalar(tmp) : (m.consoleWidth=1);
+			o.dumpInputData=(tmp=GetField123Check(S,"dumpInputData",2)) ? GetScalar(tmp) : (m.dumpInputData=1);
+			o.smoothCpOccPrCurve=(tmp=GetField123Check(S,"smoothCpOccPrCurve",2)) ? GetScalar(tmp) : (m.smoothCpOccPrCurve=1);
+			#define _1(x)       o.x=(tmp=GetFieldCheck(S,#x))? GetScalar(tmp): (m.x=1)
 			#define _2(x,y)     _1(x);_1(y)
 			#define _3(x,y,z)   _1(x);_2(y,z)
 			#define _4(x,y,z,w) _2(y,z);_2(y,z)
@@ -788,21 +812,10 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 			_2(computeSeasonAmp,computeTrendSlope);
 			_4(tallyPosNegSeasonJump,tallyPosNegTrendJump,tallyIncDecTrendJump,tallyPosNegOutliers);
 			_1(useMeanOrRndBeta);
-			if ( (tmp=GetField123(S,"ncpStatMethod",3)) && IsChar(tmp)) {
-				char a[10+1];
-				GetCharArray(tmp,a,10);
-				if      (strcicmp(a,"mean")==0)    o.ncpStatMethod=StatMEAN;
-				else if (strcicmp(a,"mode")==0)    o.ncpStatMethod=StatMODE;
-				else if (strcicmp(a,"median")==0)  o.ncpStatMethod=StatMEDIAN;
-				else								  o.ncpStatMethod=StatMODE;
-				m.ncpStatMethod=0;
-			} else {
-				m.ncpStatMethod=1;
-			}
 		} 
 	} 
 	if (m.whichOutputDimIsTime)		o.whichOutputDimIsTime=whichDimIsTime;
-	if (m.ncpStatMethod)			o.ncpStatMethod=StatMODE;
+	if (m.removeSingletonDims)		o.removeSingletonDims=1;
 	if (o.whichOutputDimIsTime > ndims)		o.whichOutputDimIsTime=1L; 
 	if (m.smoothCpOccPrCurve)    o.smoothCpOccPrCurve=0;
 	if (m.dumpInputData)		 o.dumpInputData=0;

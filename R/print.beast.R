@@ -1,8 +1,43 @@
-printf=function(...){ 
+printf = function(...) { 
    cat(sprintf(...))
 }
   
 print.beast <- function (x,index=1,...) {
+
+  
+  if ( length(x$marg_lik)> 1 ){
+  # More than one time series is present
+	 rows=x$nrows
+	 cols=x$ncols
+	 nTS=rows*cols
+	  
+	 call  = match.call()
+     oName = as.character(call$x)
+  
+	 if( length(index)==1){
+		 if(index>nTS){	 
+		      stop(sprintf("Invalid index: The input object conatains a total of %d time series.",nTS))
+	      }
+		  printf("\nResult for time series #%d (total number of time series in '%s': %d)\n\n", index, oName, nTS) 		 
+     } 
+	 else {
+	     if(index[1]<1 || index[1]>rows || index[2]<1 || index[2]>cols){	 
+		         stop(sprintf("Invalid indices of [%d, %d]: The valid row and col dimensions of the input object are %d and %d.",index[1],index[2],rows, cols))
+	     }
+		 printf("\nResult for time series #(%d,%d) (total number of time series in '%s': %d=%dx%d)\n\n", index[1],index[2],oName, nTS,rows, cols)		 
+     }  
+  }  
+  
+
+  
+
+ 
+  
+  .Call( BEASTV4_rexFunction, list("print",x,index),   212345)   	
+  return(invisible(NULL))
+  
+  #The following R code is deprecated and has been ported in C. But they are kept here
+  #as a reference and they will be never run.
   
   call  = match.call()
   oName = as.character(call$x)
@@ -176,8 +211,7 @@ print.beast <- function (x,index=1,...) {
    }
    printf("---------------------------------------'\n")   
       
-    
-    
+ 
   }   
   printf("Note: the beast output object '%s' is a LIST. Type 'str(%s)' to see all \nthe elements in it. Or use 'plot(%s)' or 'plot(%s,interactive=TRUE)' to \nplot the model output.\n",oName,oName,oName,oName)
 

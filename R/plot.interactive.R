@@ -5,11 +5,11 @@
 
 plot.interactive =function (o, index=1, ncpStat='mode') {
   
-
-if ( is.null( attributes(o)$tsextract ) ) {
-		o=tsextract(o,index)
+if ( length(o$marg_lik)> 1 ) {
+    # more than time series is present
+	o=tsextract(o,index)
 }  
-
+ 
 t  = o$time; 
 y  = o$data
 
@@ -30,18 +30,20 @@ Prob  =0;
 Order =0
 Slp   =0
 SlpSD =0
-SlpSign=0
+SlpSignPos=0
+SlpSignZero=0
 
 cp   =0        
 cpCI =0        
 ncp  =0    
-ncp_mean  =0      
-ncp_mode  =0      
-ncp_median  =0      
-ncp_pct90  =0      
-ncpPr=0        
-cpPr =0
-cpChange=0
+ncp_mean   = 0      
+ncp_mode   = 0      
+ncp_median = 0      
+ncp_pct90  = 0     
+ncp_pct10  = 0    
+ncpPr    = 0        
+cpPr     = 0
+cpChange = 0
 
 ":" = function(i,j){
   if(i>j)   return(NULL)
@@ -60,29 +62,33 @@ get.T      = function(){
   else                          CI <<-SD
 
   
-  Slp  <<-o$trend$slp
-  SlpSD <<-  c(Slp-o$trend$slpSD,  rev(Slp+o$trend$slpSD));         
-  SlpSign <<- o$trend$slpSignPr
-  Order<<-o$trend$order;
+  Slp          <<- o$trend$slp
+  SlpSD        <<- c(Slp-o$trend$slpSD,  rev(Slp+o$trend$slpSD));         
+  SlpSignPos   <<- o$trend$slpSgnPosPr
+  SlpSignPos   <<- o$trend$slpSgnZeroPr
+  Order        <<- o$trend$order;
   
 }
 get.tcp    = function(){
-  cp   <<- o$trend$cp;         
-  cpCI <<- o$trend$cpCI;  
-  
+
   cmpnt = o$trend
-  ncp  <<- switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,pct90=cmpnt$ncp_pct90,max=sum(!is.nan(cp)))
+  
+  cp   <<- cmpnt$cp;         
+  cpCI <<- cmpnt$cpCI;  
+  ncp  <<- switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,
+                 pct90=cmpnt$ncp_pct90,pct10=cmpnt$ncp_pct10,max=sum(!is.nan(cp))  )
   ncp_mean   <<- cmpnt$ncp
   ncp_mode   <<- cmpnt$ncp_mode
   ncp_median <<- cmpnt$ncp_median
   ncp_pct90  <<- cmpnt$ncp_pct90
+  ncp_pct10  <<- cmpnt$ncp_pct10
   
-  ncpPr<<-o$trend$ncpPr
-  cpPr <<-o$trend$cpPr
-  cpChange<<-o$trend$cpAbruptChange
+  ncpPr     <<- cmpnt$ncpPr
+  cpPr      <<- cmpnt$cpPr
+  cpChange  <<- cmpnt$cpAbruptChange
   
-  Prob <<-o$trend$cpOccPr;    
-  Prob1 <<-c(Prob,Prob-Prob)
+  Prob   <<- cmpnt$cpOccPr;    
+  Prob1  <<- c(Prob,Prob-Prob)
 }
 get.pos_tcp= function(){
   cp  <<-o$trend$pos_cp;         
@@ -149,19 +155,24 @@ get.S      = function(){
   
 }
 get.scp    = function(){
-  cp      <<- o$season$cp;         
-  cpCI    <<- o$season$cpCI;  
-  cmpnt     = o$season
-  ncp       <<- switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,pct90=cmpnt$ncp_pct90,max=sum(!is.nan(cp)))
+  cmpnt = o$season
+  
+  cp   <<- cmpnt$cp;         
+  cpCI <<- cmpnt$cpCI;  
+  ncp  <<- switch(ncpStat, mode=cmpnt$ncp_mode, median=cmpnt$ncp_median,mean=cmpnt$ncp,
+                 pct90=cmpnt$ncp_pct90,pct10=cmpnt$ncp_pct10,max=sum(!is.nan(cp))  )
   ncp_mean   <<- cmpnt$ncp
   ncp_mode   <<- cmpnt$ncp_mode
   ncp_median <<- cmpnt$ncp_median
   ncp_pct90  <<- cmpnt$ncp_pct90
-  ncpPr   <<- o$season$ncpPr
-  cpPr    <<- o$season$cpPr
-  cpChange<<- o$season$cpAbruptChange
+  ncp_pct10  <<- cmpnt$ncp_pct10
   
-  Prob <<-o$season$cpOccPr;    
+  ncpPr     <<- cmpnt$ncpPr
+  cpPr      <<- cmpnt$cpPr
+  cpChange  <<- cmpnt$cpAbruptChange
+  
+  Prob   <<- cmpnt$cpOccPr;    
+  Prob1  <<- c(Prob,Prob-Prob)   
   Prob1 <<-c(Prob,Prob-Prob)
 }
 get.pos_scp= function(){
@@ -580,11 +591,11 @@ ptrend.slpSD =function() {
   g.draw()
   
 }
-ptrend.slpSignPr =function() {
+ptrend.slpSgnPosPr =function() {
   
   get.T()
   
-  create.vp12(t,CI, t, c(0, SlpSign,1.01)) ;
+  create.vp12(t,CI, t, c(0, 1.01)) ;
   ################################################################################
   g.polygon(1,t2t, CI, gp=BLK(0.3),default.units='native')
   g.polygon(1,t2t, CI, gp=gpar(col='black',fill=NA),default.units='native')
@@ -595,7 +606,30 @@ ptrend.slpSignPr =function() {
   ################################################################################
   g.lines(2, t,   t-t+0.5, gp=gpar(col='black',lty=2), default.units='native')
   g.text(2,'Prob=0.5',   x=t[1], y=0.5, just=c(0,0),   default.units='native')
-  g.lines(2, t,   SlpSign, gp=RED(),   default.units='native')
+  g.lines(2, t,   SlpSignPos, gp=RED(),   default.units='native')
+  I=2; get.yscale(I)
+  for (i in 1:ncp)  g.segments(I,cp[i],cp[i],y0=YL,y1=YU,default.units='native',gp=BDASH())
+  set.axis(2,'time','Prob(slope>0)')
+  ################################################################################
+  g.draw()
+  
+}
+ptrend.slpSgnZeroPr =function() {
+  
+  get.T()
+  
+  create.vp12(t,CI, t, c(0, 1.01)) ;
+  ################################################################################
+  g.polygon(1,t2t, CI, gp=BLK(0.3),default.units='native')
+  g.polygon(1,t2t, CI, gp=gpar(col='black',fill=NA),default.units='native')
+  g.lines(1, t,    Y,  gp=BLK(),   default.units='native')
+  I=1; get.yscale(I)
+  for (i in 1:ncp)  g.segments(I,cp[i],cp[i],y0=YL,y1=YU,default.units='native',gp=BDASH())
+  set.axis(1,NULL,'trend')
+  ################################################################################
+  g.lines(2, t,   t-t+0.5, gp=gpar(col='black',lty=2), default.units='native')
+  g.text(2,'Prob=0.5',   x=t[1], y=0.5, just=c(0,0),   default.units='native')
+  g.lines(2, t,   SlpSignZero, gp=RED(),   default.units='native')
   I=2; get.yscale(I)
   for (i in 1:ncp)  g.segments(I,cp[i],cp[i],y0=YL,y1=YU,default.units='native',gp=BDASH())
   set.axis(2,'time','Prob(slope>0)')
@@ -674,6 +708,19 @@ ptrend.ncp_pct90 =function() {
     g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
   }
   g.lines(1,c(ncp_pct90, ncp_pct90), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
+ptrend.ncp_pct10 =function() {
+  
+  get.tcp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_pct10, ncp_pct10), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
   set.axis(1,"Number of changepoints",'Probability')
   g.draw()
 }
@@ -1532,29 +1579,6 @@ pseason.ampSD =function() {
   g.draw()
   
 }
-pseason.slpCI =function() {
-  
-  get.S()
-  
-  create.vp12(t,CI, t, c(0, SlpSign,1.01)) ;
-  ################################################################################
-  g.polygon(1,t2t, CI, gp=BLK(0.3),default.units='native')
-  g.polygon(1,t2t, CI, gp=gpar(col='black',fill=NA),default.units='native')
-  g.lines(1, t,    Y,  gp=BLK(),   default.units='native')
-  I=1; get.yscale(I)
-  for (i in 1:ncp)  g.segments(I,cp[i],cp[i],y0=YL,y1=YU,default.units='native',gp=BDASH())
-  set.axis(1,NULL,'trend')
-  ################################################################################
-  g.lines(2, t,   t-t+0.5, gp=gpar(col='black',lty=2), default.units='native')
-  g.text(2,'Prob=0.5',   x=t[1], y=0.5, just=c(0,0),   default.units='native')
-  g.lines(2, t,   SlpSign, gp=RED(),   default.units='native')
-  I=2; get.yscale(I)
-  for (i in 1:ncp)  g.segments(I,cp[i],cp[i],y0=YL,y1=YU,default.units='native',gp=BDASH())
-  set.axis(2,'time','Prob(slope>0)')
-  ################################################################################
-  g.draw()
-  
-}
 pseason.order =function( ) {
   get.S()
   get.scp()
@@ -1626,6 +1650,19 @@ pseason.ncp_pct90 =function() {
     g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
   }
   g.lines(1,c(ncp_pct90, ncp_pct90), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
+  set.axis(1,"Number of changepoints",'Probability')
+  g.draw()
+}
+pseason.ncp_pct10 =function() {
+  
+  get.scp()
+  ncpMax=length(ncpPr)
+  
+  create.vp1( xscale=c(-0.5, ncpMax+0.5), yscale=c(0,    min( max(ncpPr)*1.5,1 )  )    )   
+  for (i in 1:ncpMax){
+    g.rect(1,(i-1)-0.3, 0,0.6, ncpPr[i],just=c(0,0),gp=gpar(col='black',fill='gray'),default.units='native')
+  }
+  g.lines(1,c(ncp_pct10, ncp_pct10), c(0, min( max(ncpPr)*1.5,1 ) ), gp=gpar(col='red'),default.units='native')
   set.axis(1,"Number of changepoints",'Probability')
   g.draw()
 }
@@ -2203,14 +2240,16 @@ mousedown <- function(button,x,y) {
   
   plot.button(i,label)
   ClickedButton <<- i
-  
  
   cat(label$tagstr[i],"\n") 
   f=FUN[[i]];
+  
   if (is.function(f)){
-    #f()
-  }  
-  f()
+    f()
+  } else {
+    cat('No plot function defined for this variable\n');
+  }
+  
   
 }
 
@@ -2262,18 +2301,18 @@ HEIGHT=800
 dpi = get.dpi() 
 new.interactiveWindow(width=WIDTH/dpi , height=HEIGHT/dpi)
 
-x0<-0.01
-y0<-0.96
-h <-0.025
-nrow<-38
-ClickedButton <--1;
+x0   <- 0.01
+y0   <- 0.96
+h    <- 0.025
+nrow <- 38
+ClickedButton <- -1;
 
-label<-get.names(o)
-FUN  <-get.fun()
-DF=create.menugrob(nrow=nrow,x0=x0, y0=y0, h=h,label=label)
+label <- get.names(o)
+FUN   <- get.fun()
+DF    = create.menugrob(nrow=nrow,x0=x0, y0=y0, h=h,label=label)
 ncol <- DF$ncol
-w   <-DF$w
-G   <-DF$G
+w    <- DF$w
+G    <- DF$G
 
 grid.newpage()
 grid.draw(G)

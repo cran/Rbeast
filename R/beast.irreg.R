@@ -4,10 +4,12 @@ beast.irreg <- function(
                     season=c('harmonic','dummy','none'),
                     scp.minmax=c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
                     tcp.minmax=c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
-                    detrend=FALSE,
+                    detrend= FALSE,
                     deseasonalize=FALSE,
                     mcmc.seed=0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
 					ci             = FALSE,
+                    precValue      = 1.5,
+                    precPriorType  = c('componentwise','uniform','constant','orderwise'),					
                     print.options=TRUE,
                     print.progress  =TRUE,					
                     gui=FALSE,...)
@@ -25,10 +27,13 @@ beast.irreg <- function(
   #print.progress  =TRUE
   #gui=FALSE
   
-  if ( !hasArg("y") || is.list(y) )  {
+  # list is supported in this version for the multivariate cases
+  #if ( !hasArg("y") || is.list(y) )  {  
+  if ( !hasArg("y") )  {  
     stop("Something is wrong with the input 'y'. Make sure that y is a vector")
-    invisible(return(NULL))
+    invisible(return(NULL))         
   }  
+  
   if ( is.matrix(y) )  {
     dims=dim(y);
 	if (dims[1]>1 && dims[2]>1) {	
@@ -47,7 +52,8 @@ beast.irreg <- function(
   }
 
  
- season=match.arg(season)
+  season        = match.arg(season)
+  precPriorType = match.arg(precPriorType)
  # tmplist=list(...)
 #......Start of displaying 'MetaData' ......
    metadata = list()
@@ -90,8 +96,7 @@ beast.irreg <- function(
         prior$outlierMaxKnotNum	 =list(...)[['ocp']] 
    }  
    prior$K_MAX            = 300
-   prior$precValue        = 1.500000
-   prior$precPriorType    = 'uniform'
+ 
 #......End of displaying pripr ......
 
 #......Start of displaying 'mcmc' ......

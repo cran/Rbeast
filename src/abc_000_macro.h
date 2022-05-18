@@ -1,6 +1,6 @@
 #pragma once
-#define R_INTERFACE    1
-#define M_INTERFACE    0
+#define R_INTERFACE    0
+#define M_INTERFACE    1
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
 #define MATLAB_LIBRARY  0 
@@ -15,8 +15,24 @@
 	    #undef   MKL_LIBRARY
 		#define MYMAT_LIBRARY 1
 	    #define MKL_LIBRARY   0
-	   #define PCGRAND_LIBRARY 1
-       #define MKLRAND_LIBRARY 0
+	    #define PCGRAND_LIBRARY 1
+        #define MKLRAND_LIBRARY 0
+#endif
+#ifdef M_RELEASE
+		#undef   R_INTERFACE
+		#undef   M_INTERFACE
+		#define  R_INTERFACE 0
+		#define  M_INTERFACE 1
+		#undef   MYMAT_LIBRARY
+	    #undef   MKL_LIBRARY
+		#define MYMAT_LIBRARY 1
+	    #define MKL_LIBRARY   0
+	    #define PCGRAND_LIBRARY 1
+        #define MKLRAND_LIBRARY 0
+        #ifndef MATLAB_MEX_FILE
+			#define MATLAB_MEX_FILE
+        #endif
+        #define MATLAB_DEFAULT_RELEASE  R2017b
 #endif
 #ifdef _MSC_VER
 	#define MSVC_COMPILER
@@ -37,11 +53,15 @@
 #endif
 #if defined(__linux__) 
 	#define LINUX_OS
-	#define _GNU_SOURCE 
+    #ifndef _GNU_SOURCE
+		#define _GNU_SOURCE 
+    #endif
 #endif
 #if (defined(unix)||defined(__unix__)||defined(__unix) ) && !defined(__APPLE__)
 	#define UNIX_OS
-	#define _GNU_SOURCE 
+	#ifndef _GNU_SOURCE
+		#define _GNU_SOURCE 
+	#endif
 #endif
 #if defined(sun) && defined(__sun) && defined(__SVR4) 
 	#define SOLARIS_OS

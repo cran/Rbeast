@@ -4,7 +4,7 @@
  
 \title{The Minesweeper game in R}
 \description{
-   A poor man's implemenation of the minesweeper game in R. Yes, you are right: it has nothing to do with time series decomposistion, changepoint detection, and time series segmentation. Its only remote connetion to Rbeast is that this is a practice script I wrote to learn R graphics for implementing Rbeast.
+   A poor man's implementation of the minesweeper game in R. Yes, you are right: it has nothing to do with time series decomposition, changepoint detection, and time series segmentation. Its only remote connection to Rbeast is that this is a practice script I wrote to learn R graphics for implementing Rbeast.
   }
 \usage{
 	minesweeper(height=15, width=12, prob=0.1) 
@@ -13,7 +13,7 @@
   
   \item{height}{integer; number of rows of the mine grid along the vertical direction.}
   \item{width}{integer; number of columns of the mine grid along the horizontal direction.}
-  \item{prob}{ numeric; a fraction between 0 and 1 to specify the probabity of mine occurrence in the mine grid.}   
+  \item{prob}{ numeric; a fraction between 0 and 1 to specify the probability of mine occurrence in the mine grid.}   
  
 }
 
@@ -22,7 +22,7 @@
 		\itemize{
 		 \item  LEFT-click to clear a spot.
 		 \item  RIGHT-click to flag a spot.
-		 \item  MIDDEL-click(wheel) a cleared and numbered spot to open neighor spots, if flagged correctly.
+		 \item  MIDDLE-click(wheel) a cleared and numbered spot to open neighbor spots, if flagged correctly.
 		 \item  Click Restart for a new game
 		}
  

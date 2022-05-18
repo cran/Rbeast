@@ -40,6 +40,7 @@ void (*f32_to_f64_inplace)(F32PTR data32,int N);
 void (*f64_to_f32_inplace)(F64PTR data64,int N);
 void (*i32_to_f32_scaleby_inplace)(I32PTR X,int N,F32 scale);
 void (*i32_increment_bycond_inplace)(I32PTR x,F32PTR cond,int N);
+void (*i32_increment_vec2_bycond_inplace)(I32PTR x,I32PTR y,F32PTR cond,int N);
 I32  (*i08_sum_binvec)(U08PTR binvec,I32 N);
 void (*f32_gemm_XtY2x1)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
 void (*f32_gemm_XtY2x2)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
@@ -48,11 +49,15 @@ void (*f32_gemm_XY2x2)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PT
 void (*f32_gemm_XtYt2x2)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
 void (*f32_gemm_XYt2x1)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
 void(*f32_gemv_Xb)(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C);
-I32  (*f32_findindex)(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag);
+I32   (*f32_findindex)(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag);
 void  (*f32_scatter_vec_byindex)(F32PTR  x,I32PTR indices,F32PTR values,int N);
-void (*f32_gatherVec_scatterVal_byindex)(F32PTR  x,I32PTR indices,F32PTR values,F32 newValue,int N);
-void (*f32_gather2Vec_scatterVal_byindex)(F32PTR  x,F32PTR  y,I32PTR indices,F32PTR values,F32 newValue,int N);
-void (*f32_scale_inplace)(const F32 gain,const F32 offset,const F32PTR x,const int N);
+void  (*f32_gatherVec_scatterVal_byindex)(F32PTR  x,I32PTR indices,F32PTR values,F32 newValue,int N);
+void  (*f32_gather2Vec_scatterVal_byindex)(F32PTR  x,F32PTR  y,I32PTR indices,F32PTR values,F32 newValue,int N);
+void  (*f32_scale_inplace)(const F32 gain,const F32 offset,const F32PTR x,const int N);
+void  (*f32_hinge_neg)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
+void  (*f32_hinge_pos)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
+void  (*f32_step_neg)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
+void  (*f32_step_pos)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
 void print_funcs() {
 	r_printf("\n\n"  );
 	r_printf("%s:%05x\n","i32_add_val_inplace",i32_add_val_inplace);
@@ -91,6 +96,7 @@ void print_funcs() {
 	r_printf("%s:%05x\n","f64_to_f32_inplace",f64_to_f32_inplace);
 	r_printf("%s:%05x\n","i32_to_f32_scaleby_inplace",i32_to_f32_scaleby_inplace);
 	r_printf("%s:%05x\n","i32_increment_bycond_inplace",i32_increment_bycond_inplace);
+	r_printf("%s:%05x\n","i32_increment_vec2_bycond_inplace",i32_increment_vec2_bycond_inplace);
 	r_printf("%s:%05x\n","i08_sum_binvec",i08_sum_binvec);
 	r_printf("%s:%05x\n","f32_gemm_XtY2x1",f32_gemm_XtY2x1);
 	r_printf("%s:%05x\n","f32_gemm_XtY2x2",f32_gemm_XtY2x2);

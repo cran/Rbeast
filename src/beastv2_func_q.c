@@ -10,20 +10,14 @@
 #include "abc_vec.h"  
 #include "beastv2_func.h"
 F32  GetPercentileNcp(F32PTR prob,I32 N,F32 pctile) {
-	F32 preNcp=0;
-	F32 ncp=0;
 	F32 cumProb=0.f;
 	for (int i=0; i < N; i++) {
 		cumProb+=prob[i];
 		if (cumProb > pctile) {
-			F32 d2=cumProb - pctile;
-			F32 d1=pctile - (cumProb-prob[i]);
-			ncp=(preNcp*d2+i*d1)/prob[i];
-			break;
-		}
-		preNcp=i;
+			return i;		
+		}	 
 	}
-	return ncp;
+	return N - 1; 
 }
 void SetupPointersForCoreResults(CORESULT* coreResults,BEAST2_BASIS_PTR b,I32 NumBasis,BEAST2_RESULT* resultChain) {
 	for (I32 i=0; i < NumBasis; i++) {
@@ -52,7 +46,7 @@ void SetupPointersForCoreResults(CORESULT* coreResults,BEAST2_BASIS_PTR b,I32 Nu
 }
 void BEAST2_EvaluateModel(
 	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
-	BEAST2_YINFO_PTR  yInfo,BEAST2_HyperPar *hyperPar,F32 precVal,VOID_PTR stream )
+	BEAST2_YINFO_PTR  yInfo,BEAST2_HyperPar *hyperPar,F32PTR precVec,VOID_PTR stream )
 {
 	I32 Npad=(I32)ceil((F32)N/8.0f) * 8; Npad=N;
 	I32 K=0;	 
@@ -99,14 +93,12 @@ void BEAST2_EvaluateModel(
 		f32_mat_multirows_set_by_submat(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing);
 	}
 	F32PTR cholXtX=curmodel->cholXtX;
-	f32_copy( XtX,cholXtX,K * K);
-	f32_add_val_matrixdiag(cholXtX,precVal,K);
 	F32PTR beta_mean=curmodel->beta_mean;	
-	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,&precVal,K,1,K);
+	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,precVec,K,1,K);
 	solve_U_as_LU_invdiag_sqrmat(cholXtX,XtY,beta_mean,K);
 	F32 alpha2_star=(yInfo->YtY_plus_alpha2Q[0] - DOT(K,XtY,beta_mean)) * 0.5;
 	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
-	F32 half_log_det_prior=-.5f * K*logf(precVal);
+	F32 half_log_det_prior=-.5f * K*logf(precVec[0]);
 	F32 marg_lik=half_log_det_post - half_log_det_prior - yInfo->alpha1_star * logf(alpha2_star);
 	curmodel->alpha2_star=alpha2_star;
 	curmodel->marg_lik=marg_lik;
@@ -287,7 +279,7 @@ void MoveCOLsWithinMatrix(F32PTR X,I32 N,I32 Kstart,I32 Kend,I32 Knewstart) {
 }
 void MR_EvaluateModel(
 	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
-	BEAST2_YINFO_PTR yInfo,BEAST2_HyperPar *hyperPar,F32 precVal,VOID_PTR stream )
+	BEAST2_YINFO_PTR yInfo,BEAST2_HyperPar *hyperPar,F32PTR precVec,VOID_PTR stream )
 {
 	I32 Npad=(I32)ceil((F32)N/8.0f) * 8; Npad=N;
 	I32 K=0;	 
@@ -335,17 +327,15 @@ void MR_EvaluateModel(
 		f32_mat_multirows_set_by_submat(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing);
 	}
 	F32PTR cholXtX=curmodel->cholXtX;
-	f32_copy( XtX,cholXtX,K * K);
-	f32_add_val_matrixdiag(cholXtX,precVal,K);
 	F32PTR beta_mean=curmodel->beta_mean;	
-	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,&precVal,K,1,K);
+	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,precVec,K,1,K);
 	solve_U_as_LU_invdiag_sqrmat_multicols(cholXtX,XtY,beta_mean,K,q);
     r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,K,1.f,beta_mean,K,XtY,K,0.f,curmodel->alphaQ_star,q);
 	r_ippsSub_32f(curmodel->alphaQ_star,yInfo->YtY_plus_alpha2Q,curmodel->alphaQ_star,q * q);	
 	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',q,curmodel->alphaQ_star,q); 
 	F32 log_det_alphaQ=sum_log_diagv2(curmodel->alphaQ_star,q);	
 	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
-	F32 half_log_det_prior=-.5f * K*logf(precVal);
+	F32 half_log_det_prior=-.5f * K*logf(precVec[0]);
 	F32 marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * log_det_alphaQ*2.0f;
     curmodel->marg_lik=marg_lik;
  	return;

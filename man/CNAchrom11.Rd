@@ -18,6 +18,11 @@
  library(Rbeast)
  data(CNAchrom11)  
  
+ \donttest{
+ o = beast(CNAchrom11, season='none') # no periodic component
+ plot(o)
+ }
+ 
 }
 \keyword{misc}
 

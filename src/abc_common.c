@@ -6,6 +6,31 @@
 #include "abc_sort.h"
 #include "abc_vec.h" 
 #include "abc_blas_lapack_lib.h"
+static INLINE int isSpace(char c) {return (c==' '||c=='\t'||c=='\n');}
+int get_word(char* str) {
+	int i=0,wordlen=0;
+	while (isSpace(str[i])) {
+		str[i]=' ';
+		wordlen++;
+		i++;
+	}
+	while (str[i] && !isSpace(str[i++])) { wordlen++;}
+	return wordlen;}
+char* word_wrap(char* str,int LINE_LENGTH) {
+	int wordLen;                     
+	int current_lineLen=0;             
+	int start_curLen=0;              
+	while ((wordLen=get_word(str+start_curLen+current_lineLen)) > 0) {
+		if (current_lineLen+wordLen < LINE_LENGTH) {
+			current_lineLen+=wordLen;
+		}else {
+			str[start_curLen+current_lineLen]='\n';
+			start_curLen+=current_lineLen+1L;
+			current_lineLen=0L;
+		}
+	}
+	return str;
+}
 void ToUpper(char* s) { for (int i=0; s[i] !='\0'; i++) 	s[i]=s[i] >='a' && s[i] <='z' ? s[i] - 32 : s[i]; }
 I32 strcicmp(char const * _restrict a,char const * _restrict b) {
 	for (;; a++,b++) {
@@ -22,6 +47,14 @@ I32 strcicmp_nfirst(char const* _restrict a,char const* _restrict b,int nfirst) 
 		if (d !=0||!*a||i >=nfirst) {
 			return d;
 		}		
+	}
+}
+I32 strmatch(char const* _restrict full,char const* _restrict part) {
+	for (;; full++,part++) {
+		I32 d=((*full)|(U08)32) - ((*part)|(U08)32);
+		if (d !=0||!*part) {
+			return (!*part)? 0: d;
+		}
 	}
 }
 F32 DeterminePeriod(F32PTR Y,I32 N)
@@ -474,6 +507,15 @@ void CopyStrideMEMToF32Arr(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOf
 	else if (srcDataType==DATA_INT16)	{
 		f32_from_strided_i16(dst,src,N,srcStride,srcOffset);
 	}  
+}
+void WriteStrideMEMToArrMEM(VOID_PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDstDataType)
+{
+	if (srcDstDataType==DATA_FLOAT) {
+		f32_from_strided_f32(dst,src,N,srcStride,srcOffset);
+	} else if (srcDstDataType==DATA_DOUBLE) {
+		f32_from_strided_f64(dst,src,N,srcStride,srcOffset);
+		f32_to_f64_inplace(dst,N);
+	}
 }
 #if defined(WIN64_OS)||defined(WIN32_OS) 
 	#include "float.h"

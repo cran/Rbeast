@@ -11,7 +11,7 @@ extern void CvtKnotsToBinVec(BEAST2_BASIS_PTR b,I32 NUMBASIS,I32 N,BEAST2_YINFO_
 extern void GenarateRandomBasis(BEAST2_BASIS_PTR basis,I32 NUMBASIS,I32 N,BEAST2_RNDSTREAM* PRAND);
 void BEAST2_EvaluateModel(
     BEAST2_MODELDATA* curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
-    BEAST2_YINFO_PTR  pyInfo,BEAST2_HyperPar*hyperPar,F32 precVal,VOID_PTR stream);
+    BEAST2_YINFO_PTR  pyInfo,BEAST2_HyperPar*hyperPar,F32PTR precVec,VOID_PTR stream);
 void MatxVec(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR Y,F32PTR XtY,I32 N);
 I32  GetInfoBandList(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Klastcol);
 I32  GetInfoBandList_post(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Kstartcol);
@@ -89,4 +89,4 @@ static void XtX_ByGroup_FULL(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR XtX,
 }
 void MR_EvaluateModel(
 	BEAST2_MODELDATA* curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
-	BEAST2_YINFO_PTR pyInfo,BEAST2_HyperPar*hyperPar,F32 precVal,VOID_PTR stream);
+	BEAST2_YINFO_PTR pyInfo,BEAST2_HyperPar*hyperPar,F32PTR precVec,VOID_PTR stream);

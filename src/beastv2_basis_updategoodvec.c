@@ -7,7 +7,7 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,
 {
 	I32     newKnot=new->newKnot;
 	I32     newIdx=new->newIdx;
-	U08PTR  goodVec=basis->goodvec;
+	U08PTR    goodVec=basis->goodvec;
 	I32       MINSEP=basis->prior.minSepDist;
 	TKNOT_PTR knotList=basis->KNOT;
 	MOVETYPE flag=new->jumpType;
@@ -90,8 +90,8 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,
 }
 static void OO_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 Npad16_not_used)
 {
-	rI32     newKnot=new->newKnot;
-	rU08PTR  goodVec=basis->goodvec;
+	I32     newKnot=new->newKnot;
+	U08PTR  goodVec=basis->goodvec;
 	MOVETYPE flag=new->jumpType;
 	if (flag==BIRTH) {
 		goodVec[newKnot - 1]=0;

@@ -31,12 +31,13 @@ void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32 minSep
 	}
 	for (I32 n=minOrder*1L; n <=KMAX;++n) totalNum[n - 1]=-log(totalNum[n - 1]);	
 }
-static F32 ST_ModelPriorFactor0(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
+static F32 ST_ModelPriorFactor0(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
 	return 0.f; 
 }
-static F32 ST_ModelPriorFactor1(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
+static F32 ST_ModelPriorFactor1(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
+	I32  N=newcol->N;
 	I32  Kold=basis->K;
-	I32  Knew=Kold+(new->k2_new-new->k2_old);
+	I32  Knew=Kold+(newcol->k2_new- newcol->k2_old);
 	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
 	I32  Sold=basis->nKnot+1;
 	I32  Snew=new->nKnot_new+1;
@@ -58,9 +59,10 @@ static F32 ST_ModelPriorFactor1(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
 	}
 	return (F32) log(factor);
 }
-static F32 ST_ModelPriorFactor2(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
+static F32 ST_ModelPriorFactor2(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
+	I32 N=newcol->N;
 	I32  Kold=basis->K;
-	I32  Knew=Kold+(new->k2_new-new->k2_old);
+	I32  Knew=Kold+(newcol->k2_new-newcol->k2_old);
 	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
 	I32  Sold=basis->nKnot+1;
 	I32  Snew=new->nKnot_new+1;
@@ -82,10 +84,11 @@ static F32 ST_ModelPriorFactor2(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N) {
 	}
 	return log(factor);
 }
-static F32 ST_ModelPriorFactor3(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
+static F32 ST_ModelPriorFactor3(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new)
 {   
+	    I32  N=newcol->N ;
 		I32  Kold=basis->K;
-		I32  Knew=Kold+(new->k2_new - new->k2_old);
+		I32  Knew=Kold+(newcol->k2_new - newcol->k2_old);
 		if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
 	    F32 factor0=basis->priorVec[Knew-1] - basis->priorVec[Kold - 1];
 		F32 factor;
@@ -100,10 +103,10 @@ static F32 ST_ModelPriorFactor3(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
 		}
 		return (factor);	  
 }
-static F32 ST_ModelPriorFactor4(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
+static F32 ST_ModelPriorFactor4(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new)
 {	
 	I32  Kold=basis->K;
-	I32  Knew=Kold+(new->k2_new-new->k2_old);
+	I32  Knew=Kold+(newcol->k2_new-newcol->k2_old);
 	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
 	I32  Sold=basis->nKnot+1;
 	I32  Snew=new->nKnot_new+1; 
@@ -113,7 +116,7 @@ static F32 ST_ModelPriorFactor4(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
 	F32    factor=MAT[(Sold-1)* KMAX+Kold- 1] * (NUMORDER * Sold+1)/(MAT[(Snew-1) *KMAX+Knew - 1] *(NUMORDER*Snew+1));
 	return (F32) logf(factor);	
 }
-static F32 ST_ModelPriorFactor5(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
+static F32 ST_ModelPriorFactor5(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new)
 {
 	F32 factor=0;
 	int delta_k1=basis->nKnot;
@@ -121,7 +124,7 @@ static F32 ST_ModelPriorFactor5(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 N)
 	int delta_k2=new->nKnot_new;
 	delta_k2++;
 	I32 Kold=basis->K;
-	I32 Knew=basis->K+new->k2_new - new->k2_old;
+	I32 Knew=basis->K+newcol->k2_new - newcol->k2_old;
 	if (delta_k1==delta_k2 && Kold==Knew)
 		factor=0;
 	else {
