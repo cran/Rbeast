@@ -1,6 +1,6 @@
 #pragma once
-#define R_INTERFACE    0
-#define M_INTERFACE    1
+#define R_INTERFACE    1
+#define M_INTERFACE    0
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
 #define MATLAB_LIBRARY  0 
@@ -214,8 +214,10 @@
     DISABLE_WARNING(int-conversion,int-conversion,NOT_USED) \
     DISABLE_WARNING(switch,switch,NOT_USED) \
     DISABLE_WARNING(uninitialized,uninitialized,NOT_USED)\
-   DISABLE_WARNING(pedantic,pedantic,NOT_USED)
+    DISABLE_WARNING(pedantic,pedantic,NOT_USED) \
+    DISABLE_WARNING(typedef-redefinition,typedef-redefinition,NOT_USED) 
 	#define  ENABLE_MANY_WARNINGS  \
+    ENABLE_WARNING(typedef-redefinition,typedef-redefinition,NOT_USED)\
     ENABLE_WARNING(pedantic,pedantic,NOT_USED)\
     ENABLE_WARNING(uninitialized,uninitialized,NOT_USED)\
     ENABLE_WARNING(switch,switch,NOT_USED)\

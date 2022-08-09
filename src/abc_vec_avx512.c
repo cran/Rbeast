@@ -866,6 +866,28 @@ void avx512_f32_seq(F32PTR p,F32 x0,F32 dX,int N) {
     }     
     _mm256_zeroupper();    
 }
+void avx512_i32_seq(I32PTR p,I32 x0,I32 dX,int N) {
+    __m512i X;
+    {    
+        __m128i tmp;
+        tmp=_mm_cvtsi64_si128(0x0706050403020100);
+        tmp=_mm_insert_epi64(tmp,0x0F0E0D0C0B0A0908,1);        
+        __m512i v1to15=_mm512_cvtepu8_epi32(tmp);
+        __m512i  DX=_mm512_mullo_epi32(v1to15,set1_i32(dX));
+        X=addi32(set1_i32(x0),DX);        
+    }    
+    __m512i dX16=set1_i32(dX*16)  ;
+    int i=0;
+    for (; i < N - (NF - 1); i+=NF) {
+        storei(p+i,X);  
+        X=addi32(X,dX16);        
+    } 
+    int n=N - i;
+    if (n > 0) {
+        maskstorei(p+i,GetMoveMask(n),X);
+    }     
+    _mm256_zeroupper();    
+}
 void avx512_f32_to_f64_inplace(F32PTR data32,int N) {
     F64PTR data64=data32;
     int i=N - 16;
@@ -1283,7 +1305,21 @@ static INLINE void fma_f32_axpy_inplace( const F32 a,const F32PTR x,F32PTR y,con
         maskstore(y+i,GetMoveMask(n),_mm512_fmadd_ps(load(x+i),C,load(y+i)) );
     _mm256_zeroupper();
 }
-static INLINE void avx512_f32_axpy_inplace(const F32 a,const F32PTR x,F32PTR y,const int N) {
+static  void avx512_f32_axpy_inplace(const F32 a,const F32PTR x,F32PTR y,const int N) {
+    __m512  C=set1(a);
+    int i=0;
+    for (; i < N - (NF3 - 1); i+=NF3)
+        store(y+i,add(mul(load(x+i),C),load(y+i))),
+        store(y+i+NF,add(mul(load(x+i+NF),C),load(y+i+NF))),
+        store(y+i+NF2,add(mul(load(x+i+NF2),C),load(y+i+NF2)));
+    for (; i < N - (NF - 1); i+=NF)
+        store(y+i,add(mul(load(x+i),C),load(y+i)));
+    int n=N - i;
+    if (n > 0) 
+        maskstore(y+i,GetMoveMask(n),add(mul(load(x+i),C),load(y+i)));
+    _mm256_zeroupper();
+}
+static INLINE void __avx512_f32_axpy_inplace(const F32 a,const F32PTR x,F32PTR y,const int N) {
     __m512  C=set1(a);
     int i=0;
     for (; i < N - (NF3 - 1); i+=NF3)
@@ -1298,7 +1334,7 @@ static INLINE void avx512_f32_axpy_inplace(const F32 a,const F32PTR x,F32PTR y,c
     _mm256_zeroupper();
 }
 #define fmadd _mm512_fmadd_ps  
-static INLINE void fma_f32_ax1bx2py_inplace(const F32PTR a,const F32PTR x1,const F32PTR x2,F32PTR y,const int N) {
+static INLINE void __fma_f32_ax1bx2py_inplace(const F32PTR a,const F32PTR x1,const F32PTR x2,F32PTR y,const int N) {
     __m512  A=set1(a[0]);
     __m512  B=set1(a[1]);
     int i=0;
@@ -1317,7 +1353,7 @@ static INLINE void fma_f32_ax1bx2py_inplace(const F32PTR a,const F32PTR x1,const
     }  
     _mm256_zeroupper(); 
 }
-static INLINE void avx512_f32_ax1bx2py_inplace(const F32PTR a,const F32PTR x1,const F32PTR x2,F32PTR y,const int N) {
+static INLINE void __avx512_f32_ax1bx2py_inplace(const F32PTR a,const F32PTR x1,const F32PTR x2,F32PTR y,const int N) {
     __m512  C1=set1(a[0]);
     __m512  C2=set1(a[1]);
     int i=0;
@@ -1343,19 +1379,19 @@ void avx512_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
     for (; row < N - (256 * 2 -1); row+=256*2) {
         int col=0;
         for (; col < K-1; col+=2) {
-            avx512_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,256 * 2);
+            __avx512_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,256 * 2);
         }
         if(col<K)
-            avx512_f32_axpy_inplace(b[col],X+col * lda+row,C+row,256 * 2);
+            __avx512_f32_axpy_inplace(b[col],X+col * lda+row,C+row,256 * 2);
     }
     int n=N - row;
     if (n > 0) {
         int col=0;
         for (; col < K-1; col+=2) {
-            avx512_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,n);
+            __avx512_f32_ax1bx2py_inplace(b+col,X+col * lda+row,X+(col+1) * lda+row,C+row,n);
         }
         if(col<K)
-            avx512_f32_axpy_inplace(b[col],X+col * lda+row,C+row,n);
+            __avx512_f32_axpy_inplace(b[col],X+col * lda+row,C+row,n);
     }
 }
 static INLINE I32 _avx512_f32_findindex_cmp_lt(F32PTR  x,I32PTR indices,F32 value,int N ) {
@@ -1674,45 +1710,45 @@ void avx512_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,con
     }
     _mm256_zeroupper();    
 }
-  void avx512_f32_step_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N){    
+  void avx512_f32_step_pos(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N){
     __m512  O=set0();
     __m512  I=set1(1.0);
     __m512  C=set1(knot);
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
-        __m512 d1=sub(load(X+i),C);   store(Y+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),O,I)); 
-        __m512 d2=sub(load(X+i+NF),C);   store(Y+i+NF,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d2,O,_CMP_GE_OQ),O,I)); 
-        __m512 d3=sub(load(X+i+NF2),C);  store(Y+i+NF2,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d3,O,_CMP_GE_OQ),O,I)); 
-        __m512 d4=sub(load(X+i+NF3),C);  store(Y+i+NF3,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d4,O,_CMP_GE_OQ),O,I)); 
+        __m512 d1=sub(load(X+i),C);   store(Z+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),O,load(Y+i ))); 
+        __m512 d2=sub(load(X+i+NF),C);   store(Z+i+NF,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d2,O,_CMP_GE_OQ),O,load(Y+i+NF))); 
+        __m512 d3=sub(load(X+i+NF2),C);  store(Z+i+NF2,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d3,O,_CMP_GE_OQ),O,load(Y+i+NF2))); 
+        __m512 d4=sub(load(X+i+NF3),C);  store(Z+i+NF3,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d4,O,_CMP_GE_OQ),O,load(Y+i+NF3))); 
     }
     for (; i < N - (NF - 1); i+=NF) {
-        __m512 d1=sub(load(X+i),C);   store(Y+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),O,I)); 
+        __m512 d1=sub(load(X+i),C);      store(Z+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),O,load(Y+i))); 
     }
     int n=N - i;
     if (n > 0) {
         __m512 d1=sub(load(X+i),C);  
-        maskstore(Y+i,GetMoveMask(n),_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),O,I) ); 
+        maskstore(Z+i,GetMoveMask(n),_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),O,load(Y+i  )) ); 
     }
     _mm256_zeroupper();    
 }
-  void avx512_f32_step_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N){    
+  void avx512_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N){
     __m512  O=set0();
     __m512  I=set1(1.0);
     __m512  C=set1(knot);
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
-        __m512 d1=sub(load(X+i),C);   store(Y+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),I,O)); 
-        __m512 d2=sub(load(X+i+NF),C);   store(Y+i+NF,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d2,O,_CMP_GE_OQ),I,O)); 
-        __m512 d3=sub(load(X+i+NF2),C);  store(Y+i+NF2,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d3,O,_CMP_GE_OQ),I,O)); 
-        __m512 d4=sub(load(X+i+NF3),C);  store(Y+i+NF3,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d4,O,_CMP_GE_OQ),I,O)); 
+        __m512 d1=sub(load(X+i),C);   store(Z+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),load(Y+i),O)); 
+        __m512 d2=sub(load(X+i+NF),C);   store(Z+i+NF,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d2,O,_CMP_GE_OQ),load(Y+i+NF),O)); 
+        __m512 d3=sub(load(X+i+NF2),C);  store(Z+i+NF2,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d3,O,_CMP_GE_OQ),load(Y+i+NF2),O)); 
+        __m512 d4=sub(load(X+i+NF3),C);  store(Z+i+NF3,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d4,O,_CMP_GE_OQ),load(Y+i+NF3),O)); 
     }
     for (; i < N - (NF - 1); i+=NF) {
-        __m512 d1=sub(load(X+i),C);   store(Y+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),I,O)); 
+        __m512 d1=sub(load(X+i),C);   store(Z+i,_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),load(Y+i),O)); 
     }
     int n=N - i;
     if (n > 0) {
         __m512 d1=sub(load(X+i),C);  
-        maskstore(Y+i,GetMoveMask(n),_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),I,O) ); 
+        maskstore(Z+i,GetMoveMask(n),_mm512_mask_blend_ps(_mm512_cmp_ps_mask(d1,O,_CMP_GE_OQ),load(Y+i),O) ); 
     }
     _mm256_zeroupper();    
 }
@@ -1749,6 +1785,7 @@ void SetupVectorFunction_AVX512() {
     f32_minidx=&avx512_f32_minidx;    
     f32_diff_back=& avx512_f32_diff_back;
     f32_seq=& avx512_f32_seq;
+    i32_seq=&avx512_i32_seq;
     f32_to_f64_inplace=&avx512_f32_to_f64_inplace;
     f64_to_f32_inplace=&avx512_f64_to_f32_inplace;
     i32_to_f32_scaleby_inplace=&avx512_i32_to_f32_scaleby_inplace;
@@ -1771,6 +1808,7 @@ void SetupVectorFunction_AVX512() {
     f32_hinge_neg=avx512_f32_hinge_neg;
     f32_step_pos=avx512_f32_step_pos;
     f32_step_neg=avx512_f32_step_neg;
+    f32_axpy_inplace=avx512_f32_axpy_inplace;
 }
 #else
 static char a='a';

@@ -259,9 +259,9 @@ typedef struct BEAST2_BASIS {
 		void        (*Propose)(BEAST2_BASIS_PTR,NEWTERM_PTR,NEWCOLINFO_PTR,PROP_DATA*);
 		pfnGenTerms GenTerms;
 		int         (*CalcBasisKsKeK_TermType)(BEAST2_BASIS_PTR  basis);
-		void        (*UpdateGoodVec)(BEAST2_BASIS_PTR basis,NEWTERM_PTR new1,I32 Npad16_not_used);
+		void        (*UpdateGoodVec)(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,I32 Npad16_not_used);
 		void        (*ComputeY)(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad);
-		F32         (*ModelPrior)(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new1);
+		F32         (*ModelPrior)(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new);
 	};	
 	F32PTR   scalingFactor;
 	F64PTR   priorMat;
@@ -291,33 +291,25 @@ typedef struct {
 	F32PTR XtX,XtY,cholXtX,beta_mean;
 	F32PTR precXtXDiag;
 	I16PTR nTermsPerPrecGrp;
-	union {
-		F32      alpha2_star;
-		F32PTR   alphaQ_star; 
-	};
+	F32PTR   alpha2Q_star;  
 	F32    marg_lik;
 	I32    K;
 } BEAST2_MODELDATA,*_restrict  BEAST2_MODELDATA_PTR;
 typedef struct BEAST2_MODEL {
 	I32 (*PickBasisID)(PROP_DATA_PTR );
-	F32PTR beta;
-	union {
-		F32	    sig2;
-		F32PTR  SIG2; 
-	};
+	F32PTR  beta;	
+	F32PTR	sig2; 
 	I08PTR08 extremePosVec;
 	F32PTR   deviation;
 	F32PTR   avgDeviation;  
 	I32      extremPosNum;
 	I16     nPrec;
 	F32PTR  precVec;
-	F32PTR  logPrecVec;
-	F32     precVal;        
-	F32     logPrecVal;     
+	F32PTR  logPrecVec;	
 	BEAST2_MODELDATA curr,prop;
-	I08          NUMBASIS;
+	I32          NUMBASIS;
 	I08          vid,did,sid,tid,oid;
-	BEAST2_BASIS b[MAX_NUM_BASIS];	
+	BEAST2_BASIS *b;	
 } BEAST2_MODEL,* _restrict BEAST2_MODEL_PTR;
 typedef struct {
 	I32              minSepDist;

@@ -33,6 +33,7 @@ void solve_U_as_LU_invdiag_sqrmat(F32PTR U,F32PTR y,F32PTR x,I64 K);
 void solve_U_as_LU_invdiag_sqrmat_multicols(F32PTR U,F32PTR y,F32PTR x,I64 K,I64 nColY);
 void solve_U_as_U_invdiag(F32PTR U,F32PTR x,I64 N,I64 K);
 void solve_U_as_U_invdiag_multicols(F32PTR U,F32PTR x,I64 ldu,I64 K,I32 nColx);
+void chol_addCol_skipleadingzeros_prec_nostartprec_invdiag(F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1);
 void chol_addCol_skipleadingzeros_prec_invdiag(F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1);
 void chol_addCol_skipleadingzeros_precVec_invdiag(   F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1);
 void linear_regression(F32PTR Y,F32PTR X,int ldx,int N,int K,F32PTR B,F32PTR Yfit,F32PTR Yerror,F32PTR TMP);
@@ -45,4 +46,4 @@ typedef struct {
    I16 KOLD,KNEW;
 } NEWCOLINFO,* _restrict NEWCOLINFO_PTR;
 extern void update_XtX_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR XtX,F32PTR XtXnew,NEWCOLINFO* new);
-extern void update_XtY_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR Y,F32PTR XtY,F32PTR XtYnew,NEWCOLINFO* new,I32 q);
+extern void update_XtY_from_Xnewterm(F32PTR Y,F32PTR Xnewterm,F32PTR XtY,F32PTR XtYnew,NEWCOLINFO* new,I32 q);

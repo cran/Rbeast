@@ -124,8 +124,7 @@ static int SS_0( F32PTR X,I32 N,BEAST2_BASESEG_PTR seg,BASIS_CONST* ptr) {
 	F32PTR TERM=SEASON.TERMS+N * (seg->ORDER1-1) * 2+seg->R1 - 1;
     F32PTR season_csum=SEASON.SQR_CSUM+1L+(N+1) * (seg->ORDER1-1)*2;
 	I32    k=0;
-	for (I32 j=seg->ORDER1; j <=seg->ORDER2; j++)
-	{
+	for (I32 j=seg->ORDER1; j <=seg->ORDER2; j++) 	{
 		F32   scalingFactor;
 		r_cblas_scopy(Nseg,TERM,1L,X+seg->R1 - 1,1L);
 		scalingFactor=sqrtf(N/(season_csum[seg->R2 - 1] - season_csum[(seg->R1 - 1) - 1]));

@@ -65,25 +65,25 @@ int beast2_main_corev4_mthrd(void* dummy)
 	BEAST2_Result_AllocMEM(&resultChain,opt,&MEM); 	
 	BEAST2_Result_AllocMEM(&result,opt,&MEM);
 	if (extra.computeCredible) {
-		I32  Npad=(opt->io.N+7)/8 * 8; Npad=opt->io.N;
-		I32  XnewOffset=0;
+		I32  Npad=(opt->io.N+7)/8 * 8;
+		I32  XnewtermOffset=0;
+		Npad=opt->io.N;    
 		for (I32 i=0; i < MODEL.NUMBASIS; i++) {
 			if (MODEL.b[i].type==SEASONID||MODEL.b[i].type==DUMMYID||MODEL.b[i].type==SVDID)
-				ci[i].result=resultChain.sCI,		
-			    ci[i].newDataRow=Xnewterm+XnewOffset;			
+				ci[i].result=resultChain.sCI,		         
+			    ci[i].newDataRow=Xnewterm+XnewtermOffset;	 
 			else if (MODEL.b[i].type==TRENDID)
-				ci[i].result=resultChain.tCI,     
-			    ci[i].newDataRow=Xnewterm+XnewOffset;   
+				ci[i].result=resultChain.tCI,               
+			    ci[i].newDataRow=Xnewterm+XnewtermOffset;    
 			else if (MODEL.b[i].type==OUTLIERID)
 				ci[i].result=resultChain.oCI,      
-			    ci[i].newDataRow=Xnewterm+XnewOffset; 
-			XnewOffset+=Npad * q;   
+			    ci[i].newDataRow=Xnewterm+XnewtermOffset; 
+			XnewtermOffset+=Npad * q;   
 		}
 	} 
 	const CORESULT coreResults[MAX_NUM_BASIS];
 	SetupPointersForCoreResults(coreResults,MODEL.b,MODEL.NUMBASIS,&resultChain);
-	const BEAST2_HyperPar  hyperPar={ .alpha_1=opt->prior.alpha1,.alpha_2=opt->prior.alpha2,
-										.del_1=opt->prior.delta1,.del_2=opt->prior.delta2};
+	const BEAST2_HyperPar  hyperPar={.alpha_1=opt->prior.alpha1,.alpha_2=opt->prior.alpha2,.del_1=opt->prior.delta1,.del_2=opt->prior.delta2};
 	InitTimerFunc();
 	StartTimer();
 	SetBreakPointForStartedTimer();
@@ -130,10 +130,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 		#define __END_IF_NOT_SKIP_TIMESESIRIES__                        
 		__START_IF_NOT_SKIP_TIMESESIRIES__  
 		if (!skipCurrentPixel) {
-		if (q==1) {
+		if (q==1) {  
 				yInfo.YtY_plus_alpha2Q[0]=yInfo.YtY_plus_alpha2Q[0]+2 *hyperPar.alpha_2;
-				yInfo.alpha1_star=yInfo.n * 0.5+hyperPar.alpha_1;
-		}	else {
+				yInfo.alpha1_star=yInfo.n * 0.5+hyperPar.alpha_1;    
+		}	else {	
 				f32_add_val_matrixdiag(yInfo.YtY_plus_alpha2Q,hyperPar.alpha_2,q);
 				yInfo.alpha1_star=yInfo.n * 0.5+(hyperPar.alpha_1+q - 1) * 0.5;
 		}
@@ -146,6 +146,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,MAX_RAND_NUM,RNDGAMMA,( hyperPar.alpha_1+yInfo.n * 0.5f),0,1);
 		}
 		BEAST2_Result_FillMEM(&result,opt,0);		
+		ReInit_PrecValues(&MODEL,opt);
 		for ( U32 chainNumber=0;  chainNumber < MCMC_CHAINNUM; chainNumber++)
 		{
 			const I32  N=opt->io.N; 
@@ -159,7 +160,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				precFunc.GetXtXPrecDiag(&MODEL);        
 				CvtKnotsToBinVec(MODEL.b,MODEL.NUMBASIS,N,&yInfo);
 				if (q==1) {
-					BEAST2_EvaluateModel(&MODEL.curr,MODEL.b,Xt_mars,N,MODEL.NUMBASIS,&yInfo,&hyperPar,&opt->prior.precValue,&stream);
+					BEAST2_EvaluateModel(&MODEL.curr,MODEL.b,Xt_mars,N,MODEL.NUMBASIS,&yInfo,&hyperPar,&opt->prior.precValue,&stream); 
 				} else 	{
 					MR_EvaluateModel(    &MODEL.curr,MODEL.b,Xt_mars,N,MODEL.NUMBASIS,&yInfo,&hyperPar,&opt->prior.precValue,&stream);
 				}
@@ -197,8 +198,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 				BEAST2_BASIS_PTR basis=MODEL.b+MODEL.PickBasisID(&PROPINFO); 
 				basis->Propose(basis,&NEW,&NewCol,&PROPINFO); 
 				#ifdef __DEBUG__
-					I32 basisIdx=basis - MODEL.b;				 
-					flagSat[NEW.newKnot - 1]+=basisIdx==0 && (NEW.jumpType==BIRTH||NEW.jumpType==MOVE);					
+					I32 basisIdx=basis - MODEL.b;		
+					flagSat[NEW.newKnot - 1]+=basisIdx==0 && (NEW.jumpType==BIRTH||NEW.jumpType==MOVE);					 
+					if (basisIdx==0)++(flagS[NEW.jumpType]);
+					else++(flagT[NEW.jumpType]); 
 				#endif
 				I32 Knewterm=0;				
 				for (I32 i=0; i < NEW.numSeg; i++) { 
@@ -206,10 +209,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 					Knewterm+=kterms;
 				} 
 				NewCol.k2_new=NewCol.k1+Knewterm - 1L;	
-				NewCol.k1+=basis->Kbase;			
+				NewCol.k1+=basis->Kbase;		
 				NewCol.k2_old+=basis->Kbase;
 				NewCol.k2_new+=basis->Kbase;
-				I32 KOLD=MODEL.curr.K;                   
+				I32 KOLD=MODEL.curr.K;                         
 				I32 KNEW=KOLD+NewCol.k2_new - NewCol.k2_old; 
 				NewCol.Knewterm=Knewterm;
 				NewCol.KOLD=KOLD;
@@ -218,7 +221,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				f32_mat_multirows_extract_set_by_scalar(Xnewterm,Npad,Knewterm,Xt_zeroBackup,yInfo.rowsMissing,yInfo.nMissing,0.0f);
 				if (!GROUP_MatxMat) {
 					update_XtX_from_Xnewterm(Xt_mars,Xnewterm,MODEL.curr.XtX,MODEL.prop.XtX,&NewCol);
-					update_XtY_from_Xnewterm(Xt_mars,Xnewterm,yInfo.Y,MODEL.curr.XtY,MODEL.prop.XtY,&NewCol,q);
+					update_XtY_from_Xnewterm(yInfo.Y,Xnewterm,MODEL.curr.XtY,MODEL.prop.XtY,&NewCol,q);
 				}
 				else {
 					for (I32 i=1; i < NewCol.k1; i++) SCPY(i,MODEL.curr.XtX+(i - 1L) * KOLD,MODEL.prop.XtX+(i - 1L) * KNEW);
@@ -268,7 +271,6 @@ int beast2_main_corev4_mthrd(void* dummy)
 						}
 					} 
 				}
-				MODEL.prop.K=KNEW;
 				if (1L) {		
 					for (I32 i=1; i<NewCol.k1; i++) 
 						SCPY(i,MODEL.curr.cholXtX+(i-1)*KOLD,MODEL.prop.cholXtX+(i-1)*KNEW);
@@ -276,10 +278,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 					precFunc.chol_addCol(  MODEL.prop.XtX+(NewCol.k1-1)*KNEW,
 							               MODEL.prop.cholXtX,
 							               MODEL.prop.precXtXDiag,KNEW,NewCol.k1,KNEW);
-					MODEL.prop.K=KNEW;  
+				   MODEL.prop.K=KNEW;
 				   precFunc.ComputeMargLik(&MODEL.prop,&MODEL,&yInfo,&hyperPar);
 				   if ( IsNaN(MODEL.prop.marg_lik)||IsInf(MODEL.prop.marg_lik ) ) {
-					   if (++numBadIterations < 20) {
+					   if (++numBadIterations < 15) {
 						   precFunc.IncreasePrecValues(&MODEL);
 						   precFunc.GetXtXPrecDiag(&MODEL);
 						   precFunc.chol_addCol(MODEL.curr.XtX,MODEL.curr.cholXtX,MODEL.curr.precXtXDiag,MODEL.curr.K,1L,MODEL.curr.K);
@@ -293,7 +295,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 					   numBadIterations=0;
 				   } 
 				   if (q==1) {
-					   MODEL.prop.alpha2_star=max(MODEL.prop.alpha2_star,MIN_ALPHA2_VALUE);
+					   MODEL.prop.alpha2Q_star[0]=max(MODEL.prop.alpha2Q_star[0],MIN_ALPHA2_VALUE);
 				   }
 				}
 				F32  factor;				
@@ -334,10 +336,9 @@ int beast2_main_corev4_mthrd(void* dummy)
 						Exchange(curr.XtY,prop.XtY);
 						Exchange(curr.beta_mean,prop.beta_mean);
 						Exchange(curr.cholXtX,prop.cholXtX);
-						Exchange(curr.precXtXDiag,prop.precXtXDiag);
+						Exchange(curr.precXtXDiag,prop.precXtXDiag);        
 						Exchange(curr.nTermsPerPrecGrp,prop.nTermsPerPrecGrp);   
-						if (q==1) MODEL.curr.alpha2_star=MODEL.prop.alpha2_star; 
-						else 	    Exchange(curr.alphaQ_star,prop.alphaQ_star);    
+						Exchange(curr.alpha2Q_star,prop.alpha2Q_star);           
 						MODEL.curr.marg_lik=MODEL.prop.marg_lik;
 						MODEL.curr.K=MODEL.prop.K;  
 						#undef Exchange											
@@ -350,18 +351,17 @@ int beast2_main_corev4_mthrd(void* dummy)
 					}
 					#endif
 				} 
-				if (ite <=MCMC_BURNIN) continue;
-				U08 bResampleParameter=(ite%20==0);
-				U08 bStoreCurrentSample=(ite%MCMC_THINNING==0);
+				U08 bResampleParameter=(ite >=100)         && (ite%20==0)     ; 
+				U08 bStoreCurrentSample=(ite > MCMC_BURNIN) && (ite%MCMC_THINNING==0);
 				if (bResampleParameter||bStoreCurrentSample)	{		
 					if (q==1) {
-						MODEL.sig2=(*RND.rndgamma++) * 1.f/MODEL.curr.alpha2_star;
-						MODEL.sig2=1.0f/MODEL.sig2;
-						MODEL.sig2=max(MODEL.sig2,MIN_SIG2_VALUE);
+						F32 sig2=(*RND.rndgamma++) * 1.f/MODEL.curr.alpha2Q_star[0];
+						sig2=1.0f/sig2;					 
+						MODEL.sig2[0]=sig2 > MIN_SIG2_VALUE ? sig2 : MODEL.sig2[0];
 					}	else {
 						F32PTR MEMBUF=Xnewterm;
-						local_pcg_invwishart_upper( &stream,MODEL.SIG2,MODEL.SIG2+q*q,MEMBUF,q,
-							                        MODEL.curr.alphaQ_star,hyperPar.alpha_1+yInfo.n+q - 1);					
+						local_pcg_invwishart_upper( &stream,MODEL.sig2,MODEL.sig2+q*q,MEMBUF,q,
+							                        MODEL.curr.alpha2Q_star,hyperPar.alpha_1+yInfo.n+q - 1);					
 					}
 				}
 				if (bResampleParameter||(bStoreCurrentSample && extra.useMeanOrRndBeta)) {
@@ -369,36 +369,19 @@ int beast2_main_corev4_mthrd(void* dummy)
 						I32 K=MODEL.curr.K;
 						r_vsRngGaussian(VSL_RNG_METHOD_GAUSSIAN_ICDF,stream,K,MODEL.beta,0,1);
 						solve_U_as_U_invdiag(MODEL.curr.cholXtX,MODEL.beta,K,K);
-						r_ippsMulC_32f_I(fastsqrt(MODEL.sig2),MODEL.beta,K);
+						r_ippsMulC_32f_I(fastsqrt(MODEL.sig2[0]),MODEL.beta,K);
 						r_ippsAdd_32f_I(MODEL.curr.beta_mean,MODEL.beta,K);
 					} else {
 						F32PTR MEMBUF=Xnewterm;
 						I32    K=MODEL.curr.K;
 						r_vsRngGaussian(VSL_RNG_METHOD_GAUSSIAN_ICDF,stream,K * q,MEMBUF,0.,1.);
-						r_cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,K,q,q,1.0,MEMBUF,K,MODEL.SIG2,q,0.f,MODEL.beta,K);
+						r_cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,K,q,q,1.0,MEMBUF,K,MODEL.sig2,q,0.f,MODEL.beta,K);
 						solve_U_as_U_invdiag_multicols(MODEL.curr.cholXtX,MODEL.beta,K,K,q);
 						r_ippsAdd_32f_I(MODEL.curr.beta_mean,MODEL.beta,K * q);
 					}
 				}
 				if (bResampleParameter && q==1) 
 				{
-			       #ifdef DEBUG_BEAST2
-					if (ite%10==0) {
-						 float sum=0;
-						 int   n=0;
-							r_printf("ite %d: ",ite);
-							for (int i=1; i <=MODEL.nPrec; i++) {
-								if (opt->prior.precPriorType < 2) {
-									sum+=MODEL.precVec[0];
-									n++;
-									r_printf("%7.4f|%7.4f ",MODEL.precVec[0],sum/n );
-								}								
-								else
-									r_printf("%7.4f ",MODEL.precVec[i - 1]);
-							}
-							r_printf("\n ");
-					}
-				   #endif
 					I32 ntries=0;
 					do {
 						if (ntries++==0)	precFunc.ResamplePrecValues(&MODEL,&hyperPar,&stream);							
@@ -419,14 +402,15 @@ int beast2_main_corev4_mthrd(void* dummy)
 				{
 					F32PTR MEMBUF=Xnewterm;					
 					I32    K=MODEL.curr.K;
-					r_cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,K,q,q,1.0,MODEL.beta,K,MODEL.SIG2+q*q,q,0.f,MEMBUF,K);
-					F32 sumq=DOT(K * q,MEMBUF,MEMBUF);
-					r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,1,MODEL.precVec,(hyperPar.del_1+K * q * 0.5f),0.f,1.f);
-					MODEL.precVec[0]=MODEL.precVec[0]/(hyperPar.del_2+0.5f * sumq);
-					MODEL.logPrecVec[0]=logf(MODEL.precVec[0]);
 					I32 ntries=0;
 					do {
-						if (ntries++!=0) {
+						if (ntries++==0) {
+							r_cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,K,q,q,1.0,MODEL.beta,K,MODEL.sig2+q*q,q,0.f,MEMBUF,K);
+							F32 sumq=DOT(K * q,MEMBUF,MEMBUF);
+							r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,1L,MODEL.precVec,(hyperPar.del_1+K * q * 0.5f),0.f,1.f);
+							MODEL.precVec[0]=MODEL.precVec[0]/(hyperPar.del_2+0.5f * sumq);
+							MODEL.logPrecVec[0]=logf(MODEL.precVec[0]);
+						} else {
 							precFunc.IncreasePrecValues(&MODEL);
 						}
 						precFunc.GetXtXPrecDiag(&MODEL);
@@ -435,9 +419,9 @@ int beast2_main_corev4_mthrd(void* dummy)
 					} while (IsNaN(MODEL.curr.marg_lik) && ntries < 20);
 					if ( IsNaN(MODEL.curr.marg_lik) ) {
 						#if !(defined(R_RELEASE)||defined(M_RELEASE)) 
-						r_printf("skip4|prec: %.4f|marg_lik_cur: %.4f \n",MODEL.precVec[0],MODEL.curr.marg_lik);
+							r_printf("skip4|prec: %.4f|marg_lik_cur: %.4f \n",MODEL.precVec[0],MODEL.curr.marg_lik);
 						#endif
-						skipCurrentPixel=4;
+						skipCurrentPixel=3;
 						break;
 					}  
 				}
@@ -445,13 +429,13 @@ int beast2_main_corev4_mthrd(void* dummy)
 				sample++;
 				*resultChain.marg_lik+=MODEL.curr.marg_lik;
 				if (q==1) {
-					*resultChain.sig2+=MODEL.sig2;
+					resultChain.sig2[0]+=MODEL.sig2[0];
 				}	else {
 					F32PTR MEMBUF=Xnewterm;
-					r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,q,1.f,MODEL.SIG2,q,MODEL.SIG2,q,0.f,MEMBUF,q);
+					r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,q,1.f,MODEL.sig2,q,MODEL.sig2,q,0.f,MEMBUF,q);
 					r_ippsAdd_32f_I(MEMBUF,resultChain.sig2,q*q);
 				}
-				F32PTR BETA=extra.useMeanOrRndBeta==0 ? MODEL.curr.beta_mean : MODEL.beta;
+				F32PTR BETA=(extra.useMeanOrRndBeta==0) ? MODEL.curr.beta_mean : MODEL.beta;
 				{
 					F32PTR MEMBUF1=Xnewterm;					
 					for (I32 i=0; i < MODEL.NUMBASIS;++i) 
@@ -463,10 +447,10 @@ int beast2_main_corev4_mthrd(void* dummy)
 						result->xNProb[nKnot]+=1L;
 						for (I32 i=0; i < nKnot; i++) result->xProb[ KNOT[i]-1 ]+=1L;
 						if (result->xorder !=NULL) {
-							TORDER_PTR  orderList=basis->ORDER;
+							TORDER_PTR  ORDER=basis->ORDER;
 							for (I32 i=0; i <=nKnot;++i) {
 								I16 r1=KNOT[i-1],r2=KNOT[i]-1;
-								r_ippsAddC_32s_ISfs(orderList[i],result->xorder+r1 - 1,r2 - r1+1,0);							
+								r_ippsAddC_32s_ISfs(ORDER[i],result->xorder+r1 - 1,r2 - r1+1,0);
 							}
 						}
 						if (q==1) {
@@ -484,7 +468,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 						}
 					}
 				}
-				if(extra.computeSeasonAmp)
+				if(extra.computeSeasonAmp) 
 				{
 					F32PTR           MEMBUF1=Xnewterm+3*Npad;
 					F32PTR           MEMBUF2=MODEL.prop.beta_mean; 
@@ -597,13 +581,12 @@ int beast2_main_corev4_mthrd(void* dummy)
 					resultChain.opos_ncpPr[posKnotNum]+=1L;
 					resultChain.oneg_ncpPr[knotNum - posKnotNum]+=1L;								
 				}
-				if (extra.computeCredible) {
-					if (extra.fastCIComputation && !(*RND.rnd16++< ciParam.subsampleFraction_x_INT16MAX)) {
-					}
-					else {
-						for (int i=0; i < MODEL.NUMBASIS; i++)
-							InsertNewRowToUpdateCI(&ciParam,&ci[i]);
-					}
+				if (extra.computeCredible)	{ 	
+					if (extra.fastCIComputation &&  !(*RND.rnd16++< ciParam.subsampleFraction_x_INT16MAX)  ){
+					} else {
+						for (int i=0; i < MODEL.NUMBASIS; i++) 
+							InsertNewRowToUpdateCI(&ciParam,&ci[i]);						
+					}					
 				} 
 			}
 			if (!skipCurrentPixel)

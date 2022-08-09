@@ -6,7 +6,6 @@
 #include "globalvars.h"
 #include "abc_mcmc.h"
 #include "abc_ts_func.h"
-extern void InitPrecPriorMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers* MEM);
 typedef struct PREC_FUNC {
 	void (*IncreasePrecValues)(        BEAST2_MODEL_PTR model);
 	void (*GetNumTermsPerPrecGrp)(     BEAST2_MODEL_PTR model);

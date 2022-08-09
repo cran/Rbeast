@@ -100,7 +100,7 @@ void BEAST2_EvaluateModel(
 	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
 	F32 half_log_det_prior=-.5f * K*logf(precVec[0]);
 	F32 marg_lik=half_log_det_post - half_log_det_prior - yInfo->alpha1_star * logf(alpha2_star);
-	curmodel->alpha2_star=alpha2_star;
+	curmodel->alpha2Q_star[0]=alpha2_star;
 	curmodel->marg_lik=marg_lik;
 	return;
 }
@@ -330,10 +330,10 @@ void MR_EvaluateModel(
 	F32PTR beta_mean=curmodel->beta_mean;	
 	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,precVec,K,1,K);
 	solve_U_as_LU_invdiag_sqrmat_multicols(cholXtX,XtY,beta_mean,K,q);
-    r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,K,1.f,beta_mean,K,XtY,K,0.f,curmodel->alphaQ_star,q);
-	r_ippsSub_32f(curmodel->alphaQ_star,yInfo->YtY_plus_alpha2Q,curmodel->alphaQ_star,q * q);	
-	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',q,curmodel->alphaQ_star,q); 
-	F32 log_det_alphaQ=sum_log_diagv2(curmodel->alphaQ_star,q);	
+    r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,K,1.f,beta_mean,K,XtY,K,0.f,curmodel->alpha2Q_star,q);
+	r_ippsSub_32f(curmodel->alpha2Q_star,yInfo->YtY_plus_alpha2Q,curmodel->alpha2Q_star,q * q);
+	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',q,curmodel->alpha2Q_star,q); 
+	F32 log_det_alphaQ=sum_log_diagv2(curmodel->alpha2Q_star,q);
 	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
 	F32 half_log_det_prior=-.5f * K*logf(precVec[0]);
 	F32 marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * log_det_alphaQ*2.0f;

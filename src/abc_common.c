@@ -40,6 +40,9 @@ I32 strcicmp(char const * _restrict a,char const * _restrict b) {
 	}
 }
 I32 strcicmp_nfirst(char const* _restrict a,char const* _restrict b,int nfirst) {
+	if (nfirst==0) {
+		nfirst=strlen(a)+1;
+	}
 	int i=0;
 	for (;; a++,b++) {
 		I32 d=((*a)|(U08)32) - ((*b)|(U08)32);

@@ -36,6 +36,7 @@ I32 (*f32_maxidx)(const F32PTR  X,const  int N,F32PTR val);
 I32 (*f32_minidx)(const F32PTR  X,const int  N,F32PTR val);
 void (*f32_diff_back)(const F32PTR  X,F32PTR result,const int N);
 void (*f32_seq)(F32PTR p,F32 x0,F32 dX,int N);
+void (*i32_seq)(I32PTR p,I32 x0,I32 dX,int N);
 void (*f32_to_f64_inplace)(F32PTR data32,int N);
 void (*f64_to_f32_inplace)(F64PTR data64,int N);
 void (*i32_to_f32_scaleby_inplace)(I32PTR X,int N,F32 scale);
@@ -56,8 +57,9 @@ void  (*f32_gather2Vec_scatterVal_byindex)(F32PTR  x,F32PTR  y,I32PTR indices,F3
 void  (*f32_scale_inplace)(const F32 gain,const F32 offset,const F32PTR x,const int N);
 void  (*f32_hinge_neg)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
 void  (*f32_hinge_pos)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
-void  (*f32_step_neg)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
-void  (*f32_step_pos)(const F32PTR X,const F32PTR Y,const F32 knot,const int N);
+void  (*f32_step_neg)(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N);
+void  (*f32_step_pos)(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N);
+void  (*f32_axpy_inplace)(const F32 a,const F32PTR x,F32PTR y,const int N);
 void print_funcs() {
 	r_printf("\n\n"  );
 	r_printf("%s:%05x\n","i32_add_val_inplace",i32_add_val_inplace);
@@ -245,6 +247,7 @@ I32  i08_find_nth_onebyte_binvec(U08PTR binvec,I32 N,I32 nth)
 {
 	I32 nthPos;
 	I32 count=0;
+	I32 failed=1;
 	{
 		I32 i=0,N16=N/16;		
 		I32 deltaSum=0;
@@ -255,11 +258,17 @@ I32  i08_find_nth_onebyte_binvec(U08PTR binvec,I32 N,I32 nth)
 			*((I08PTR)&sum)+=*((I08PTR)&sum+1);
 			deltaSum=*((I08PTR)&sum);
 			count+=deltaSum;
-			if (count >=nth) break;
+			if (count >=nth) { 
+				failed=0;
+				break; 
+			}
 			binvec+=16;
 		}
 		count -=deltaSum;
 		nthPos=i * 16;
+	}
+	if (failed) {
+		return 0xffffffff;
 	}
 	{
 		I32 j;
@@ -566,6 +575,12 @@ int f32_normalize_multicols_zeroout_nans(F32PTR Y,I32PTR BadRowIndices,I32 ldy,I
 		Y=Y+ldy;
 	}
 	return nMissing;
+}
+void f32_normalize_std_avg_inplace(F32PTR X,I32 N,F32PTR avg,F32PTR std) {
+	f32_avgstd(X,N,avg,std);
+	F32 gain=1/std[0];
+	F32 offset=-avg[0]/std[0];  
+	f32_scale_inplace(gain,offset,X,N);
 }
 void f32_normalize_inplace(F32PTR X,I32 N) {
 	F32 avg,std;

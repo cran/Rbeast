@@ -296,33 +296,25 @@ typedef struct {
 	F32PTR XtX,XtY,cholXtX,beta_mean;
 	F32PTR precXtXDiag;
 	I16PTR nTermsPerPrecGrp;
-	union {
-		F32      alpha2_star;
-		F32PTR   alphaQ_star; 
-	};
+	F32PTR   alpha2Q_star;  
 	F32    marg_lik;
 	I32    K;
 } BEAST2_MODELDATA,*_restrict  BEAST2_MODELDATA_PTR;
 typedef struct BEAST2_MODEL {
 	I32 (*PickBasisID)(PROP_DATA_PTR );
-	F32PTR beta;
-	union {
-		F32	    sig2;
-		F32PTR  SIG2; 
-	};
+	F32PTR  beta;	
+	F32PTR	sig2; 
 	I08PTR08 extremePosVec;
 	F32PTR   deviation;
 	F32PTR   avgDeviation;  
 	I32      extremPosNum;
 	I16     nPrec;
 	F32PTR  precVec;
-	F32PTR  logPrecVec;
-	F32     precVal;        
-	F32     logPrecVal;     
+	F32PTR  logPrecVec;	
 	BEAST2_MODELDATA curr,prop;
-	I08          NUMBASIS;
+	I32          NUMBASIS;
 	I08          vid,did,sid,tid,oid;
-	BEAST2_BASIS b[MAX_NUM_BASIS];	
+	BEAST2_BASIS *b;	
 } BEAST2_MODEL,* _restrict BEAST2_MODEL_PTR;
 typedef struct {
 	I32              minSepDist;
@@ -331,3 +323,4 @@ typedef struct {
 #elif defined(SOLARIS_COMPILER)
 #include "beastv2_header_solaris.h"
 #endif
+#define AggregatedMemAlloc 1L

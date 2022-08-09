@@ -1,8 +1,7 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 #include "beastv2_header.h"
-static void DD_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis)
-{
+static void DD_CalcBasisKsKeK_prec0123(BEAST2_BASIS_PTR  basis) {
 	I32		   period=basis->bConst.dummy.period; 
 	TKNOT_PTR  KNOT=basis->KNOT;
 	I16PTR     KS=basis->ks;

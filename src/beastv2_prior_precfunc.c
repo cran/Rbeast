@@ -12,69 +12,7 @@
 #include "globalvars.h"
 #include "beastv2_header.h"
 #include "beastv2_prior_precfunc.h" 
-void InitPrecPriorMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers * MEM) {
-	#define MODEL (*model)
-	I08 precType=opt->prior.precPriorType;
-	if (precType==ConstPrec||precType==UniformPrec) {
-		MODEL.nPrec=1L;    
-		MODEL.precVal=opt->prior.precValue;	
-		MODEL.logPrecVal=logf(MODEL.precVal);
-		MODEL.precVec=&(MODEL.precVal);
-		MODEL.logPrecVec=&(MODEL.logPrecVal);
-		MODEL.curr.precXtXDiag=&MODEL.precVal; 
-		MODEL.prop.precXtXDiag=&MODEL.precVal;
-		for (int i=0; i < MODEL.NUMBASIS; i++) {
-			MODEL.b[i].nPrec=-9999L;
-			MODEL.b[i].offsetPrec=-9999L;
-		}	
-		MODEL.curr.nTermsPerPrecGrp=NULL;
-		MODEL.prop.nTermsPerPrecGrp=NULL;
-	}
-	else if (precType==ComponentWise)
-	{
-		MODEL.nPrec=MODEL.NUMBASIS;     
-		MODEL.precVec=MyALLOC(*MEM,MODEL.nPrec*2,F32,0);
-		MODEL.logPrecVec=MODEL.precVec+MODEL.nPrec;
-		F32 precValue=opt->prior.precValue;
-		r_ippsSet_32f(precValue,MODEL.precVec,MODEL.nPrec);
-		r_ippsSet_32f(logf(precValue),MODEL.logPrecVec,MODEL.nPrec);
-		I32 K_MAX=opt->prior.K_MAX;
-		MODEL.curr.precXtXDiag=MyALLOC(*MEM,K_MAX * 2,F32,64);
-		MODEL.prop.precXtXDiag=MODEL.curr.precXtXDiag+K_MAX;
-		for (int i=0; i < MODEL.NUMBASIS; i++) {
-			BEAST2_BASIS_PTR b=MODEL.b+i;
-			b->nPrec=-9999L;
-			b->offsetPrec=-9999L;
-		}
-		MODEL.curr.nTermsPerPrecGrp=MyALLOC(*MEM,MODEL.nPrec * 2,I16,0);
-		MODEL.prop.nTermsPerPrecGrp=MODEL.curr.nTermsPerPrecGrp+MODEL.nPrec;
-	}
- 	else if (precType==OrderWise)
-	{
-		I32    cumsum=0;
-		for (int i=0; i < MODEL.NUMBASIS; i++) {
-			BEAST2_BASIS_PTR b=MODEL.b+i;
-			if      (b->type==SEASONID)		b->nPrec=b->prior.maxOrder;
-			else if (b->type==DUMMYID)		b->nPrec=b->bConst.dummy.period;
-			else if (b->type==SVDID)		    b->nPrec=b->prior.maxOrder;
-			else if (b->type==TRENDID)		b->nPrec=b->prior.maxOrder+1;
-			else if (b->type==OUTLIERID) 	b->nPrec=1;
-			b->offsetPrec=cumsum;
-			cumsum+=b->nPrec;
-		}
-		MODEL.nPrec=cumsum;
-		MODEL.precVec=MyALLOC(*MEM,MODEL.nPrec * 2,F32,64); 
-		MODEL.logPrecVec=MODEL.precVec+MODEL.nPrec;
-		F32 precValue=opt->prior.precValue;
-		r_ippsSet_32f(precValue,MODEL.precVec,MODEL.nPrec);
-		r_ippsSet_32f(logf(precValue),MODEL.logPrecVec,MODEL.nPrec);
-		MODEL.curr.nTermsPerPrecGrp=MyALLOC(*MEM,MODEL.nPrec * 2,I16,64); 	
-		MODEL.prop.nTermsPerPrecGrp=MODEL.curr.nTermsPerPrecGrp+MODEL.nPrec;
-		I32 K_MAX=opt->prior.K_MAX;
-		MODEL.curr.precXtXDiag=MyALLOC(*MEM,K_MAX * 2,F32,64);
-		MODEL.prop.precXtXDiag=MODEL.curr.precXtXDiag+K_MAX;
-	}
-}
+#define MODEL (*model)
 void GetNumTermsPerPrecGrp_prec01(BEAST2_MODEL_PTR model) {
 	return;
 }
@@ -199,7 +137,7 @@ void ResamplePrecValues_prec1(BEAST2_MODEL_PTR model,BEAST2_HyperPar *hyperPar,V
 	I32 K=MODEL.curr.K;
 	F32 sumq=DOT(K,MODEL.beta,MODEL.beta);
 	r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,(*(VSLStreamStatePtr*)stream),1L,model->precVec,(hyperPar->del_1+K * 0.5f),0,1.f);
-	F32 newPrecVal=model->precVec[0]/(hyperPar->del_2+0.5f * sumq/model->sig2);
+	F32 newPrecVal=model->precVec[0]/(hyperPar->del_2+0.5f * sumq/model->sig2[0]);
 	model->precVec[0]=newPrecVal > MIN_PREC_VALUE? newPrecVal: MIN_PREC_VALUE;
 	model->logPrecVec[0]=logf(model->precVec[0]);
 }
@@ -211,7 +149,7 @@ void ResamplePrecValues_prec2(BEAST2_MODEL_PTR model,BEAST2_HyperPar *hyperPar,V
 			if (K <=0) continue;
 			F32		sumq=DOT(K,beta,beta);
 			r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,(*(VSLStreamStatePtr*)stream),1,&(MODEL.precVec[id]),(hyperPar->del_1+K * 0.5f),0,1.f);
-			F32 newPrecVal=MODEL.precVec[id]/(hyperPar->del_2+0.5f * sumq/MODEL.sig2);
+			F32 newPrecVal=MODEL.precVec[id]/(hyperPar->del_2+0.5f * sumq/MODEL.sig2[0]);
 			MODEL.precVec[id]=newPrecVal > MIN_PREC_VALUE ? newPrecVal : MIN_PREC_VALUE;
 			MODEL.logPrecVec[id]=logf(MODEL.precVec[id]);	
 		}		
@@ -233,7 +171,7 @@ void ResamplePrecValues_prec3(BEAST2_MODEL_PTR model,BEAST2_HyperPar *hyperPar,V
 			}
 			if (K > 0) {
 				r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,(*(VSLStreamStatePtr*)stream),1,&prec[i - 1],(hyperPar->del_1+K * 0.5f),0,1.f);
-				F32 newPrecVal=prec[i - 1]/(hyperPar->del_2+0.5f * sumq/MODEL.sig2);
+				F32 newPrecVal=prec[i - 1]/(hyperPar->del_2+0.5f * sumq/MODEL.sig2[0]);
 				prec[i - 1]=newPrecVal > MIN_PREC_VALUE ? newPrecVal : MIN_PREC_VALUE;
 				logPrec[i - 1]=logf(prec[i - 1]);
 			}
@@ -278,9 +216,9 @@ void ComputeMargLik_prec01(BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,BEAS
 	 solve_U_as_LU_invdiag_sqrmat(data->cholXtX,data->XtY,data->beta_mean,K);
 	F32 alpha2_star=(yInfo->YtY_plus_alpha2Q[0] - DOT(K,data->XtY,data->beta_mean))*0.5;
 	F32 half_log_det_post=sum_log_diagv2(data->cholXtX,K);
-	F32 half_log_det_prior=-0.5f*model->logPrecVal*K;		
+	F32 half_log_det_prior=-0.5f*model->logPrecVec[0] * K;
 	F32 marg_lik=half_log_det_post  -half_log_det_prior	- yInfo->alpha1_star * fastlog(alpha2_star);
-	data->alpha2_star=alpha2_star;
+	data->alpha2Q_star[0]=alpha2_star;
 	data->marg_lik=marg_lik;
 }
 void ComputeMargLik_prec23(BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,BEAST2_YINFO_PTR yInfo, 
@@ -294,7 +232,7 @@ void ComputeMargLik_prec23(BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,BEAS
 		half_log_det_prior+=model->logPrecVec[i] * data->nTermsPerPrecGrp[i];
 	half_log_det_prior *=-0.5;
 	F32 marg_lik=half_log_det_post - half_log_det_prior -yInfo->alpha1_star * fastlog(alpha2_star);
-	data->alpha2_star=alpha2_star;
+	data->alpha2Q_star[0]=alpha2_star;
 	data->marg_lik=marg_lik;
 }
 void MR_ComputeMargLik_prec01(BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,BEAST2_YINFO_PTR yInfo,
@@ -305,12 +243,12 @@ void MR_ComputeMargLik_prec01(BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,B
 	solve_U_as_LU_invdiag_sqrmat_multicols(data->cholXtX,data->XtY,data->beta_mean,K,q);
 	F32PTR beta_mean=data->beta_mean;
 	F32PTR XtY=data->XtY;
-	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,K,1.f,beta_mean,K,XtY,K,0.f,data->alphaQ_star,q);
-	r_ippsSub_32f(data->alphaQ_star,yInfo->YtY_plus_alpha2Q,data->alphaQ_star,q * q);
+	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,K,1.f,beta_mean,K,XtY,K,0.f,data->alpha2Q_star,q);
+	r_ippsSub_32f(data->alpha2Q_star,yInfo->YtY_plus_alpha2Q,data->alpha2Q_star,q * q);
 	F32 half_log_det_post=sum_log_diagv2(data->cholXtX,K);
-	F32 half_log_det_prior=-0.5f * K * model->logPrecVal;
-	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',q,data->alphaQ_star,q); 
-	F32 sumLn_alphaQ_det=sum_log_diagv2(data->alphaQ_star,q);
+	F32 half_log_det_prior=-0.5f * K * model->logPrecVec[0];
+	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',q,data->alpha2Q_star,q); 
+	F32 sumLn_alphaQ_det=sum_log_diagv2(data->alpha2Q_star,q);
 	data->marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * sumLn_alphaQ_det*2.f; 	 
 }
 void SetUpPrecFunctions(I08 precPriorType,I32 q,PREC_FUNCS * funcs) {

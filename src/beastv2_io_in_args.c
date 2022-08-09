@@ -674,7 +674,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	if (m.trendMaxKnotNum)   o.trendMaxKnotNum=min( floor(N/(o.trendMinSepDist+1) - 1.f),10); o.trendMaxKnotNum=min(o.trendMaxKnotNum,floor(N/(o.trendMinSepDist+1) - 1.f));	
 	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum=o.trendMaxKnotNum;                                  o.outlierMaxKnotNum=max(o.outlierMaxKnotNum,1L); 
 	if (m.K_MAX )            o.K_MAX=500;                  
-	if (m.sigFactor)         o.sigFactor=1.8;            o.sigFactor=min(o.sigFactor,1.02);
+	if (m.sigFactor)         o.sigFactor=1.8;            o.sigFactor=max(o.sigFactor,1.02);
 	if (m.outlierSigFactor)  o.outlierSigFactor=2.5;            o.outlierSigFactor=max(o.outlierSigFactor,1.5);
 	if (m.sig2 )             o.sig2=0.2f;				  o.sig2=max(o.sig2,0.01);
 	if (m.precValue)         o.precValue=1.5f;				  o.precValue=max(o.precValue,0.01);

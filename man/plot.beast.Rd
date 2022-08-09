@@ -9,7 +9,7 @@
 \method{plot}{beast}(
      x, 
      index = 1,
-     vars  = c('st','s','scp','sorder','t','tcp','torder','slpsgn','o','ocp','error'),  
+     vars  = c('y','s','scp','sorder','t','tcp','torder','slpsgn','o','ocp','error'),  
      col         = NULL, 
      main        = "BEAST decomposition and changepoint detection",
      xlab        = 'Time',
@@ -27,7 +27,7 @@
   
   \item{index}{an integer (default to 1 ) or a vector of two integers to specify the index of the time series to plot if \code{x} contains results for multiple time series. \code{index} is always 1 if \code{x} has 1 time series. If \code{x} is returned by \code{\link[Rbeast]{beast123}} with a 2D input,\code{index} should be a single integer. If \code{x} is from \code{\link[Rbeast]{beast123}} applied to 3D arrays of time series (e.g., stacked satellite images), \code{index} can be a linear index or two subscripts to specify the row and column of the pixel/grid.}
   
-  \item{vars}{a vector of strings indicating the elements or variables of \code{x} to plot. Possible vars strings include 'st' (season plus trend), 's' (season component), 't' (trend component), 'o' (outliers), 'scp', 'tcp', 'ocp'  (occurrence probability of seasonal/trend/outlier changepoint), 'sorder' (seasonal harmonic order), 'torder' (trend polynomial order), 'samp' (amplitude of seasonality), 'tslp' (slope of trend), 'slpsgn' (probabilities of the slope being positive, zero, and negative) and 'error' (remainder).}
+  \item{vars}{a vector of strings indicating the elements or variables of \code{x} to plot. Possible vars strings include 'y' (season plus trend), 's' (season component), 't' (trend component), 'o' (outliers), 'scp', 'tcp', 'ocp'  (occurrence probability of seasonal/trend/outlier changepoint), 'sorder' (seasonal harmonic order), 'torder' (trend polynomial order), 'samp' (amplitude of seasonality), 'tslp' (slope of trend), 'slpsgn' (probabilities of the slope being positive, zero, and negative) and 'error' (remainder).}
   
   \item{relative.heights}{a numeric vector of the same length as that of \code{vars} to specify the relative heights of subplots of individual variables in \code{vars}. }
   

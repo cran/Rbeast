@@ -247,7 +247,7 @@
 library(Rbeast)
 \donttest{
 
-#################################Example 1############################################
+#------------------------------------Example 1----------------------------------------#
 # 'googletrend_beach' is the monthly Google search popularity of 'beach' in the US 
 #  from 2004 to 2022, obtained from Google Trends. Sudden changes in the time series
 # coincide with known extreme  weather events (e.g., 2006 North American Blizzard, 2011
@@ -262,7 +262,7 @@ library(Rbeast)
                                   # green to the prob of slope being zero, and the lower 
                                   # blue to the probability of slope being negative.
 
-#################################Example 1############################################
+#------------------------------------Example 2----------------------------------------#
 # Yellowstone is a half-monthly satellite time series of 774 NDVI(vegetation greeness) 
 # observations starting from July 1-15,1981(i.e., start=c(1981,7,7)) at a Yellowstone
 # site. It has 24 data points per year (i.e., freq=24). Note that the beast function 
@@ -283,7 +283,7 @@ library(Rbeast)
  out = beast(Yellowstone)   # the times assumed to be 1:length(Yellowstone) by default
  plot(out)
 
-#################################Example 2############################################
+#------------------------------------Example 3----------------------------------------#
 # The time info such as start,delta,and freq is explicitly provided. 'start' can be 
 # given as (1) a vector comprising year, month,& day, (2) a fractional number, or (3)
 # a R's Date. The unit of start and deltat does not necessarily refer to time and can 
@@ -296,7 +296,7 @@ library(Rbeast)
 
  print(o)                           # o is a R LIST object with many fields
  plot(o)                            # plot many variables 
- plot(o, vars=c('st','s','t') )     # plot the Y, seasonal, and trend components only
+ plot(o, vars=c('y','s','t') )      # plot the Y, seasonal, and trend components only
  plot(o, vars=c('s','scp','samp','t','tcp','tslp'))# plot some selected variables in 
                                                    # 'o'. Type "?plot.beast" to see 
                                                    # more about vars
@@ -314,7 +314,7 @@ library(Rbeast)
 
 \donttest{
 
-#################################Example 3############################################
+#------------------------------------Example 4----------------------------------------#
 # Specify other arguments explicitly.  Default values are used for missing parameters.
 # Note that beast(), beast.irreg(), and beast123() call the same internal C/C++ library,
 # so in beast(), the input parameters will be converted to metadata, prior, mcmc, and 
@@ -348,7 +348,7 @@ library(Rbeast)
  plot(out, interactive=TRUE)
  }
  
-#################################Example 4############################################
+#------------------------------------Example 5----------------------------------------#
 # Run an interactive GUI to visualize how BEAST is samplinig from the possible model 
 # spaces in terms of the numbers and timings of seasonal and trend changepoints.
 # The GUI inferface allows changing the option parameters interactively. This GUI is 
@@ -358,7 +358,7 @@ library(Rbeast)
  beast(Yellowstone, freq=24, gui=TRUE) 
 }
 
-######################################################################################
+#------------------------------------Example 6----------------------------------------#
 # Apply beast to trend-only data. 'Nile' is the ANNUAL river flow of the river
 # Nile at Aswan since 1871. It is a 'ts' object; its time attributes (start=1871, 
 # end=1970,frequency=1) are used to replace the user-supplied start,deltat, and freq, 
@@ -379,30 +379,32 @@ library(Rbeast)
 		   )
 } 
  
-#################################Example 5############################################
+#------------------------------------Example 7----------------------------------------#
 # NileVec is  a pure data vector. The first run below is WRONG bcz NileVec was assumed
 # to have a perodic component by default and beast gets a best estimate of freq=6 while 
 # the true value is freq=1. To fit a trend-only model, season='none' has to be explicitly
 # specified, as in the 2nd & 3rd funs.
 \donttest{
  NileVec = as.vector(Nile) # NileVec is not a ts obj but a pure numeric data vector
- o       = beast(NileVec)  # ERROR: No time attributes available to interpret NileVec. 
-                           # By default, beast assumes season='harmonic', start=1, and
-                           # deltat=1. 'freq' is missing and guessed to be 6 (WRONG).    
- plot(o)          
+ o       = beast(NileVec)  # WRONG WAY to call: No time attributes available to interpret 
+                           # NileVec. By default, beast assumes season='harmonic', start=1,
+                           # & deltat=1. 'freq' is missing and guessed to be 6 (WRONG).    
+						   
+ plot(o)                   # WRONG Results: The result has a suprious seasonal component 
 							  
- o=beast(NileVec,season='none') # Use season='none' for trend-only analysis; the default
-                                # time is the indices '1:length(NileVec)'. 
+ o=beast(NileVec,season='none') # Correct WAY to call: Use season='none' for trend-only 
+                                # analysis; the default time is the integer indices
+                                # "1:length(NileVec)'. 
 								
- o=beast(NileVec,               # The true time attributes, if needed, has to be given 
-         start  = 1871,         # explicitly thru start and deltat (or freq if there is
-         deltat = 1,            # a  cyclic cmpnt). 
+ o=beast(NileVec,               # Recommended WAY to call: The true time attributes are 
+         start  = 1871,         # given explicitly through start and deltat (or freq if 
+         deltat = 1,            # there is a  cyclic/seasonal cmponent). 
          season = 'none')                                                
  plot(o)
 }
 
 
-#################################Example 6############################################
+#------------------------------------Example 8----------------------------------------#
 # beast can handle missing data. co2 is a monthly time series (i.e.,freq=12) starting
 # from Jan 1959. We generate some missing values at random indices
  
@@ -426,7 +428,7 @@ library(Rbeast)
 
 
 
-#################################Example 7############################################
+#------------------------------------Example 9----------------------------------------#
 # Apply beast to time seris-like sequence data: the unit of sequences is not 
 # necessarily time.
  
@@ -442,7 +444,7 @@ library(Rbeast)
 } 
 
 
-#################################Example 8############################################
+#------------------------------------Example 10---------------------------------------#
 # Apply beast to time seris-like data: the unit of sequences is not necessarily time.
  
 \donttest{
@@ -460,7 +462,7 @@ library(Rbeast)
 } 
 
  
-#################################Example 9############################################
+#------------------------------------Example 11---------------------------------------#
 # Another example from the tsdl data library
  
 
@@ -481,7 +483,7 @@ library(Rbeast)
   
 }
 
-#################################Example 10############################################
+#------------------------------------Example 12---------------------------------------#
 #    Daily confirmed COVID-19 new cases and deaths across the globe
  
  \dontrun{
@@ -504,14 +506,14 @@ library(Rbeast)
  
  }
  
-#################################Example11############################################
-# The old API interface of beast is still made available but not recommended. It is 
+#------------------------------------Example 13---------------------------------------#
+# The old API interface of beast is still made available but NOT recommended. It is 
 # kept mainly to ensure the working of the sample code on Page 475 in the text
 # Ecological Metods by Drs. Southwood and Henderson.
 
 \dontrun{
 
-  # The interface as shown here will be deprecated and not recommended.
+  # The interface as shown here will be deprecated and NOT recommended.
   beast(Yellowstone, 24)  #24 is the freq: number of datapoints per period
   
    

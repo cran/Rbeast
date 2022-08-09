@@ -2,7 +2,7 @@
 plot.beast<-function(
   x, 
   index = 1,
-  vars  = c('st','s','scp','sorder','t','tcp','torder','slpsgn','o','ocp','error'),  
+  vars  = c('y','s','scp','sorder','t','tcp','torder','slpsgn','o','ocp','error'),  
   col   = NULL, 
   main  ="BEAST decomposition and changepoint detection",
   xlab  ='Time',
@@ -31,8 +31,8 @@ plot.beast<-function(
   }
  
    
-  #vars = c('st','s','scp','sorder','t','tcp','torder','error')  
-  #vars = c('st','s','scp','sorder','samp','t','tcp','torder', 'tslp','o','ocp','error'),  
+  #vars = c('y','s','scp','sorder','t','tcp','torder','error')  
+  #vars = c('y','s','scp','sorder','samp','t','tcp','torder', 'tslp','o','ocp','error'),  
   #col  = NULL 
   #main ="BEAST decomposition and changepoint detection"
   #xlab ='Time'
@@ -43,14 +43,14 @@ plot.beast<-function(
   #interactive=FALSE 
   
   vars     = tolower(vars)
-  vars_log = vars=='st'|vars=='s'|vars=='t'|vars=='scp'|vars=='tcp'|vars=='sorder'|vars=='torder'|vars=='error'|vars=='o'|vars=='ocp'|vars=='samp'|vars=='tslp'|vars=='slpsgn';  
+  vars_log = vars=='y'|vars=='s'|vars=='t'|vars=='scp'|vars=='tcp'|vars=='sorder'|vars=='torder'|vars=='error'|vars=='o'|vars=='ocp'|vars=='samp'|vars=='tslp'|vars=='slpsgn';  
   vars     = vars[vars_log]
   
   if (length(ylab)== length(vars_log)){  
     ylab = ylab[vars_log]
   } else{
     ylab = vector(mode='character',length(vars))
-    ylab[vars=='st']  ='Y'
+    ylab[vars=='y']  ='Y'
     ylab[vars=='s']   ='season'
     ylab[vars=='t']   ='trend'
     ylab[vars=='o']   ='outlier'
@@ -69,7 +69,7 @@ plot.beast<-function(
     col = col[vars_log]
   } else{
     col = vector(mode='character',length(vars))
-    col[vars=='st']    ='#111111'
+    col[vars=='y']    ='#111111'
     col[vars=='s']     ='red'
     col[vars=='scp']   ='red'
     col[vars=='sorder']='red'
@@ -90,7 +90,7 @@ plot.beast<-function(
   } else{
     heights = (1:length(vars))
     heights =heights-heights+1
-    heights[vars=='st']=.8
+    heights[vars=='y']=.8
     heights[vars=='s']= .8
     heights[vars=='t']=.8
     heights[vars=='o']=.8
@@ -117,11 +117,12 @@ plot.beast<-function(
   idx =1:length(vars) > 0
   if(!hasAmp)      {  idx   = idx & !(vars=='samp')}
   if(!hasSlp)      {  idx   = idx & !(vars=='tslp'|vars=='slpsgn')}
-  if(!hasSeason)   {  idx   = idx & !(vars=='st'|vars=='s'|vars=='sorder'|vars=='scp') }
+  if(!hasSeason)   {  idx   = idx & !(vars=='s'|vars=='sorder'|vars=='scp') }
   if(!hasHarmonic) {  idx   = idx & !(vars=='sorder') }
   if(!hasTOrder)   {  idx   = idx & !(vars=='torder') }
-  if(!hasOutlier)  {  idx   =  idx &!(vars=='o'|vars=='ocp') }
-  if(!hasData)     {  idx   =  idx &!(vars=='error') }
+  if(!hasOutlier)  {  idx   = idx & !(vars=='o'|vars=='ocp') }
+  if(!hasData)     {  idx   = idx & !(vars=='error') }
+  if(!hasSeason && !hasOutlier)   {  idx = idx & !(vars=='y') }
   
   col         = col[idx]
   vars        = vars[idx]
@@ -132,7 +133,7 @@ plot.beast<-function(
  
   
   if(nPlots==0){
-    stop("No valid variable names speciffied int the 'vars' argument. Possible names include 'st','t','s','sorder','torder','scp','tcp','samp','tslp','slpsgn','o', 'ocp', and 'error'. ");
+    stop("No valid variable names speciffied int the 'vars' argument. Possible names include 'y','t','s','sorder','torder','scp','tcp','samp','tslp','slpsgn','o', 'ocp', and 'error'. ");
   }
   
   #######################################################
@@ -169,7 +170,7 @@ plot.beast<-function(
   cpChange=0
   HasChangePoint=FALSE;
   
-  ":" = function(i,j){ if(i>j){return(NULL)} ;  seq(i,j) }
+  ":" = function(i,j){ if(i>j){return(NULL)} ; seq(i,j) }
   
   Yts   = 0
   YtsSD = 0
@@ -177,7 +178,7 @@ plot.beast<-function(
   
   get.Yts  = function(){
     SD2   = 0
-    sig2 = x$sig2[1]
+    sig2  = x$sig2[1]
   
     Yts   <<- x$trend$Y
 	SD2    = x$trend$SD^2 +sig2
@@ -198,7 +199,7 @@ plot.beast<-function(
   get.T      = function(){
     Y  <<-x$trend$Y;
     SD <<-c(Y-x$trend$SD,  rev(Y+x$trend$SD)); 
-	if ( !is.null(x$trend$CI) )		CI <<-c(x$trend$CI[,1], rev(x$trend$CI[,2])) 
+	if ( !is.null(x$trend$CI) )	CI <<-c(x$trend$CI[,1], rev(x$trend$CI[,2])) 
     else                        CI <<-SD
     
     Slp         <<- x$trend$slp
@@ -445,7 +446,7 @@ plot.beast<-function(
     
     subplot(i,heights )
     
-    if (var=='st')    {  get.Yts();           plot.st(clr,    ytitle)  }
+    if (var=='y')    {  get.Yts();           plot.st(clr,    ytitle)  }
     if (var=='s' )    {  get.S(); get.scp();  plot.y(clr,     ytitle)  }
     if (var=='t' )    {  get.T(); get.tcp();  plot.y(clr,     ytitle)  }
     if (var=='scp')   {  get.S(); get.scp();  plot.prob(clr,  ytitle) }

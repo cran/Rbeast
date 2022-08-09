@@ -289,7 +289,7 @@
 
 \examples{
 
-######################################################################################
+#--------------------------------NOTE-------------------------------------------------#
 # beast123() is an all-inclusive function that duplicates the functionalities of beast 
 # and beast.irreg. It can handle a single, multiple, or 3D of stacked time series, being
 # either regular or irregular. It allows for customization through four LIST arguments:
@@ -297,15 +297,15 @@
 #   prior    -- prior parameters for the beast model 
 #   mcmc     -- MCMC simulation setting
 #   extra    -- misc parameters turning on/off outputs and setting up parallel computations
-
-# Despite being essentially the same as beast and beast.irreg, beast123 is provided mainly to
-# support concurrent handling of multiple time series (e.g., stacked satellite images) via
-# parallel computing: When processing stacked raster layers, do not iterate pixels using 
-# beast or beast.irreg via an external parallel caller (e.g., doParallel or foreach). Instread
-# use beast123, which supports mulithreading internally. 
+#
+# Despite being essentially the same as beast and beast.irreg, beast123 is provided mainly
+# to support concurrent handling of multiple time series (e.g., stacked satellite images)
+# via parallel computing: When processing stacked raster layers, DO NOT iterate pixel by pixel
+# using beast() or beast.irreg() via an external parallel caller (e.g., doParallel or foreach).
+# Instread, please use beast123(), which supports mulithreading internally. 
 
  
-######################################################################################
+#------------------------------Example 1: one time series with seasonalty-------------#
 # Yellowstone is a half-monthly time series of  774 NDVI measurmments at a Yellowstone
 # site starting from July 1-15,1981(i.e., start=c(1981,7,7). It has 24 data points per 
 # year (freq=24).        
@@ -314,36 +314,37 @@
  data(Yellowstone)
  plot(Yellowstone)
 
-######################################################################################
-# The four option args are missing, so defalut values will be used, with some warning 
-# messages given to altert this. By default, the input Y is assumed to be regular with 
-# a seasonal component. The default values used will be printed out and they can serve 
-# as a template to customize the parameters.
+# Below, the four option args are missing, so defalut values will be used, with some 
+# warning messages given to altert this. By default, the input Y is assumed to be regular
+# with a seasonal component. The default arg values used will be printed out and they can
+# serve as a template to customize the parameters.
 \donttest{ 
  o = beast123(Yellowstone)
  plot(o)
 }
-######################################################################################
+
+#------------------------------Example 2: a trend-only time series-------------------#
 # Nile is an annual river flow time series (i.e., no periodic variation). So, season 
-# is set to 'none' for trend-only analysis. Default values are used for other 
-# missing options. Unlike the beast function, beast123 does NOT use the time attributes 
+# is set to 'none' to indicate trend-only analysis. Default values are used for other 
+# missing options. Unlike the beast() function, beast123 does NOT use the time attributes 
 # of a 'ts' object. For example, Nile is treated as a pure data number; its (start=1871,
 # end=1970, freq=1) attributes are ignored. The default times 1:length(Nile) are used 
-# instead. The true time info need to be specified by the metadata parameter, as shown
+# instead. The true time info need to be specified by the 'metadata' parameter, as shown
 # in the next example.
 \donttest{ 
  o = beast123(Nile,season='none')
  plot(o)
-
 }
-###################################################################################### 
-# Specify metadata, prior, mcmc, and extra explicitly. Only 'prior' is the true model 
-# parameters of BEAST; the other three are just options to configure the input/ouput or
-# the computation process.
+
+#------------------------------Example 3: call via the full API interface-----------#
+# Specify metadata, prior, mcmc, and extra explicitly. Only 'prior' is the true statistical
+# model parameters of BEAST; the other three are just options to configure the input/ouput
+# or the computation process.
+
 \dontrun{ 
 
  # metadata is NOT part of BEAST itself, but some extra info to describe the input
- # time series Y. Below, the input Y is the 'Yellowstone' ts.
+ # time series Y. Below, the input Y is the 'Yellowstone' ts. 
  metadata                  = list()                                                 
  metadata$isRegularOrdered = TRUE         # Regular input
  metadata$whichDimIsTime   = 1            # Which dim of the input refer to time for 
@@ -382,8 +383,7 @@
 
  # mcmc is NOT part of the beast model itself, but some parameters to configure the 
  # MCMC inference. 
- mcmc = list()
- 
+ mcmc = list() 
  mcmc$seed                      = 9543434# an arbitray seed for random number generator
  mcmc$samples                   = 3000   # samples collected per chain
  mcmc$thinningFactor            = 3      # take every 3rd sample and discard others
@@ -426,7 +426,9 @@
  plot(o)
 }
   
-###################################################################################### 
+
+
+#------------------------------Example 4: Handle irregular time series-----------------#
 #  Handle irregular time series: ohio is a data frame of a Landsat NDVI series observed
 #  at unevely-spaced times
 \donttest{ 
@@ -518,12 +520,15 @@
  
  o=beast123(ohio$ndvi, metadata)          # Default values used for those missing parameters 
 }
-#############################################################################################
+
+
+#------------------Example 4: Handle multiple time series (i.e., matrix input)-----------#
 # Handle multiple time series: 'simdata' is a 2D matrix of dim 300x3; it consits of 3
-# time series of length 300 each. As a toy example, the 3 time series are the same.
+# time series of length 300 each. For this toy example, I decide to be lazy and use the same 
+# time series for the three columns. 
 \dontrun{ 
- data(simdata)                         # 
- dim(simdata)                          # dim of simdata: 300 x 3 (time x num_of_ts)
+ data(simdata)                         # dim of simdata: 300 x 3 (time x num_of_time_series)
+ dim(simdata)                          # the first dimenion refer to time (i.e, 300)
  
  metadata                  = list() 
  metadata$whichDimIsTime   = 1         # Which dim of the input refer to time for 2D inputs?
@@ -534,9 +539,14 @@
  extra$whichOutputDimIsTime = 2            # Which dim of the output arrays refers to  time?
  o=beast123(simdata, metadata,extra=extra) # Default values used for those missing parameters
  
+ # The lists of arg parameters can also be directly provided inline within the command
+ o=beast123( simdata, metadata=list(whichDimIsTime=1,period=24), extra=list(whichOutput=2) )
  
- ##################################################### Another run by transposing simdata
+ # The field names of the lists can be shortened as long as no ambiguitity is caused.
+ o=beast123( simdata, metadata=list(whichDim=1,per=24), extra=list(whichOut=2) )
  
+ #------------------Example 4: Another run by transposing simdata--------------------------#
+  
  simdata1=t(simdata)                   # dim of simdata1: 3 x 300 (num of ts  x time )
  
  metadata                  = list() 
@@ -544,9 +554,13 @@
                                        # 300 is the ts length, so dim is set to '2' here.
  metadata$period           = 24        # By default, we assume startTime=1 and deltaTime=1 
  o=beast123(simdata1, metadata)        # Default values used for those missing parameters 
+ 
+ o=beast123( simdata1, metadata=list(whichDim=2, per=24) )
  }
 
-###################################################################################### 
+
+
+#------------------Example 5: Handle stacked time series images (e.g., 3d input)--------#
 # Handle 3D stacked images of irregular and unordered time-series: imagestack is a 3D 
 # array of size 12x9x1066, each pixel being a time series of length 1066
 \dontrun{ 
@@ -577,8 +591,10 @@
  image(o$trend$ncp) # number of trend changepoints over space
 } 
  
-
- 
+#---------Example 6: Handle stacked GeoTiff image files imported with the raster package------#
+# Handle 3D stacked images of irregular time-series : 'ndvi.zip' is  a zip file of 
+# 437 NDIV tiff image files, each having a dim of 12 x 9.
+# Code availlable at https://github.com/zhaokg/Rbeast/blob/master/R/beast123_raster_example.txt
  
 }
 

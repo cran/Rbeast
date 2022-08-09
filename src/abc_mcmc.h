@@ -1,6 +1,7 @@
 #pragma once
 #include "abc_datatype.h"
 typedef enum  MOVETYPE { BIRTH,DEATH,MERGE,MOVE,ChORDER,NoChangeFixGlobal } MOVETYPE;
+#include "abc_mem.h"
 typedef struct _CRED_INTERVAL {
 	F32PTR CI95;
 	F32PTR minValPerStrip;
@@ -22,14 +23,13 @@ typedef struct _CI {
 	I32PTR    SamplesPerStrip;
 	I32PTR    OffsetsPerStrip;
 } CI_PARAM;
-typedef struct MemPointers MemPointers;
 #define _inout_ 
 void ConstructCIStruct(
 	F32 alpahLevel,I32 MCMC_SAMPLES,I32 N,I32 numCIVars,MemPointers* MEM,
 	U08PTR _inout_  fastCIComputation,CI_PARAM* _out_ ciInfo,CI_RESULT* _out_ CI);
 extern void InsertNewRowToUpdateCI(CI_PARAM* _restrict info,CI_RESULT* _restrict ci);
 #define  RANDINTEGER(x0,x1,SEED)             ((x0)+(SEED)%( (x1)- (x0)+1))
-#define  RANDINT(x0,x1,SEED)                 ((x0)+(SEED)%( (x1) -(x0)+1))
+#define  RANDINT(x0,x1,SEED)                 (x0)==(x1) ? x1  :  ((x0)+(SEED)%( x1 -(x0)+1)) 
 #define  RANDI08(a,b)						 RANDINTEGER(a,b,*rnd08++)
 #define  RANDI16(a,b)					  	 RANDINTEGER(a,b,*rnd16++)
 #define  RANDI32(a,b)						 RANDINTEGER(a,b,*rnd32++)

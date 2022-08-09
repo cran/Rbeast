@@ -188,7 +188,7 @@ beast <- function(  y,
    extra$computeTrendOrder    = TRUE
    extra$computeSeasonChngpt  = TRUE
    extra$computeTrendChngpt   = TRUE
-   extra$computeSeasonAmp     = TRUE
+   extra$computeSeasonAmp     = season != 'svd' # Not implemented for SVD
    extra$computeTrendSlope    = TRUE
    extra$tallyPosNegSeasonJump= TRUE
    extra$tallyPosNegTrendJump = TRUE
@@ -225,7 +225,7 @@ beast <- function(  y,
  invisible(return(ANS))    
 }
 
-meanfilter <- function(x,n=5){filter(x,rep(1,n), sides=2)}
+# meanfilter <- function(x,n=5){filter(x,rep(1,n), sides=2)}
 
  
  

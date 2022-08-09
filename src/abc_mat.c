@@ -506,6 +506,30 @@ void chol_addCol_skipleadingzeros_prec(F32PTR Au,F32PTR U,F32 precPrior,I64 N,I6
 		Au+=N;
 	}
 }
+void chol_addCol_skipleadingzeros_prec_nostartprec_invdiag(F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1)
+{
+	F32PTR  Ubase=U;
+	F32PTR  Ucol=Ubase+(K0 - 1) * N;
+	for (I64 COL=K0; COL <=K1; COL++) {
+		I64 rIdxFirstNonZero=1;
+		for (; Au[rIdxFirstNonZero - 1]==0 && rIdxFirstNonZero < COL; Ucol[rIdxFirstNonZero - 1]=0,rIdxFirstNonZero++);
+		U=Ubase+(rIdxFirstNonZero - 1) * N;
+		F64  SUM=0.f;
+		for (I64 col=rIdxFirstNonZero; col < COL; col++) {
+			F64 sum=0.f;
+			for (I64 row=rIdxFirstNonZero; row < col; row++) { sum+=U[row - 1] * Ucol[row - 1]; }
+			F32  Ukk_invert=U[col - 1];
+			F64  Ucol_curElem=(Au[col - 1] - sum) * Ukk_invert; 
+			Ucol[col - 1]=Ucol_curElem;
+			SUM+=Ucol_curElem * Ucol_curElem;
+			U+=N;
+		}
+		F32 prec=(COL==1) ? 0. : *precPrior;
+		Ucol[COL - 1]=1.f/sqrt((Au[COL - 1]+prec) - SUM); 
+		Ucol+=N;
+		Au+=N;
+	}
+}
 void chol_addCol_skipleadingzeros_prec_invdiag(F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1)
 {
 	F32PTR  Ubase=U;
@@ -721,7 +745,7 @@ void update_XtX_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR XtX,F32PTR XtXnew,
 	if (k2_old !=KOLD) {
 		for (I32 kold=k2_old+1,knew=k2_new+1; kold <=KOLD; kold++,knew++) {
 			F32PTR ColStart_old=XtX+(kold - 1) * KOLD;
-			F32PTR ColStart_new=XtX+(knew - 1) * KNEW;
+			F32PTR ColStart_new=XtXnew+(knew - 1) * KNEW;
 			SCPY(k1 - 1,ColStart_old,ColStart_new); 
 			SCPY(kold - k2_old,ColStart_old+(k2_old+1) - 1,ColStart_new+(k2_new+1) - 1); 
 		}
@@ -734,7 +758,7 @@ void update_XtX_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR XtX,F32PTR XtXnew,
 		}
 	}
 }
-void update_XtY_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR Y,F32PTR XtY,F32PTR XtYnew,NEWCOLINFO* new,I32 q) {
+void update_XtY_from_Xnewterm(F32PTR Y,F32PTR Xnewterm,F32PTR XtY,F32PTR XtYnew,NEWCOLINFO* new,I32 q) {
 	I32 k1=new->k1;
 	I32 k2_old=new->k2_old;
 	I32 k2_new=new->k2_new;
@@ -749,7 +773,7 @@ void update_XtY_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR Y,F32PTR XtY,F32PT
 				r_cblas_sgemv(CblasColMajor,CblasTrans,N,Knewterm,1.f,
 						Xnewterm,Nlda,
 						Y,1L,0.f,
-						XtY+k1 - 1,1L); 
+					    XtYnew+k1 - 1,1L);
 		}
 		if (k2_old !=KOLD) SCPY(KNEW - k2_new,XtY+(k2_old+1L) - 1L,XtYnew+(k2_new+1) - 1);
 	}

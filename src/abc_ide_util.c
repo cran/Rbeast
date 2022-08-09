@@ -1,5 +1,6 @@
 #include <math.h>
 #include <string.h>
+#include "assert.h"
 #include "abc_000_warning.h"
 #include "abc_ide_util.h"
 #include "abc_common.h"
@@ -106,9 +107,12 @@ void printProgress2(F32 pct,F64 time,I32 width,char * buf,I32 firstTimeRun)
 }
 void RemoveField(FIELD_ITEM *fieldList,int nfields,char * fieldName)
 {
-	for (I64 i=0; i < nfields; i++){
+	for (I64 i=0; i < nfields && fieldList[i].name[0]!=0; i++) {
 		if (strcmp(fieldList[i].name,fieldName)==0)	{
-			fieldList[i].ptr=NULL;
+			if (fieldList[i].ptr) {
+				fieldList[i].ptr[0]=NULL; 
+			}
+			fieldList[i].ptr=NULL;        
 			break;
 		}
 	}
@@ -121,6 +125,18 @@ int CopyNumericArrToF32Arr(F32PTR outmem,VOID_PTR infield,int N) {
 	else if (IsInt64(infield))		for (I32 i=0; i < N; i++) outmem[i]=*((I64*)data+i);
 	else if (IsChar(infield))		 return 0;
 	else {	
+		return 0;
+	}
+	return 1L;
+}
+int CopyNumericArrToI32Arr(I32PTR outmem,VOID_PTR infield,int N) {
+	VOID_PTR data=GetData(infield);
+	if      (IsInt32(infield))    	memcpy(outmem,data,sizeof(I32) * N);
+	else if (IsDouble(infield))		for (I32 i=0; i < N; i++) outmem[i]=*((double*)data+i);
+	else if (IsSingle(infield))		for (I32 i=0; i < N; i++) outmem[i]=*((int*)data+i);
+	else if (IsInt64(infield))		for (I32 i=0; i < N; i++) outmem[i]=*((I64*)data+i);
+	else if (IsChar(infield))	  return 0;
+	else {
 		return 0;
 	}
 	return 1L;
@@ -138,6 +154,18 @@ SEXP getListElement(SEXP list,const char *str)
 		break;
 	}
 	return elmt;
+}
+static int GetFieldIndex(SEXP list,const char* str)
+{
+	int  index=-1L;
+	SEXP names=getAttrib(list,R_NamesSymbol);
+	for (int i=0; i < length(list); i++)
+		if (strcmp(CHAR(STRING_ELT(names,i)),str)==0) {
+			SEXP elmt=VECTOR_ELT(list,i);
+			index=i;
+			break;
+		}
+	return index;
 }
 SEXP getListElement_CaseIn(SEXP list,const char *str)
 {
@@ -259,8 +287,57 @@ int IsInt32(void* ptr)   { return TYPEOF((SEXP)ptr)==INTSXP;  }
 int IsInt16(void* ptr) { return 0; }
 int IsInt64(void* ptr)   { return 0; }
 int IsLogical(void* ptr) { return TYPEOF((SEXP)ptr)==LGLSXP; };
-void * CreateStructVar(FIELD_ITEM *fieldList,int nfields)
-{ 
+void *CreateNumVar(DATA_TYPE dtype,int *dims,int ndims,VOIDPTR * data_ptr) {
+	        int rtype;
+			if (dtype==DATA_INT32) 
+				rtype=INTSXP; 
+			else if (dtype==DATA_DOUBLE) 
+				rtype=REALSXP;			
+			else {
+				assert(0);
+			}
+			SEXP     tmpSEXP=NULL;
+			SEXP dims4d;
+			switch (ndims) {
+			case 1:
+				PROTECT( tmpSEXP=allocVector(rtype,dims[0]) );
+				UNPROTECT(1);
+				break;
+			case 2:
+				PROTECT(tmpSEXP=allocMatrix(rtype,dims[0],dims[1]) );				
+				UNPROTECT(1); 
+				break;
+			case 3:
+				PROTECT(tmpSEXP=alloc3DArray(rtype,dims[0],dims[1],dims[2]));				
+				UNPROTECT(1);
+				break;
+			case 4:
+				PROTECT(dims4d=allocVector(INTSXP,4));
+				INTEGER(dims4d)[0]=dims[0];
+				INTEGER(dims4d)[1]=dims[1];
+				INTEGER(dims4d)[2]=dims[2];
+				INTEGER(dims4d)[3]=dims[3];
+				PROTECT( tmpSEXP=allocArray(rtype,dims4d) );				
+				UNPROTECT(2);
+				break;
+			}
+			if (data_ptr !=NULL && tmpSEXP !=NULL) {
+				if      (rtype==INTSXP) 	data_ptr[0]=INTEGER(tmpSEXP);		 
+				else if (rtype==REALSXP) 	data_ptr[0]=REAL(tmpSEXP);
+				else {
+					assert(0);
+					data_ptr[0]=NULL;
+				} 
+			}
+			return tmpSEXP;
+}
+void *CreateStructVar(FIELD_ITEM *fieldList,int nfields) { 	
+	int nfields_new=0;
+	for (int i=0; i < nfields;++i) {
+		nfields_new++;
+		if (fieldList[i].name[0]==0) 	break;
+	}
+	nfields=nfields_new;
 	SEXP LIST;
 	SEXP NAMES;
 	int  nprt=0L;
@@ -268,8 +345,6 @@ void * CreateStructVar(FIELD_ITEM *fieldList,int nfields)
 	PROTECT(NAMES=allocVector(STRSXP,nfields));++nprt;
 	for (I64 i=0; i < nfields; i++)
 		SET_STRING_ELT(NAMES,i,mkChar(fieldList[i].name));
-	SEXP dims4d;
-	PROTECT(dims4d=allocVector(INTSXP,4));++nprt;
 	SEXP tmpSEXP;
 	for (I32 i=0; i < nfields; i++) 	{	 
 		if (fieldList[i].ptr==NULL) {
@@ -279,76 +354,23 @@ void * CreateStructVar(FIELD_ITEM *fieldList,int nfields)
 		if (fieldList[i].type==DATA_STRUCT) {			
 			tmpSEXP=fieldList[i].ptr;
 			SET_VECTOR_ELT(LIST,i,tmpSEXP);
-		}
-		else if (fieldList[i].type==DATA_INT32||fieldList[i].type==DATA_INT64)
-		{		
-			switch (fieldList[i].ndim) {
-			case 1:
-				PROTECT( tmpSEXP=allocVector(INTSXP,fieldList[i].dims[0]) );   
-				*(fieldList[i].ptr)=INTEGER(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1);
-				break;
-			case 2:
-				PROTECT(tmpSEXP=allocMatrix(INTSXP,fieldList[i].dims[0],fieldList[i].dims[1]) );				
-				*(fieldList[i].ptr)=INTEGER(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1); 
-				break;
-			case 3:
-				PROTECT(tmpSEXP=alloc3DArray(INTSXP,fieldList[i].dims[0],fieldList[i].dims[1],fieldList[i].dims[2]));				
-				*(fieldList[i].ptr)=INTEGER(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1);
-				break;
-			case 4:
-				INTEGER(dims4d)[0]=fieldList[i].dims[0];
-				INTEGER(dims4d)[1]=fieldList[i].dims[1];
-				INTEGER(dims4d)[2]=fieldList[i].dims[2];
-				INTEGER(dims4d)[3]=fieldList[i].dims[4];
-				PROTECT( tmpSEXP=allocArray(INTSXP,dims4d) );	 
-				*(fieldList[i].ptr)=INTEGER(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1);
-				break;
-			}
-		} 
-		else {
-			switch (fieldList[i].ndim) {
-			case 1:
-				PROTECT(tmpSEXP=allocVector(REALSXP,fieldList[i].dims[0]));   
-				*(fieldList[i].ptr)=REAL(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1);
-				break;
-			case 2:
-				PROTECT(tmpSEXP=allocMatrix(REALSXP,fieldList[i].dims[0],fieldList[i].dims[1]));				
-				*(fieldList[i].ptr)=REAL(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1);
-				break;
-			case 3:
-				PROTECT(tmpSEXP=alloc3DArray(REALSXP,fieldList[i].dims[0],fieldList[i].dims[1],fieldList[i].dims[2]));
-				*(fieldList[i].ptr)=REAL(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1);
-				break;
-			case 4:
-				INTEGER(dims4d)[0]=fieldList[i].dims[0];
-				INTEGER(dims4d)[1]=fieldList[i].dims[1];
-				INTEGER(dims4d)[2]=fieldList[i].dims[2];
-				INTEGER(dims4d)[3]=fieldList[i].dims[3];
-				PROTECT(tmpSEXP=allocArray(REALSXP,dims4d));  
-				*(fieldList[i].ptr)=REAL(tmpSEXP);
-				SET_VECTOR_ELT(LIST,i,tmpSEXP);
-				UNPROTECT(1);
-				break;
-			} 
-		} 
+		}else  	{		
+			tmpSEXP=PROTECT( CreateNumVar(fieldList[i].type,fieldList[i].dims,fieldList[i].ndim,fieldList[i].ptr ));
+			SET_VECTOR_ELT(LIST,i,tmpSEXP);
+			UNPROTECT(1);		
+		}  
 	}
 	setAttrib(LIST,R_NamesSymbol,NAMES);
 	UNPROTECT(nprt);
 	return (void*)LIST;
+}
+void ReplaceStructField(VOIDPTR s,char* fname,VOIDPTR newvalue){
+	int index=GetFieldIndex(s,fname);
+	if (index <0) {
+		return;
+	}
+	SEXP oldvalue=VECTOR_ELT(s,index);
+	SET_VECTOR_ELT(s,index,newvalue);
 }
 void  DestoryStructVar(VOID_PTR strutVar) {
 }
@@ -597,6 +619,12 @@ int IsInt64(void* ptr) { return mxIsInt64(ptr); }
 int IsLogical(void* ptr) { return mxIsLogical(ptr); }
 void * CreateStructVar(FIELD_ITEM *fieldList,int nfields)
 { 
+	int nfields_new=0;
+	for (int i=0; i < nfields;++i) {
+		nfields_new++;
+		if (fieldList[i].name[0]==0) 	break;
+	}
+	nfields=nfields_new;
 	mxArray * _restrict out;
 	{
 		char * fldNames[100];		

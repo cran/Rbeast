@@ -21,7 +21,7 @@ geeLandsat = function(lon=NA,lat=NA,radius=100, stat='mean',timeout=700){
  
   
   addr=sprintf("https://zhaokg.pythonanywhere.com/landsat?lat=%f&lon=%f&r=%d&stat=%s", lat,lon,radius,stat)
-  
+  print(addr)
   options(timeout=timeout)
   
   #con = url(addr,'rb')

@@ -29,27 +29,22 @@ static INLINE int GetTotalColNumOfXmars(BEAST2_BASIS_PTR b,I32 NUM_BASIS) {
     }
     return K;
 }
-static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b,I32 NUMBASIS,int startBasisIdx) {
+static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b,I32 NUMBASIS,int startBasisIdx0) {
     if (NUMBASIS==1) 
         b[0].Kbase=0;    
     else if (NUMBASIS==2) {
-        if (startBasisIdx==0) {
-              b[1].Kbase=b[0].K;
-        } 
-        else  {            
-        }
-    } else if (NUMBASIS==3) {
-        if (startBasisIdx==0) {
+        if (startBasisIdx0==0) {
+             b[1].Kbase=b[0].K;
+        }  
+    } 
+	else if (NUMBASIS==3) {
+        if (startBasisIdx0==0) {
             b[1].Kbase=b[0].K;
             b[2].Kbase=b[1].Kbase+b[1].K;
-        } else if (startBasisIdx==1) {
+        } else if (startBasisIdx0==1) {
             b[2].Kbase=b[1].Kbase+b[1].K;
-        } else if (startBasisIdx==2) {
+        } else if (startBasisIdx0==2) {
         }          
-    }  else if (NUMBASIS > 3)  {           
-        for (rI32 i=startBasisIdx+1; i < MAX_NUM_BASIS; i++) {
-            b[i].Kbase=b[i-1].Kbase+b[i-1].K;
-        }   
     }
 }
  void MoveCOLsWithinMatrix(F32PTR X,I32 N,I32 Kstart,I32 Kend,I32 Knewstart);

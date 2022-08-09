@@ -39,9 +39,6 @@
     # define ALIGN32_BEG
     # define ALIGN32_END __attribute__((aligned(32)))
 #endif
-typedef __m256  v8sf; 
-typedef __m256i v8si; 
-typedef __m128i v4si; 
 #define _PI32AVX_CONST(Name,Val)                                            \
   static const ALIGN32_BEG int _pi32avx_##Name[4] ALIGN32_END={ Val,Val,Val,Val }
 _PI32AVX_CONST(1,1);

@@ -40,6 +40,9 @@
  }
 static VOID_PTR  MemAlloc(MemPointers * self,I64 N,U08 alignment)
 {
+	if (N <=0) {
+		return NULL;
+	}
 	ExpandInternelBuf(self);
 	alignment=alignment==0 ? 1 : alignment;
 	int       isSuccess=0;
@@ -104,10 +107,71 @@ static I32  verify_header(MemPointers* _restrict self) {
 	}
 	return badHeaderNum;
 }
+static void  __NullifyNodes(MemNode* list,VOIDPTR * nodesRemove) {
+	int i=0;
+	while (nodesRemove[i]) {	        
+		int j=0;
+		while (list[j].addr) {
+			if (list[j].addr==nodesRemove[i]) {
+				list[j].size=0;
+				break;
+			}
+			j++;
+		}
+		i++;
+	}
+}
+static void  MemAllocList(MemPointers* self,MemNode* list,int aggregatedAllocation,VOIDPTR * nodesRemove) {
+	if (nodesRemove) {
+		__NullifyNodes(list,nodesRemove);
+	}
+	if (!aggregatedAllocation) {
+		int i=0;
+		while (list[i].addr ) {									 
+			*list[i].addr=MemAlloc(self,list[i].size,list[i].align);	 
+			i++;
+		}    
+		return;
+	}
+	#define MAX_LEN 255
+	I64 newoffsets[MAX_LEN]; 
+	I64 prevoffset=0;	
+	I64 currNodeSize=0;  
+	int i=0;
+	while (list[i].addr) {
+		int curalign=max(2,list[i].align);
+		int prevsize=(i==0)? 0  : list[i - 1].size;
+		currNodeSize=list[i].size;
+		I64 curr_offset;
+		if (currNodeSize==0) {
+			curr_offset=prevoffset+prevsize;			
+		}	else {
+			 curr_offset=(prevoffset+prevsize+curalign - 1) & ~(uintptr_t)(curalign - 1);
+		}	
+		newoffsets[i]=curr_offset;
+		prevoffset=curr_offset;
+		i++;
+	 }
+	I64 totalSize=prevoffset+currNodeSize;
+	I08 *p=NULL;
+	if (totalSize > 0) {
+		p=MemAlloc(self,totalSize,64);
+	}
+	i=0;
+	while (list[i].addr) {
+		if (list[i].size==0) {
+			*list[i].addr=NULL;
+		} else {
+			*list[i].addr=p+newoffsets[i];
+		} 
+		i++;
+	}
+}
 void mem_init(MemPointers* self) {	 
 	*self=(MemPointers) {
 			.alloc=MemAlloc,
 			.alloc0=MemAlloc0,
+			.alloclist=MemAllocList,
 			.init=mem_init,
 			.free_all=mem_free_all,
 			.nptsMax=0,

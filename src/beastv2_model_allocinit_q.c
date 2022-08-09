@@ -4,6 +4,7 @@
 #include "abc_vec.h"
 #include "abc_ts_func.h"
 #include "abc_mem.h"
+#include "abc_blas_lapack_lib.h" 
 #include "beastv2_header.h"
 #include "beastv2_model_allocinit.h"
 #include "beastv2_prior_precfunc.h" 
@@ -19,37 +20,108 @@ extern void* Get_PickBasisID(I08,I08,I32PTR);
 extern void* Get_CvtKnotsToBinVec(I08 id);
 extern void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32 minSep,F64PTR TNUM,F64PTR totalNum);
 #define MODEL (*model)
+void  ReInit_PrecValues(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt) {
+	I32 hasNaNs=0;
+	for (int i=0; i < MODEL.nPrec; i++) {
+			if (IsNaN(MODEL.precVec[i])) {
+				hasNaNs=1L;
+				break;
+			}				
+	}
+	if (hasNaNs) {
+			F32 precValue=opt->prior.precValue;
+			r_ippsSet_32f(precValue,MODEL.precVec,MODEL.nPrec);
+			r_ippsSet_32f(logf(precValue),MODEL.logPrecVec,MODEL.nPrec);
+	}
+}
+static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers * MEM) {
+	MemNode nodes[100];
+	int     nid=0;
+	int   q=opt->io.q;
+	{ 
+		I32  qq=q * q;			
+		I32  nelem=(q==1) ? 1 : ( qq+qq);
+		nodes[nid++]=(MemNode){&MODEL.sig2,sizeof(F32) * nelem,.align=4 };  
+		nodes[nid++]=(MemNode){&MODEL.curr.alpha2Q_star,sizeof(F32)*qq,.align=4 };
+		nodes[nid++]=(MemNode){&MODEL.prop.alpha2Q_star,sizeof(F32)*qq,.align=4 };
+	}
+	I32 nPrecGrp,nPrecXtXDiag;
+	I08 precType=opt->prior.precPriorType;
+	if (precType==ConstPrec||precType==UniformPrec) {
+		MODEL.nPrec=1L;    
+		nPrecGrp=0;
+		nPrecXtXDiag=0;
+		for (int i=0; i < MODEL.NUMBASIS; i++) {
+			MODEL.b[i].nPrec=0x2fff;
+			MODEL.b[i].offsetPrec=0x2fff;
+		}			
+	}
+	else if (precType==ComponentWise) {
+		MODEL.nPrec=MODEL.NUMBASIS;     
+		nPrecGrp=MODEL.NUMBASIS;
+		nPrecXtXDiag=opt->prior.K_MAX;
+		for (int i=0; i < MODEL.NUMBASIS; i++) {
+			MODEL.b[i].nPrec=0x2fff;
+			MODEL.b[i].offsetPrec=0x2fff;
+		}	 
+	}
+ 	else if (precType==OrderWise)	{
+		I32    cumsum=0;
+		for (int i=0; i < MODEL.NUMBASIS; i++) {
+			BEAST2_BASIS_PTR b=MODEL.b+i;
+			if      (b->type==SEASONID)		b->nPrec=b->prior.maxOrder;
+			else if (b->type==DUMMYID)		b->nPrec=b->bConst.dummy.period;
+			else if (b->type==SVDID)		    b->nPrec=b->prior.maxOrder;
+			else if (b->type==TRENDID)		b->nPrec=b->prior.maxOrder+1;
+			else if (b->type==OUTLIERID) 	    b->nPrec=1;
+			b->offsetPrec=cumsum;
+			cumsum+=b->nPrec;
+		}
+		MODEL.nPrec=cumsum;
+		nPrecGrp=MODEL.nPrec;
+		nPrecXtXDiag=opt->prior.K_MAX;		
+	}
+	nodes[nid++]=(MemNode){ &MODEL.precVec,sizeof(F32) * MODEL.nPrec,.align=4 };
+	nodes[nid++]=(MemNode){ &MODEL.logPrecVec,sizeof(F32) * MODEL.nPrec,.align=4 };
+	nodes[nid++]=(MemNode){ &MODEL.curr.precXtXDiag,sizeof(F32) * nPrecXtXDiag,.align=4 }; 
+	nodes[nid++]=(MemNode){ &MODEL.prop.precXtXDiag,sizeof(F32) * nPrecXtXDiag,.align=4 }; 
+	nodes[nid++]=(MemNode){ &MODEL.curr.nTermsPerPrecGrp,sizeof(I16) * nPrecGrp,.align=4 }; 
+	nodes[nid++]=(MemNode){ &MODEL.prop.nTermsPerPrecGrp,sizeof(I16) * nPrecGrp,.align=4 }; 
+	nodes[nid++]=(MemNode){ NULL,};
+	MEM->alloclist(MEM,nodes,AggregatedMemAlloc,NULL);
+	if (nPrecXtXDiag==0) {
+		MODEL.curr.precXtXDiag=MODEL.precVec;
+		MODEL.prop.precXtXDiag=MODEL.precVec;
+	}
+	F32 precValue=opt->prior.precValue;
+	r_ippsSet_32f(precValue,MODEL.precVec,MODEL.nPrec);
+	r_ippsSet_32f(logf(precValue),MODEL.logPrecVec,MODEL.nPrec);
+	f32_fill_val_matrixdiag(MODEL.sig2,opt->prior.sig2,q);
+}
 void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers* MEM)
 {	
 	I32 N=opt->io.N;
+	I32 Npad16=(N+15)/16 * 16;
 	I32 K_MAX=opt->prior.K_MAX;
 	I32 q=opt->io.q;
-	if (q==1) {
-		MODEL.sig2=opt->prior.sig2; 
-	} else { 
-		I32   qq=q * q;
-		MODEL.SIG2=MyALLOC0(*MEM,2*qq+qq+qq,F32,64);
-		MODEL.curr.alphaQ_star=MODEL.SIG2+2 * qq;
-		MODEL.prop.alphaQ_star=MODEL.curr.alphaQ_star+qq;
-		f32_fill_val_matrixdiag(MODEL.SIG2,opt->prior.sig2,q);
-	}
-	MODEL.beta=MyALLOC(*MEM,K_MAX * q,F32,64);
-	MODEL.curr.XtX=MyALLOC(*MEM,K_MAX * K_MAX,F32,64);
-	MODEL.curr.XtY=MyALLOC(*MEM,K_MAX*q,F32,64);
-	MODEL.curr.cholXtX=MyALLOC(*MEM,K_MAX * K_MAX,F32,64);
-	MODEL.curr.beta_mean=MyALLOC(*MEM,K_MAX * q,F32,64);
-	MODEL.prop.XtX=MyALLOC(*MEM,K_MAX * K_MAX,F32,64);
-	MODEL.prop.XtY=MyALLOC(*MEM,K_MAX * q,F32,64);
-	MODEL.prop.cholXtX=MyALLOC(*MEM,K_MAX * K_MAX,F32,64);
-	MODEL.prop.beta_mean=MyALLOC(*MEM,K_MAX * q,F32,64);
-	MODEL.deviation=MyALLOC(*MEM,(N*q)+(q),F32,64);	  
-	MODEL.avgDeviation=MODEL.deviation+N*q;
-	{
-	I32 Npad16=(N+15)/16 * 16;
-	MODEL.extremePosVec=MyALLOC(*MEM,Npad16,I08,8);
-	}
-	MODEL.NUMBASIS=opt->prior.numBasis;
-	I32   NumBasis=MODEL.NUMBASIS;
+  MemNode nodes[]={
+		{&MODEL.beta,sizeof(F32) * K_MAX * q,.align=64 },
+		{&MODEL.curr.XtX,sizeof(F32) * K_MAX * K_MAX,.align=4  },
+		{&MODEL.curr.XtY,sizeof(F32) * K_MAX * q,.align=4  },
+		{&MODEL.curr.cholXtX,sizeof(F32) * K_MAX * K_MAX,.align=4  },
+		{&MODEL.curr.beta_mean,sizeof(F32)* K_MAX * q,.align=4  }, 
+		{&MODEL.prop.XtX,sizeof(F32) * K_MAX * K_MAX,.align=4  },
+		{&MODEL.prop.XtY,sizeof(F32) * K_MAX * q,.align=4  },
+		{&MODEL.prop.cholXtX,sizeof(F32) * K_MAX * K_MAX,.align=4  },
+		{&MODEL.prop.beta_mean,sizeof(F32) * K_MAX * q,.align=4  },
+		{&MODEL.deviation,sizeof(F32) * N * q,.align=64 },
+	    {&MODEL.avgDeviation,sizeof(F32) * q,.align=4 },
+		{&MODEL.extremePosVec,sizeof(I08) * Npad16,.align=8 },
+		{NULL,}
+	};	  
+	MEM->alloclist(MEM,nodes,AggregatedMemAlloc,NULL); 
+	I32   NumBasis=MODEL.NUMBASIS=opt->prior.numBasis;
+	MODEL.b=MyALLOC(*MEM,NumBasis,BEAST2_BASIS,64);
 	for (int i=0; i < NumBasis; i++)
 		MODEL.b[i].type=opt->prior.basisType[i];
 	I32 isComponentFixed[3]={0,0,0};
@@ -281,7 +353,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 		basis->CalcBasisKsKeK_TermType=Get_CalcBasisKsKeK(type,opt->prior.precPriorType);
 	}
 	MODEL.PickBasisID=Get_PickBasisID(NumBasis,MODEL.oid >=0,isComponentFixed);
-	InitPrecPriorMEM(model,opt,MEM);
+	Alloc_Init_Sig2PrecPrior(model,opt,MEM);
 #undef MODEL
 }
 #include "abc_000_warning.h"
