@@ -21,3 +21,7 @@ int    GetStrPattern_fmt3(char* strings,DateFmtPattern3* pattern);
 float  Str2F32time_fmt3(char* strings,DateFmtPattern3* pattern);
 float YDOYtoF32time(int year,int doy);
 float YMDtoF32time(int year,int mon,int day);
+int   F32time2DateNum(float fyear);
+int  F32time2YMD(float fyear,int* mon,int* day);
+double extract_fyear(char* s);
+float* strings_to_fyears(char* s,int* strstart,int n);

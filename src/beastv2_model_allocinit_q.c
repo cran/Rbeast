@@ -299,7 +299,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			I32 sMAXORDER=opt->io.meta.deseasonalize? opt->io.meta.period: basis->prior.maxOrder;
 			SVD->TERMS=MyALLOC(*MEM,N*sMAXORDER,F32,64);
 			SVD->SQR_CSUM=MyALLOC(*MEM,(N+1L) * sMAXORDER,F32,64);
-			CopyNumericArrToF32Arr(SVD->TERMS,opt->io.meta.svdTerms,N* sMAXORDER);
+			CopyNumericObjToF32Arr(SVD->TERMS,opt->io.meta.svdTerms,N* sMAXORDER);
 			{
 				F32PTR ptr=SVD->TERMS;
 				F32PTR ptr1=SVD->SQR_CSUM; 

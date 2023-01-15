@@ -32,12 +32,14 @@
  library(Rbeast)
  data(simdata)
   
- \dontrun{ 
- #out=beast123(simdata) # Error: whichDimIsTime has to be specified. See below
+\dontrun{ 
+#out=beast123(simdata) #Error: whichDimIsTime has to be specified to 
+                       # tell which dim of simdata refers to time.
+                       # See below.
  out=beast123(simdata, metadata=list(whichDimIsTime=1))  
  print(out, 1)
  print(out, 2) 
- }
+}
 
 }
 \keyword{misc}

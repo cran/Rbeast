@@ -131,7 +131,7 @@ else {	\
 }
 
 
-static LZWCodecState* LZWSetupDecode( )
+static LZWCodecState* LZWSetupDecode(void)
 {
 	LZWCodecState* sp=NULL;
 	int code;

@@ -28,7 +28,7 @@ void pcg_set_seed(U64 initstate,U64 initseq)
 	global_state.state+=initstate;
 	pcg_random(&rnd,1);
 }
-void pcg_print_state() {r_printf("state: %30" PRIu64 " inc: %30"  PRIu64 "\n",global_state.state,global_state.inc);}
+void pcg_print_state(void) {r_printf("state: %30" PRIu64 " inc: %30"  PRIu64 "\n",global_state.state,global_state.inc);}
 void pcg_random(U32PTR rnd,I32 N)
 {
 	U64 oldstate=global_state.state;

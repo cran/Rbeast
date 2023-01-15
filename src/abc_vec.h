@@ -49,15 +49,32 @@ extern "C" {
 	extern F32 f32_sumlog(const F32PTR  X,const int N);
 	extern I32 i08_find_nth_onebyte_binvec(U08PTR binvec,I32 N,I32 nth);
 	extern I32 i08_find_nth_onebyte_binvec_v2(U08PTR binvec,I32 N,I32 numOneBytes,U32 rnd);
+	extern I64 i08_sum(I08PTR x,int N);
 	extern void f32_sumfilter(const F32PTR X,F32PTR Y,int N,int winSize);
 	extern F32  f32_corr_rmse_nan(const F32PTR X,const F32PTR Y,int N,F32PTR rmse);
 	extern void  f32_truncate_inplace(const F32PTR X,F32 value,int N);
+	I32 i32_maxidx(const I32PTR  X,const  int N,I32PTR val);
+	I32 i32_minidx(const I32PTR  X,const  int N,I32PTR val);
 	void f32_to_strided_f64(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset);
+	void f32_to_strided_i64(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset);
 	void f32_to_strided_f32(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset);
-	void f32_from_strided_f32(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset);
+	void f32_to_strided_i32(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset);
+	void f32_to_strided_i16(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset);
 	void f32_from_strided_f64(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset);
+	void f32_from_strided_i64(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset);
+	void f32_from_strided_f32(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset);
 	void f32_from_strided_i32(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset);
 	void f32_from_strided_i16(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset);
+	void f32_to_strided_mem(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset,DATA_TYPE dtype);
+	void f32_from_strided_mem(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDataType);
+	void arr_from_strided_mem(VOID_PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDstDataType);
+	I64  sub2ind(int* dims,int ndim,int* subs);
+	void ind2sub(int* dims,int ndim,I64 ind,int* subs);
+	int  ndarray_get1d_stride_offset(int* dims,int ndim,int* subs,int whichdim,I64* stride,I64* offset);
+	void f32_get1d_from_ndarray(F32PTR dst,VOID_PTR src,int* dims,int ndim,int* subs,int whichdim,DATA_TYPE srcDtype);
+	void f32_set1d_to_ndarray(F32PTR src,VOID_PTR dst,int* dims,int ndim,int* subs,int whichdim,DATA_TYPE dstDtype);
+	void f32_get2d_from_ndarray(F32PTR dst,VOID_PTR src,int* dims,int ndim,int* subs,int d1,int d2,DATA_TYPE srcDtype);
+	void f32_set2d_from_ndarray(F32PTR src,VOID_PTR dst,int* dims,int ndim,int* subs,int d1,int d2,DATA_TYPE dstDtype);
 	void f32_set_nan_by_value(F32PTR a,I32 N,F32 missingValue);
 	int f32_normalize_multicols_zeroout_nans(F32PTR Y,I32PTR BadRowIndices,I32 ldy,I32 N,I32 q,F32PTR mean,F32PTR sd);
 	extern void f32_transpose_inplace(F32PTR Mat,I32 ROW,I32 COL);
@@ -76,7 +93,7 @@ extern "C" {
 	extern void  (*f32_step_neg)(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N);
 	extern void  (*f32_step_pos)(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N);
 	extern void  (*f32_axpy_inplace)(const F32 a,const F32PTR x,F32PTR y,const int N);
-#define f32_copy(src,dst,N)  memcpy(dst,src,sizeof(F32)*N)
+   #define f32_copy(src,dst,N)  memcpy(dst,src,(U32)sizeof(F32)*(U32)(N))
 	extern void (*f32_gemm_XtY2x1)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
 	extern void (*f32_gemm_XtY2x2)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
 	extern void (*f32_gemm_XY1x2)(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc);
@@ -89,10 +106,10 @@ extern "C" {
 	extern void (*f32_gatherVec_scatterVal_byindex)(F32PTR  x,I32PTR indices,F32PTR values,F32 newValue,int N);
 	extern void (*f32_gather2Vec_scatterVal_byindex)(F32PTR  x,F32PTR  y,I32PTR indices,F32PTR values,F32 newValue,int N);
 	extern void (*f32_scale_inplace)(const F32 gain,const F32 offset,const F32PTR x,const int N);
-	extern void SetupVectorFunction_AVX2();
-	extern void SetupVectorFunction_AVX512();
-	extern void SetupVectorFunction_Generic();
-	void print_funcs();
+	extern void SetupVectorFunction_AVX2(void);
+	extern void SetupVectorFunction_AVX512(void);
+	extern void SetupVectorFunction_Generic(void);
+	void print_funcs(void);
 #ifdef __cplusplus
 }
 #endif

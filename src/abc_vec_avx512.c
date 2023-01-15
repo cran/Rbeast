@@ -45,7 +45,7 @@
 #include <immintrin.h>
 #include "abc_math_avx512.h"
 static __mmask16 masktemplate[16];
-static INLINE void      FillMaskTemplate() {   for (I32 i=0; i < 16; i++)    masktemplate[i]=(1UL << i) - 1UL;  }
+static INLINE void      FillMaskTemplate(void) {   for (I32 i=0; i < 16; i++)    masktemplate[i]=(1UL << i) - 1UL;  }
 static INLINE __mmask16  __attribute__((always_inline)) GetMoveMask(int n)  {
     return masktemplate[n];
 }

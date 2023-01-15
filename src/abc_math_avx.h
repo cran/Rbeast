@@ -1,6 +1,7 @@
 #pragma once
 #include <immintrin.h>
 #include "abc_000_macro.h"
+#include "abc_datatype.h"
 typedef __m256  v8sf; 
 typedef __m256i v8si; 
 typedef __m128i v4si; 

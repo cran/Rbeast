@@ -1,17 +1,19 @@
 Package: Rbeast
 Type: Package
-Version: 0.9.5
-Date: 2022-08-09
+Version: 0.9.6
+Date: 2023-01-11
 Title: Bayesian Change-Point Detection and Time Series Decomposition
-Authors@R: c(person(given = "Kaiguang", family = "Zhao", role = c("aut", "cre"), email = "zhao.1423@osu.edu"),
-             person(given = "Tongxi", family = "Hu", role = "aut", email = "hu.1555@osu.edu"),
-             person(given = "Yang", family = "Li", role = "aut", email = "li.10015@osu.edu"),
-             person(given = "Jack", family = "Dongarra", role="ctb"),
-             person(given = "Cleve", family = "Moler", role="ctb")
+Authors@R: c(person(given = "Yang",     family = "Li",       role = "aut",           email = "li.10015@osu.edu"),
+             person(given = "Tongxi",   family = "Hu",       role = "aut",           email = "hu.1555@osu.edu"),
+			 person(given = "Xuesong",  family = "Zhang",    role = "aut",           email= "xuesong.zhang@usda.gov" ),
+			 person(given = "Kaiguang", family = "Zhao",     role = c("aut", "cre"), email = "zhao.1423@osu.edu"),
+             person(given = "Jack",     family = "Dongarra", role = "ctb"),
+             person(given = "Cleve",    family = "Moler",    role = "ctb")
              )
-Author: Kaiguang Zhao [aut, cre],
+Author: Yang Li [aut],
   Tongxi Hu [aut],
-  Yang Li [aut],
+  Xuesong Zhang [aut],
+  Kaiguang Zhao [aut, cre],
   Jack Dongarra [ctb],
   Cleve Moler [ctb]
 Maintainer: Kaiguang Zhao <zhao.1423@osu.edu>
@@ -22,6 +24,6 @@ Imports: grid
 License: GPL (>= 2)
 URL: https://github.com/zhaokg/Rbeast
 NeedsCompilation: yes
-Packaged: 2022-08-09 20:45:04 UTC; zhaokg
+Packaged: 2023-01-14 17:53:41 UTC; zhaokg
 Repository: CRAN
-Date/Publication: 2022-08-09 21:10:02 UTC
+Date/Publication: 2023-01-15 17:00:09 UTC

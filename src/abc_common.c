@@ -23,12 +23,59 @@ char* word_wrap(char* str,int LINE_LENGTH) {
 	while ((wordLen=get_word(str+start_curLen+current_lineLen)) > 0) {
 		if (current_lineLen+wordLen < LINE_LENGTH) {
 			current_lineLen+=wordLen;
-		}else {
+		} else {
 			str[start_curLen+current_lineLen]='\n';
 			start_curLen+=current_lineLen+1L;
 			current_lineLen=0L;
 		}
 	}
+	return str;
+}
+char* word_wrap_indented(char* str,int LINE_LENGTH,int nspace) {
+	char* space="                      ";
+	char newstr[2000];
+	int  newlen=0;
+	int  isfirstline=1;
+	int wordLen;                     
+	int current_lineLen=0;             
+	int start_curLen=0;              
+	while ((wordLen=get_word(str+start_curLen+current_lineLen)) > 0) {
+		if (current_lineLen+wordLen < LINE_LENGTH) {
+			current_lineLen+=wordLen;
+		}
+		else {
+			str[start_curLen+current_lineLen]='\n';
+			if (isfirstline) {
+				isfirstline=0;
+				memcpy(newstr+newlen,str+start_curLen,current_lineLen);
+				newlen+=current_lineLen;
+				newstr[newlen++]='\n';
+				LINE_LENGTH -=nspace;
+			}
+			else {
+				memcpy(newstr+newlen,space,nspace);
+				newlen+=nspace;
+				memcpy(newstr+newlen,str+start_curLen,current_lineLen);
+				newlen+=current_lineLen;
+				newstr[newlen++]='\n';
+			}
+			start_curLen+=current_lineLen+1L;
+			current_lineLen=0;
+		}
+	}
+	if (isfirstline) {
+		memcpy(newstr+newlen,str+start_curLen,current_lineLen);
+	} else {
+		memcpy(newstr+newlen,space,nspace);
+		newlen+=nspace;
+		memcpy(newstr+newlen,str+start_curLen,current_lineLen);
+	}
+	newlen+=current_lineLen;
+	if (newstr[newlen] !='\n') {
+		newstr[newlen++]='\n';
+	}
+	newstr[newlen++]=0;
+	strcpy(str,newstr);
 	return str;
 }
 void ToUpper(char* s) { for (int i=0; s[i] !='\0'; i++) 	s[i]=s[i] >='a' && s[i] <='z' ? s[i] - 32 : s[i]; }
@@ -191,8 +238,8 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 	for (I32 i=w; i < UPPERIDX; i++)
 	{
 		if (mem[i] < threshold) continue;
-		bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
-		bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
+		Bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
+		Bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
 		if (!(isLargeThanNearestNeighor && isLargeThanNearestTwoNeighors)) continue;
 		I32		upperIdx_1=i+w;
 		I32		maxIdx=-999;
@@ -315,8 +362,8 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 	for (I32 i=LOWERIDX; i < UPPERIDX; i++)
 	{
 		if (mem[i] < threshold) continue;
-		bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
-		bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
+		Bool isLargeThanNearestNeighor=(mem[i] >=mem[i - 1]) && (mem[i] >=mem[i+1]);
+		Bool isLargeThanNearestTwoNeighors=(mem[i] * 4.0) > (mem[i+1]+mem[i+2]+mem[i - 1]+mem[i - 2]);
 		if ( isLargeThanNearestNeighor==0||isLargeThanNearestTwoNeighors==0 ) continue;
 		I32		UPPERIDX_1=i+w1;
 		I32		maxIdx=-9999;
@@ -409,8 +456,8 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 	for (I32 i=LOWERIDX; i < UPPERIDX; i++)
 	{
 		if (sump[i] < threshold) continue;
-		bool isLargeThanNearestNeighor=(sump[i] >=sump[i - 1]) && (sump[i] >=sump[i+1]);
-		bool isLargeThanNearestTwoNeighors=(sump[i] * 4.0) > (sump[i+1]+sump[i+2]+sump[i - 1]+sump[i - 2]);
+		Bool isLargeThanNearestNeighor=(sump[i] >=sump[i - 1]) && (sump[i] >=sump[i+1]);
+		Bool isLargeThanNearestTwoNeighors=(sump[i] * 4.0) > (sump[i+1]+sump[i+2]+sump[i - 1]+sump[i - 2]);
 		if (isLargeThanNearestNeighor==0||isLargeThanNearestTwoNeighors==0) continue;
 		I32 dist_to_prevCpt=i - cpfromSumP_Pos[numCpt - 1];
 		if ((numCpt==0)||dist_to_prevCpt > minSepDist||dist_to_prevCpt < -minSepDist) {
@@ -487,58 +534,82 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 	}
 	return numCpt;
 }
-void WriteF32ArraryToStrideMEM(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset,DATA_TYPE dtype) 
-{
-	if ( dtype==DATA_FLOAT  )	{	  
-		f32_to_strided_f32(src,dst,N,stride,dstOffset);
-	}
-	else if (dtype==DATA_DOUBLE) {
-		f32_to_strided_f64(src,dst,N,stride,dstOffset);
-	}
-}
-void CopyStrideMEMToF32Arr(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDataType)
-{
-	if      (srcDataType==DATA_FLOAT) 	{
-		f32_from_strided_f32(dst,src,N,srcStride,srcOffset);
-	}  
-	else if (srcDataType==DATA_DOUBLE){
-		f32_from_strided_f64(dst,src,N,srcStride,srcOffset);
-	}  
-	else if (srcDataType==DATA_INT32)	{
-		f32_from_strided_i32(dst,src,N,srcStride,srcOffset);
-	}  
-	else if (srcDataType==DATA_INT16)	{
-		f32_from_strided_i16(dst,src,N,srcStride,srcOffset);
-	}  
-}
-void WriteStrideMEMToArrMEM(VOID_PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDstDataType)
-{
-	if (srcDstDataType==DATA_FLOAT) {
-		f32_from_strided_f32(dst,src,N,srcStride,srcOffset);
-	} else if (srcDstDataType==DATA_DOUBLE) {
-		f32_from_strided_f64(dst,src,N,srcStride,srcOffset);
-		f32_to_f64_inplace(dst,N);
-	}
-}
 #if defined(WIN64_OS)||defined(WIN32_OS) 
 	#include "float.h"
 	#if defined(MSVC_COMPILER)
-	void EnableFloatExcetion() {
+	void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err=_controlfp_s(&_oldState,EM_OVERFLOW|EM_UNDERFLOW|EM_ZERODIVIDE|EM_DENORMAL|EM_INVALID,MCW_EM);
 	}
 	#elif defined(GCC_COMPILER)
-void EnableFloatExcetion() {
+void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err=_controlfp_s(&_oldState,_EM_OVERFLOW|_EM_UNDERFLOW|_EM_ZERODIVIDE|_EM_DENORMAL|_EM_INVALID,_MCW_EM);
 	}
 	#endif
 #else
 	#include "fenv.h" 
-void EnableFloatExcetion() {
+void EnableFloatExcetion(void) {
 	#if defined(LINUX_OS) 
 	feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW); 
 	#endif
 }
 #endif
+#include "abc_cpu.h"
+#include "abc_ide_util.h"
+void SetupRoutines_ByCPU(Bool quite) {
+	static int IS_CPU_INSTRUCTON_CHECKED=0;
+	if (IS_CPU_INSTRUCTON_CHECKED) {
+		return;
+	}
+	if (!quite)	r_printf("\nOn the first run,check the CPU instruction set ... \n");
+	 struct cpu_x86 cpuinfo;
+	 detect_host(&cpuinfo);
+	 if (!quite) print_cpuinfo(&cpuinfo);
+	 i386_cpuid_caches(quite);
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+	if (cpuinfo.HW_AVX512_F  && cpuinfo.HW_AVX512_BW && cpuinfo.HW_AVX512_DQ && cpuinfo.HW_AVX512_VL) {
+		 SetupVectorFunction_AVX512();
+		 SetupPCG_AVX512();
+		 if (!quite)	  r_printf("CPU checking result: The AVX512-enabled library is used ... \n\n");
+	}
+	else if (cpuinfo.HW_AVX &&cpuinfo.HW_AVX2 && cpuinfo.HW_FMA3) {
+		 SetupVectorFunction_AVX2();
+		 SetupPCG_AVX2();
+		 if (!quite)	 r_printf("CPU checking result: The AVX2-enabled library is used ...\n\n");
+	}
+	else {
+		 SetupVectorFunction_Generic();
+		 SetupPCG_GENERIC();
+		 if (!quite)	 r_printf("CPU checking result: No AVX2/AVX512 is supported and the default library is used ...\n\n");
+	}
+#else
+	 SetupVectorFunction_Generic();
+	 SetupPCG_GENERIC();
+	 if (!quite) r_printf("CPU checking result: No AVX2 is supported and the default library is used ...");
+#endif
+	 IS_CPU_INSTRUCTON_CHECKED=1;
+}
+void SetupRoutines_UserChoice(int avxOption) {
+#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+	if (avxOption==1) {
+		SetupVectorFunction_Generic();
+		SetupPCG_GENERIC();
+	}
+	else if (avxOption==2) {
+		SetupVectorFunction_AVX2();
+		SetupPCG_AVX2();
+	}
+	else if (avxOption==3) {
+		SetupVectorFunction_AVX512();
+		SetupPCG_AVX512();
+	}
+	else {
+		SetupRoutines_ByCPU(1L); 
+	} 
+#else
+	SetupVectorFunction_Generic();
+	SetupPCG_GENERIC();
+#endif
+}
 #include "abc_000_warning.h"

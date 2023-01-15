@@ -11,108 +11,36 @@
 #include "abc_mat.h"
 #include "abc_blas_lapack_lib.h"
 #include "beastv2_io.h"
-static I32 __GetRawTimeDimension(A(IO_PTR) io) {
-	return io->dims[io->meta.whichDimIsTime - 1];
+static void __convert_index_to_datasubs3(BEAST2_IO* io,int index,int subs3[]) {
+	int subs2[2];
+	ind2sub(io->imgdims,2L,index,subs2);
+	subs3[io->rowdim - 1]=subs2[0];
+	subs3[io->coldim - 1]=subs2[1];
+	subs3[io->timedim - 1]=1;     
 }
-static void GetInputOffsetStride(A(IO_PTR) io,I64 idx,I64 *pStride,I64 *pOffset,I64 *pN)
-{
-	I64 N=__GetRawTimeDimension(io);  
-	I64 stride,offset;	
-	if (io->ndim==1)       
-		stride=1L,
-		offset=0;	
-	if (io->ndim==2)       
-	{
-		if (io->meta.whichDimIsTime==1) {
-			stride=1L,
-			offset=(idx - 1) * N;
-		} 	else {
-			I32 ROW=io->dims[0];
-			stride=ROW,
-			offset=(idx - 1);
-		}
-	}
-	else if (io->ndim==3L)  
-	{
-			I64  ROW,COL;
-			switch (io->meta.whichDimIsTime) {
-			case 1:
-				ROW=io->dims[1];
-				COL=io->dims[2];
-				stride=1L;
-				offset=(idx - 1)*N;
-				break;
-			case 2: {
-				ROW=io->dims[0];
-				COL=io->dims[2];
-				I64 r,c;
-				c=(idx-1)/ROW;
-				r=idx - c*ROW;
-				c=c+1;
-				stride=ROW;
-				offset=(c - 1)*(N*ROW)+r - 1;
-				break;
-			}
-			case 3: {
-				ROW=io->dims[0],
-				COL=io->dims[1];
-				I64 r,c;
-				c=(idx - 1)/ROW;
-				r=idx - c*ROW;
-				c=c+1;
-				stride=ROW*COL;
-				offset=(c - 1)*ROW+r - 1;
-				break;
-			}
-		} 
-	} 
-	*pStride=stride;
-	*pOffset=offset;
-	*pN=N;
-}
-static void fetch_next_timeSeries_MEM_reglular(A(YINFO_PTR)  yInfo,int idx,A(IO_PTR) io)
-{   
-	I64  stride,offset,N;
-	GetInputOffsetStride(io,idx,&stride,&offset,&N);
+void BEAST2_fetch_timeSeries(A(YINFO_PTR)  yInfo,int pixelIndex,F32PTR GlobalMEMBuf,A(IO_PTR)  io)  {
+	int subs3[3];
+	I64 stride,offset;
+	__convert_index_to_datasubs3(io,pixelIndex,subs3);
+	ndarray_get1d_stride_offset(io->dims,3L,subs3,io->timedim,&stride,&offset);
+	int    Nraw=io->dims[io->timedim - 1L];
 	I32    q=io->q; 
 	F32PTR Y=yInfo->Y;
-	for (I32 i=0; i < q; i++) {
-		CopyStrideMEMToF32Arr(Y+i * N,io->pdata[i],N,stride,offset,io->dtype[i]);
-		f32_set_nan_by_value(Y+i * N,N,io->meta.missingValue);
-		#if R_INTERFACE==1
-			if (io->dtype[i]==DATA_INT32) {
-				I32 INTMIN=0x80000001;
-				F32 NAinteger=(F32)(INTMIN);  
-				f32_set_nan_by_value(Y+i * N,N,NAinteger);
-			}
-		#endif
+	if ( !io->meta.needAggregate ) {
+		for (I32 i=0; i < q; i++) {
+			f32_from_strided_mem(Y+i * Nraw,io->pdata[i],Nraw,stride,offset,io->dtype[i]);
+		}
+		f32_set_nan_by_value(Y,Nraw*q,io->meta.missingValue); 
+	} else {
+		for (I32 i=0; i < q; i++) {
+			f32_from_strided_mem(GlobalMEMBuf,io->pdata[i],Nraw,stride,offset,io->dtype[i]);
+			f32_set_nan_by_value(GlobalMEMBuf,Nraw,io->meta.missingValue);
+			I32    Nnew=io->N;
+			tsAggegrationPerform(Y+Nnew * i,Nnew,GlobalMEMBuf,Nraw,io->T.numPtsPerInterval,io->T.sortedTimeIdx+io->T.startIdxOfFirsInterval);
+		}
 	}
 }
-static void fetch_next_timeSeries_MEM_irregular(A(YINFO_PTR)  yInfo,int idx,F32PTR GlobalMEMBuf,A(IO_PTR)  io)
-{   
-	I64 stride,offset,Nraw; 	
-	GetInputOffsetStride(io,idx,&stride,&offset,&Nraw);
-    I32    Nnew=io->N;
-	I32    q=io->q; 
-	F32PTR Y=yInfo->Y;	
-	for (I32 i=0; i < q; i++) {
-		CopyStrideMEMToF32Arr(GlobalMEMBuf,io->pdata[i],Nraw,stride,offset,io->dtype[i]);
-		f32_set_nan_by_value(GlobalMEMBuf,Nraw,io->meta.missingValue);
-	    #if R_INTERFACE==1
-			if (io->dtype[i]==DATA_INT32) {
-				I32 INTMIN=0x80000001;
-				F32 NAinteger=(F32) (INTMIN);  
-				f32_set_nan_by_value(GlobalMEMBuf,Nraw,NAinteger);	
-			}
-		#endif
-		tsAggegrationPerform(Y+Nnew*i,Nnew,GlobalMEMBuf,Nraw,io->T.numPtsPerInterval,io->T.sortedTimeIdx+io->T.startIdxOfFirsInterval);
-	}			
-}
-void BEAST2_fetch_next_timeSeries(A(YINFO_PTR)  yInfo,int pixelIndex,F32PTR GlobalMEMBuf,A(IO_PTR)  io)  {
-		if (io->meta.isRegularOrdered)	 fetch_next_timeSeries_MEM_reglular( yInfo,pixelIndex,io );
-		else                 			 fetch_next_timeSeries_MEM_irregular(yInfo,pixelIndex,GlobalMEMBuf,io);	 
-}
-static I08 _timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo,BEAST2_BASIS_PTR basis,F32PTR Xtmp,BEAST2_OPTIONS_PTR opt) {
+static int  __timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo,BEAST2_BASIS_PTR basis,F32PTR Xtmp,BEAST2_OPTIONS_PTR opt) {
 	int    N=opt->io.N;
 	int    q=opt->io.q;
 	int    period=opt->io.meta.period; 
@@ -166,7 +94,7 @@ static I08 _timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo,BEAST2_BASIS_PT
 I08 BEAST2_preprocess_timeSeries(A(YINFO_PTR)  yInfo,BEAST2_BASIS_PTR basis,F32PTR Xtmp,BEAST2_OPTIONS_PTR opt) {
 	U08 skipCurrentPixel=0;
 	if (yInfo->Yseason !=NULL||yInfo->Ytrend !=NULL) {
-		skipCurrentPixel=_timeseries_deseasonalize_detrend(yInfo,basis,Xtmp,opt);
+		skipCurrentPixel=__timeseries_deseasonalize_detrend(yInfo,basis,Xtmp,opt);
 		if (skipCurrentPixel) return skipCurrentPixel;
 	}
 	F32PTR Y=yInfo->Y;

@@ -54,7 +54,7 @@ static INLINE __m256i GetMoveMask(int n) {
     return maskmov;
 }
 static U64   masktemplate[8];
-static void  FillMaskTempalte( ) {
+static void  FillMaskTempalte(void) {
     for (int i=0; i<8;i++)     masktemplate[i]=(1ULL << (i * 8)) - 1;
 }
 static INLINE __m256i GetMoveMask1(int n) {
@@ -64,13 +64,12 @@ static INLINE __m256i GetMoveMask1(int n) {
 }
 #else
 static U64   masktemplate[8];
-static void  FillMaskTempalte( ) {
+static void  FillMaskTempalte(void) {
     for (int i=0; i<8;i++)     masktemplate[i]=(1ULL << (i * 8)) - 1;
 }
 #define GetMoveMask(n) ({__m128i maskIdx=_mm_cvtsi64_si128(masktemplate[n]); __m256i mask=_mm256_cvtepi8_epi32(maskIdx); mask;})
 #endif
-static INLINE F32  __attribute__((always_inline))  f32_hsum_slow(__m256 r)
-{   
+static INLINE F32  __attribute__((always_inline))  f32_hsum_slow(__m256 r) { 
     __m128 vlow=_mm256_castps256_ps128(r);
     __m128 vhigh=_mm256_extractf128_ps(r,1); 
     __m128 v128=_mm_add_ps(vlow,vhigh);     

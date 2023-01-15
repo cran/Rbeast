@@ -2,8 +2,10 @@
 PKG_LIBS     =  -lpthread -lm
 PKG_CPPFLAGS =  -D_REENTRANT -DR_RELEASE
 PKG_CFLAGS   =  -DR_RELEASE  
+#PKG_CFLAGS   =  -DR_RELEASE   -Wstrict-prototypes -Wstringop-overflow    -pedantic  -Wall
 
-#PKG_CFLAGS   =  -DR_RELEASE -Wno-restrict  # no-restrict is not portable.
+#https://stackoverflow.com/questions/12201625/disable-using-sprintf-chk
+#PKG_CFLAGS   =  -DR_RELEASE   -D_FORTIFY_SOURCE=0  -Wno-restrict  # no-restrict is not portable.
 #PKG_FFLAGS   =  -m64
-#PKG_FFLAGS  =  -ggdb -m64 -gdwarf-2
+#PKG_FFLAGS  =   -ggdb -m64 -gdwarf-2
  

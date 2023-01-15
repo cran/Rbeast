@@ -26,7 +26,7 @@
 #include "beastv2_xxyy_allocmem.h" 
 #include "beastv2_io.h" 
 #define LOCAL(...) do{ __VA_ARGS__ } while(0);
-int beast2_main_corev4()   {
+int beast2_main_corev4(void)   {
 	MemPointers MEM=(MemPointers){.init=mem_init,};
 	MEM.init(&MEM);
 	VSLStreamStatePtr stream;
@@ -113,7 +113,7 @@ int beast2_main_corev4()   {
 	for (U32 pixelIndex=1; pixelIndex <=NUM_PIXELS; pixelIndex++)
 	{
 		F32PTR MEMBUF=Xnewterm; 
-		BEAST2_fetch_next_timeSeries(&yInfo,pixelIndex,MEMBUF,&(opt->io));
+		BEAST2_fetch_timeSeries(&yInfo,pixelIndex,MEMBUF,&(opt->io));
 		F32PTR  Xtmp=Xt_mars;
 		U08     skipCurrentPixel=BEAST2_preprocess_timeSeries(&yInfo,MODEL.b,Xtmp,opt);		
 		#ifdef __DEBUG__
@@ -766,7 +766,7 @@ int beast2_main_corev4()   {
 			    #undef _okn_1
 			}
 			if (skipCurrentPixel) {
-				r_warning("\nWARNING(#%d):The max number of bad iterations exceeded. Can't decompose the current time series\n",skipCurrentPixel);
+				q_warning("\nWARNING(#%d):The max number of bad iterations exceeded. Can't decompose the current time series\n",skipCurrentPixel);
 				break;
 			}
 		}

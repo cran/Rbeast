@@ -380,9 +380,7 @@ dirent_next(
     }
     return p;
 }
-static DIR*
-opendir(
-    const char *dirname)
+static DIR* opendir( const char *dirname)
 {
     struct DIR *dirp;
     if (dirname==NULL||dirname[0]=='\0') {
@@ -412,11 +410,9 @@ exit_free:
     free (dirp);
     return NULL;
 }
-static struct dirent*
-readdir(
-    DIR *dirp)
+static struct dirent* readdir(   DIR *dirp)
 {
-    struct dirent *entry;
+    struct dirent *entry=NULL;
     (void) readdir_r (dirp,&dirp->ent,&entry);
     return entry;
 }
@@ -467,9 +463,7 @@ readdir_r(
     }
     return 0;
 }
-static int
-closedir(
-    DIR *dirp)
+static int closedir(    DIR *dirp)
 {
     int ok;
     if (dirp) {
@@ -482,14 +476,11 @@ closedir(
     }
     return ok;
 }
-static void
-rewinddir(
-    DIR* dirp)
+static void rewinddir( DIR* dirp)
 {
     _wrewinddir (dirp->wdirp);
 }
-static int
-scandir(
+static int scandir(
     const char *dirname,
     struct dirent ***namelist,
     int (*filter)(const struct dirent*),

@@ -118,7 +118,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		}
 		pthread_mutex_unlock(&mutex);
 		F32PTR MEMBUF=Xnewterm; 
-		BEAST2_fetch_next_timeSeries(&yInfo,pixelIndex,MEMBUF,&(opt->io));
+		BEAST2_fetch_timeSeries(&yInfo,pixelIndex,MEMBUF,&(opt->io));
 		F32PTR  Xtmp=Xt_mars;
 		U08     skipCurrentPixel=BEAST2_preprocess_timeSeries(&yInfo,MODEL.b,Xtmp,opt);		
 		#ifdef __DEBUG__

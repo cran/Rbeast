@@ -136,7 +136,7 @@ void avx_pcg_random_vec8_slow(local_pcg32_random_t* rng,U32PTR rnd,I32 N) {
 	}
 	_mm256_storeu_si256(rng->state,oldstate);	
 }
-void SetupPCG_AVX2(){
+void SetupPCG_AVX2(void){
 	 local_pcg_set_seed=avx_pcg_set_seed;
 	 local_pcg_random=avx_pcg_random;
 }

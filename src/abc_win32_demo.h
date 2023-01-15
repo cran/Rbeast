@@ -34,9 +34,10 @@ typedef struct lpParam
 #if R_INTERFACE==1
 	SEXP pY;
 	SEXP pOpt;
-#else
+#elif M_INTERFACE==1
 	mxArray ** plhs,** prhs;
 	int nlhs,nrhs;
+#elif P_INTERFACE==1
 #endif
 	MemPointers *GLOBAL_MEM;
 	VOID_PTR     GLOBAL_OPTIONS;
@@ -51,7 +52,7 @@ typedef struct GlobalStruct
 	HANDLE threadHandle;
 	int    timerInterval;
 	int    sleepInterval;
-	enum stat { RUN,PAUSE,DONE } status;
+	enum __status { RUN,PAUSE,DONE } status;
 	U08  quit;
 	int * plotData[5][5];
 	F32 yMin,yMax;

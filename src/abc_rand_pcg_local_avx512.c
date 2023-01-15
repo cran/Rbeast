@@ -44,7 +44,7 @@ void avx512_pcg_set_seed(local_pcg32_random_t* rng,U64 initstate,U64 initseq)
 	pcg_get_lcg_multiplier_shift_multistep(8L,PCG_DEFAULT_MULTIPLIER_64,rng->increment512,&rng->MULTIPLIER_8steps,&rng->INCREMENT_8steps);
 }
 static __mmask16        masktemplate[16];
-static INLINE void      FillMaskTemplate() { for (I32 i=0; i < 16; i++)    masktemplate[i]=(1UL << i) - 1UL; }
+static INLINE void      FillMaskTemplate(void) { for (I32 i=0; i < 16; i++)    masktemplate[i]=(1UL << i) - 1UL; }
 static INLINE __mmask16 GetMoveMask(int n) { return masktemplate[n]; }
 void avx512_pcg_random(local_pcg32_random_t* rng,U32PTR rnd,I32 N) {
 	const __m512i	INCREMENT_SHIFT=_mm512_set1_epi64(rng->INCREMENT_8steps);
@@ -76,7 +76,7 @@ void avx512_pcg_random(local_pcg32_random_t* rng,U32PTR rnd,I32 N) {
 	_mm512_storeu_si512(rng->state512,oldstate);
 	_mm256_zeroupper();
 }
-void SetupPCG_AVX512() {
+void SetupPCG_AVX512(void) {
 	FillMaskTemplate();
 	local_pcg_set_seed=avx512_pcg_set_seed;
 	local_pcg_random=avx512_pcg_random;

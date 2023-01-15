@@ -2,6 +2,7 @@
 #include "abc_000_macro.h"
 #include "abc_datatype.h"   
 #include "abc_ide_util.h"
+#include "abc_ts_func.h"
 #include "abc_mat.h"   
 #ifndef SOLARIS_COMPILER
 #if R_INTERFACE==1 
@@ -30,13 +31,13 @@ typedef U08 TORDER,*_restrict TORDER_PTR;
 #define rTKNOT       register  TKNOT
 #define rTORDER      register  TORDER
 typedef struct BEAST2_METADATA {
-	VOID_PTR rawInput;
-	VOID_PTR rawTimeVec;	
 	I08      detrend;
 	I08      deseasonalize;
 	I08		 nrhs;
-	I08		 isMetaStruct;
-	I08		 isRegularOrdered;	
+	I08		 isRegular;
+	I08		 isOrdered;
+	I08      isDate;
+	I08      needAggregate;
 	I08      seasonForm;
 	I08      hasSeasonCmpnt;	
 	I08      hasOutlierCmpnt;	
@@ -93,33 +94,30 @@ typedef struct BEAST2_EXTRA {
 	I08   whichOutputDimIsTime;
 	I08   removeSingletonDims;
 	I08   ncpStatMethod;
-	bool  computeCredible;
-	bool  fastCIComputation;
-	bool  computeSeasonOrder;
-	bool  computeTrendOrder;
-	bool  computeSeasonChngpt,computeTrendChngpt,computeOutlierChngpt;
-	bool  computeSeasonAmp;
-	bool  computeTrendSlope;	
-	bool tallyPosNegSeasonJump;
-	bool tallyPosNegTrendJump;
-	bool tallyIncDecTrendJump;
-	bool tallyPosNegOutliers;
-	bool  printOptions;
-	bool  printProgressBar;
+	Bool  computeCredible;
+	Bool  fastCIComputation;
+	Bool  computeSeasonOrder;
+	Bool  computeTrendOrder;
+	Bool  computeSeasonChngpt,computeTrendChngpt,computeOutlierChngpt;
+	Bool  computeSeasonAmp;
+	Bool  computeTrendSlope;	
+	Bool tallyPosNegSeasonJump;
+	Bool tallyPosNegTrendJump;
+	Bool tallyIncDecTrendJump;
+	Bool tallyPosNegOutliers;
+	Bool  printOptions;
+	Bool  printProgressBar;
 } BEAST2_EXTRA,* _restrict BEAST2_EXTRA_PTR;
-typedef struct BEAST2_TIME {
-	I32PTR     sortedTimeIdx;
-	I32PTR     numPtsPerInterval;
-	I32        startIdxOfFirsInterval;
-} BEAST2_TIME;
 struct BEAST2_RESULT;
 typedef struct BEAST2_RESULT BEAST2_RESULT,* _restrict BEAST2_RESULT_PTR;
 typedef struct BEAST2_IO {
 	BEAST2_METADATA	meta;
-	BEAST2_TIME		T;
+	TimeAggregation	T;
 	VOID_PTR		*pdata;
 	DATA_TYPE		*dtype;
 	I08				ndim;
+	I08             rowdim,coldim,timedim;
+	I32				imgdims[2];
 	I32				dims[3];
 	I32				numOfPixels;
 	I32				N,q; 

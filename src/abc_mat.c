@@ -524,7 +524,7 @@ void chol_addCol_skipleadingzeros_prec_nostartprec_invdiag(F32PTR Au,F32PTR U,F3
 			SUM+=Ucol_curElem * Ucol_curElem;
 			U+=N;
 		}
-		F32 prec=(COL==1) ? 0. : *precPrior;
+		F32 prec=(COL==1) ? 0.f : *precPrior;
 		Ucol[COL - 1]=1.f/sqrt((Au[COL - 1]+prec) - SUM); 
 		Ucol+=N;
 		Au+=N;

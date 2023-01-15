@@ -1,14 +1,14 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
-#if M_INTERFACE==1 && !defined(MSVC_COMPILER)
+ #if M_INTERFACE==1 && !defined(MSVC_COMPILER)
 	#include "inttypes.h"
 	#include "mex.h"
 	#if defined(WIN_OS)
-		extern bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
+		extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
 	#elif defined(MAC_OS)
-		extern bool ioFlush(void)  asm("__Z7ioFlushv");
+		extern Bool ioFlush(void)  asm("__Z7ioFlushv");
 	#else 
-		extern bool ioFlush(void)  asm("_Z7ioFlushv");
+		extern Bool ioFlush(void)  asm("_Z7ioFlushv");
 	#endif
     void matlab_IOflush(void)	{
 		ioFlush();

@@ -29,17 +29,17 @@ static INLINE void Sleep_ms(int milliseconds) {
         select(0,NULL,NULL,NULL,&tv);
     #endif
 }
-extern void InitTimerFunc();
-extern void StartTimer();
-extern F64  GetElapsedSecondsSinceStart();
-extern void SetBreakPointForStartedTimer();
-extern F64  GetElaspedTimeFromBreakPoint();
-extern U64  TimerGetTickCount();
+extern void InitTimerFunc(void);
+extern void StartTimer(void);
+extern F64  GetElapsedSecondsSinceStart(void);
+extern void SetBreakPointForStartedTimer(void);
+extern F64  GetElaspedTimeFromBreakPoint(void);
+extern U64  TimerGetTickCount(void);
 #ifdef MSVC_COMPILER
     #include <intrin.h>    
 #elif defined(SOLARIS_COMPILER)
    #include <sys/time.h>
-    static INLINE   unsigned long long __rdtsc() {
+    static INLINE   unsigned long long __rdtsc(void) {
         return  gethrtime();
     }
 #elif defined(ARM64_OS)
@@ -52,8 +52,8 @@ extern U64  TimerGetTickCount();
 #else
     #include <x86intrin.h> 
 #endif
-static INLINE unsigned long long readTSC() {
+static INLINE unsigned long long readTSC(void) {
     return __rdtsc();
 }
-extern void               tic();
-extern unsigned long long toc();
+extern void               tic(void);
+extern unsigned long long toc(void);

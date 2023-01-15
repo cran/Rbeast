@@ -184,4 +184,109 @@ void mem_init(MemPointers* self) {
 			.verify_header=verify_header,
 			};			
 }
+void dynbuf_init(DynMemBufPtr buf,int init_max_len) {
+	buf->cur_len=0;
+	if (init_max_len > buf->max_len) {		
+		if (buf->raw) {
+			free(buf->raw);			
+			buf->raw=NULL;
+		}
+		buf->max_len=init_max_len;		
+	}
+	if (buf->raw==NULL) {		
+		buf->raw=malloc(buf->max_len);
+		return;
+	}
+}
+void dynbuf_kill(DynMemBufPtr buf) {
+	if (buf->raw) {
+		free(buf->raw);
+	}
+	memset(buf,0,sizeof(DynMemBuf));
+}
+void dynbuf_requestmore(DynMemBufPtr buf,int moreBytes) {
+	int newLength=moreBytes+buf->cur_len;
+	if (newLength <=buf->max_len) {
+		if (buf->raw==NULL) {
+			buf->raw=malloc(buf->max_len);
+			buf->cur_len=0;
+		}
+		return;
+	}
+	newLength=max(newLength,buf->max_len+buf->max_len/2);
+	int8_t* newptr=realloc(buf->raw,newLength);
+	if (newptr) {
+		buf->max_len=newLength;
+		buf->raw=newptr;
+	}	
+}
+void dynbuf_insert_bytes(DynMemBufPtr buf,char * newbytes,int nbytes) {	 
+	 dynbuf_requestmore(buf,nbytes);
+	 memcpy(buf->raw+buf->cur_len,newbytes,nbytes); 
+	 buf->cur_len+=nbytes;
+}
+void dynbuf_insert_str(DynMemBufPtr buf,char* newstr) {
+	int newstr_len=strlen(newstr)+1;
+	dynbuf_requestmore(buf,newstr_len);
+	memcpy(buf->raw+buf->cur_len,newstr,newstr_len); 
+	buf->cur_len+=newstr_len;
+}
+ void adynbuf_init(DynAlignedBufPtr buf,int init_max_len) {
+	 if (buf->elem_size==0||buf->align==0) {
+		 r_printf("ERROR: elem_size and algin should not be zeros (in abynbuf_nit).\n");
+		 return;
+	 }
+	 buf->cur_len=0;
+	 if (init_max_len > buf->max_len) {
+		 buf->max_len=init_max_len;
+		 if (buf->p.raw) {
+			 free(buf->p.raw - buf->offset);
+			 buf->p.raw=NULL;
+		 }	 
+	 }
+	 if (buf->p.raw==NULL) {
+		 int bufsize=buf->max_len * buf->elem_size+(buf->align);
+		 char* ptr=malloc(bufsize);
+		 char* palign=(VOID_PTR)(((uintptr_t)ptr+buf->align - 1) & ~(uintptr_t)(buf->align - 1));
+		 buf->p.raw=palign;
+		 buf->offset=palign - ptr;	 
+	 }
+ }
+ void adynbuf_kill(DynAlignedBufPtr buf) {
+	 if ((*buf).p.raw) {
+		 free(buf->p.raw - buf->offset);
+	 }
+	 memset(buf,0,sizeof(DynAlignedBuf));
+ }
+ void adynbuf_requestmore(DynAlignedBufPtr buf,int moreElements) {
+	 int newLength=moreElements+buf->cur_len;
+	 if (newLength <=buf->max_len) {
+		 return;
+	 }
+	 newLength=max(newLength,buf->max_len+buf->max_len/2);
+	 int newbufsize=newLength* buf->elem_size+(buf->align);
+	 int8_t* newptr=realloc(buf->p.raw - buf->offset,newbufsize);
+	 int8_t* newpalign=(VOID_PTR)(((uintptr_t)newptr+buf->align - 1) & ~(uintptr_t)(buf->align - 1));	 
+	 if (newptr) {
+		 int  newoffset=newpalign - newptr;
+		 if (newoffset==buf->offset) {			 
+			 buf->p.raw=newpalign;
+			 buf->max_len=newLength;
+		 }
+		 else if (newoffset < buf->offset) {			 
+			 memcpy(newpalign,newptr+buf->offset,buf->elem_size * buf->cur_len);
+			 buf->p.raw=newpalign;
+			 buf->offset=newoffset;
+			 buf->max_len=newLength;
+		 }  else if (newoffset > buf->offset) {		 
+			 int8_t* newptr1=malloc( newbufsize);
+			 int8_t* newpalign1=(VOID_PTR)(((uintptr_t)newptr1+buf->align - 1) & ~(uintptr_t)(buf->align - 1));
+			 memcpy(newpalign1,newptr+buf->offset,buf->elem_size * buf->cur_len);
+			 buf->p.raw=newpalign1;
+			 buf->offset=newpalign1 - newptr1;
+			 buf->max_len=newLength;
+			 free(newptr); 
+		 }
+	 }
+ }
 #include "abc_000_warning.h"

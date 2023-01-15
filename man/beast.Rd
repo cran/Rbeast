@@ -13,10 +13,10 @@
 \usage{
   beast(   
          y, 
-         start        = 1,      
+         start        = 1,
          deltat       = 1, 
          season       = c('harmonic','dummy','svd','none'), 
-         freq         = NA,  		   
+         period       = NULL,  		   
          scp.minmax   = c(0,10),  sorder.minmax = c(0,5),  sseg.min = NULL,
          tcp.minmax   = c(0,10),  torder.minmax = c(0,1),  tseg.min = NULL,
          detrend      = FALSE, 
@@ -31,6 +31,7 @@
          precPriorType  = c('componentwise','uniform','constant','orderwise'),
          print.options  = TRUE,
          print.progress = TRUE,		 
+		 quiet          = FALSE,		 
          gui            = FALSE,
          ...
       )
@@ -43,7 +44,7 @@
 				
 				\item  If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
 				
-				\item  If \code{y} is an object of class 'ts', its time attributes (i.e.,start, end, frequency) will be used to specify the next several args such as   \code{start},\code{detlta},\code{freq}, and \code{season}: No need to provide them explicitly; even if provided, the values are ignored to honor the time attributes of \code{y}. For example, if \code{y} has a frequency = 1, \code{season = 'none'} is always assumed; if \code{y} has a frequency > 1 (i.e., with a periodic component) but \code{season='none'} is specified by the user, 'none' will be replaced by 'harmonic'.
+				\item  If \code{y} is an object of class 'ts','xts', or 'zoo', its time attributes (i.e.,start, end, frequency) will be used to specify the next several args such as   \code{start},\code{detlta},\code{period}, and \code{season}: No need to provide them explicitly; even if provided, the values are ignored to honor the time attributes of \code{y}. For example, if \code{y} has a frequency = 1, \code{season = 'none'} is always assumed; if \code{y} has a frequency > 1 (i.e., with a periodic component) but \code{season='none'} is specified by the user, 'none' will be replaced by 'harmonic'.
             }  
 
 			If a list of multiple time series is provided for \code{y}, the multivariate version of the BEAST algorithm will be invoked to decompose the multiple time series and detect common changepoints altogether. This feature is \code{experimental} only and under further development. Check \code{\link[Rbeast]{ohio}} for a working example.			
@@ -52,7 +53,7 @@
 
   \item{start}{ numeric (default to 1.0) or \code{Date}; the time of the 1st datapoint of \code{y}. It can be specified as a scalar (e.g., 2021.0644),  a vector of three values in the order of Year, Month, and Day (e.g., \code{c(2021,1,24)} ), or a R's Date object (e.g., \code{as.Date('2021-1-24')} ).}
   
-  \item{deltat}{ numeric (default to 1.0); the time interval between consecutive data points. Its unit should be consistent with \code{start}. If \code{start} takes a numeric scalar, the unit is arbitrary and irrelevant to beast (e.g., 2021.3 can be of any unit). If \code{start} is a vector of Year, Month, and Day or an R's Date, \code{deltat} has the unit of YEAR. For example, if \code{start=c(2021,1,24)} for a monthly time series, \code{start} is converted to a fractional year 2021+(24-0.5)/365=2021.0644 and \code{deltat=1/12} needs to be set in order to specify the monthly interval.}
+  \item{deltat}{ numeric (default to 1.0) or string; the time interval between consecutive data points. Its unit should be consistent with \code{start}. If \code{start} takes a numeric scalar, the unit is arbitrary and irrelevant to beast (e.g., 2021.3 can be of any unit: Year 2021.3, 2021.3 meters, 2021.3 degrees ...). If \code{start} is a vector of Year, Month, and Day or an R's Date, \code{deltat} has the unit of YEAR. For example, if \code{start=c(2021,1,24)} for a monthly time series, \code{start} is converted to a fractional year 2021+(24-0.5)/365=2021.0644 and \code{deltat=1/12} needs to be set in order to specify the monthly interval. Alternatively,  \code{deltat} can be provided as a string to specify whether its unit is day, month, or year. Examples include '7 days', '7d', '1/2 months', '1 mn', '1.0 year', and '1y'. }
 
   \item{season}{ characters (default to 'harmonic'); specify if \code{y} has a periodic component or not. Four strings are possible.
 				\itemize{
@@ -66,7 +67,7 @@
   
   }
   
-  \item{freq}{ numeric. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and ignored for trend-only data (i.e., \code{season='none'}). It specifies the number of samples/datapoints per cycle (e.g, a time series of monthly observations with an annual period has a frequency of 12); it may be a decimal real number (e.g., a time series of bi-hourly observations with a period of 37.5 hrs has a freq of 37.5/2=18.75). The period of the cyclic component in the unit of time is \code{period=deltat*freq}. \code{freq} is not a model parameter of BEAST and has to be specified by the user, but if \code{freq} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model: in this case, \code{freq} is assumed to be an integer. }
+  \item{period}{ numeric or string. Specify the period for the periodic/seasonal component in \code{y}. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and not used for trend-only data (i.e., \code{season='none'}).  The period of the cyclic component should have a unit consisent with the unit of \code{deltat}. It holds that \code{period=deltat*freq} where \code{freq} is the number of data samples per period. (Note that the \code{freq} argument in earlier versions becomes obsolete and now is replaced by \code{period}.)  \code{period} or the number of data points per period is not a BEAST model parameter and it has to be specified by the user. But if \code{period} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model. If \code{period} <= 0, no seasonal/cyclic component is assumed (i.e, \code{season='none'}) and the trend-only model is used.  If needed, use a string to specify whether the unit of period is day, month, or year. Examples are '1.0 year', '12 months', '365d', '366 days'.}
   
   \item{sorder.minmax}{ a vector of 2 integers (>=1); the min and max harmonic orders considered to fit the seasonal component. \code{sorder.minmax} is used only used if the time series has a seasonal component (i.e., \code{season='harmonic'}) and ignored for trend-only data or when \code{season='dummy'}. If the min and max orders are equal (\code{sorder.minmax[1]=sorder.minmax[2]}), BEAST assumes a constant harmonic order used and won't infer the posterior probability of harmonic orders. }
   
@@ -116,6 +117,8 @@
   \item{print.options}{ boolean. If \code{TRUE},the full list of input parameters to BEAST  will be printed out prior to the MCMC inference; the naming for this list (e.g., metadata, prior, and mcmc) differs slightly from the input to \code{beast}, but there is a one-to-one correspondence (e.g., prior$trendMinSepDist=tseg.min). Internally, beast converts the input parameters to the forms of metadata, prior,and mcmc. Type 'View(beast)' to see the details or check the \code{beast123} function. }	
   
   \item{print.progress}{ boolean;If \code{TRUE}, a progressbar will be displayed. }	
+  
+  \item{quiet}{ boolean. If \code{TRUE}, warning messages are suppressed and not printed.}	
   
   \item{gui}{ boolean. If \code{TRUE}, BEAST will be run with a GUI window to show an animation of the MCMC sampling in the model space step by step; as an experimental feature, "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac.}	
  	
@@ -204,10 +207,10 @@
 		 \item \code{cp}: [Changepoints] a vector of length \code{scp.max=scp.minmax[2]}; the most possible  changepoint locations in the seasonal component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {sseg.min} and then picking up to a total \code{ncp} of the highest peaks in the filtered curve. If \code{ncp<scp.max}, the remaining of the vector is filled with NaNs.
 		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{scp.max}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaining elements if \code{ncp<scp.max}.
 		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{scp.max x 2}; the credibable intervals for the detected changepoints \code{cp}.
-		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{scp.max}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
-		 \item \code{Y}: a vector of length N; the estimated trend component. It is the Bayesian model averaging of all the individual sampled trend.
-		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated trend component.
-		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated trend. One vector of the matrix is for the upper envelope and another for the lower envelope.
+		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{scp.max}; the jumps in the fitted seasonal curves at the detected changepoints \code{cp}.
+		 \item \code{Y}: a vector of length N; the estimated seasonal component. It is the Bayesian model averaging of all the individual sampled signal.
+		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated seasonal component.
+		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated seasonal signal. One vector of the matrix is for the upper envelope and another for the lower envelope.
 		 \item \code{amp}: [AMPlitude] a vector of length N;  the time-varying amplitude of the estimated seasonality.
 		 \item \code{ampSD}: [Standar Deviation of AMPlitude] a vector of length N; , the SD of the amplitude of the seasonality.
  
@@ -249,18 +252,19 @@ library(Rbeast)
 
 #------------------------------------Example 1----------------------------------------#
 # 'googletrend_beach' is the monthly Google search popularity of 'beach' in the US 
-#  from 2004 to 2022, obtained from Google Trends. Sudden changes in the time series
+# from 2004 to 2022, obtained from Google Trends. Sudden changes in the time series
 # coincide with known extreme  weather events (e.g., 2006 North American Blizzard, 2011
 # US hottest summer on record, Record warm January in 2016) or the covid19 outbreak
 
- o <- beast(googletrend_beach)
+ out <- beast(googletrend_beach)
  
- plot(o)                          
- plot(o, vars=c('t','slpsgn') )   # plot the trend and probability of slope sign only.
+ plot(out)                          
+ plot(out, vars=c('t','slpsgn') ) # plot the trend and probability of slope sign only.
                                   # In the slpsgn panel, the upper red portion refers to
                                   # probability of trend slope being positive, the middle 
                                   # green to the prob of slope being zero, and the lower 
                                   # blue to the probability of slope being negative.
+                                  # Run "?plot.beast" for details on the plot function.
 
 #------------------------------------Example 2----------------------------------------#
 # Yellowstone is a half-monthly satellite time series of 774 NDVI(vegetation greeness) 
@@ -275,32 +279,49 @@ library(Rbeast)
 
 # Yellowstone is not a object of class 'ts' but a pure vector without time attributes. 
 # Below, no extra argument is supplied, so default values (i.e.,start=1, deltat=1) are 
-# used and the time is 1:774. 'freq' is missing and so is guessed via auto-correlation.
+# used and the time is 1:774. 'period' is missing and so is guessed via auto-correlation.
 # Use of auto-correlation to compute the period of a cyclic time series is not always 
-# reliable, so it is suggested to always supply 'freq' directly, as in Example 2 and
+# reliable, so it is suggested to always supply 'period' directly, as in Example 2 and
 # Example 3.
 
- out = beast(Yellowstone)   # the times assumed to be 1:length(Yellowstone) by default
- plot(out)
+ o = beast(Yellowstone)   # By defualt, the times assumed to be 1:length(Yellowstone) 
+                          # and a periodic component is assumed (season='harmonic')
+ plot(o)
+ 
+#o = beast(Yellowstone, quiet=TRUE)                        # print no warning messages
+#o = beast(Yellowstone, quiet=TRUE, print.progress=FALSE)  # print nothing
 
 #------------------------------------Example 3----------------------------------------#
-# The time info such as start,delta,and freq is explicitly provided. 'start' can be 
-# given as (1) a vector comprising year, month,& day, (2) a fractional number, or (3)
-# a R's Date. The unit of start and deltat does not necessarily refer to time and can 
+# The time info such as start,delta,and period is explicitly provided. 'start' can be 
+# given as (1) a fractional number, (2) a vector comprising year, month,& day, or (3)
+# a R's Date. In (1), the unit of start and deltat does not necessarily refer to time and can 
 # be arbitrary (e.g., a sequence of data observed at evenly-spaced distaces along a 
 # transect or a elevation gradient)
 
- o=beast(Yellowstone, start = c(1981,7,7),          deltat=1/24, freq=24)
-#o=beast(Yellowstone, start = 1981.5137,            deltat=1/24, freq=24)  
-#o=beast(Yellowstone, start = as.Date('1981-7-7'),  deltat=1/24, freq=24)  
+ # (1) Unknown unit such that 1981.5137 can be interpreted arbitrarily
+ o=beast(Yellowstone, start=1981.5137,            deltat=1/24,  period=1.0) 
+ 
+ # Use a string to explictly specify a time unit so that times are intepreted as dates
+ # o=beast(Yellowstone, start=1981.5137,   deltat='1/24 year', period=1.0) 
+ # o=beast(Yellowstone, start=1981.5137,   deltat='0.5 mon',   period=1.0) 
+ # o=beast(Yellowstone, start=1981.5137,   deltat=1/24,        period='1 yr') 
+ # o=beast(Yellowstone, start=1981.5137,   deltat=1/24,        period='365 days')
+  
+ # (2) start is provided as YMD, the unit is year: deltat=1/24 year=0.5 month
+ #o=beast(Yellowstone, start=c(1981,7,7),         deltat=1/24,  period=1.0)
+
+ # (3) start is provided as Date, the unit is year: deltat=1/24 year=0.5 month
+ #o=beast(Yellowstone, start=as.Date('1981-7-7'), deltat=1/24, period=1.0)  
 
  print(o)                           # o is a R LIST object with many fields
+ str(o)                             # See a list of fields in o
+ 
  plot(o)                            # plot many variables 
  plot(o, vars=c('y','s','t') )      # plot the Y, seasonal, and trend components only
- plot(o, vars=c('s','scp','samp','t','tcp','tslp'))# plot some selected variables in 
+ plot(o, vars=c('s','scp','samp','t','tcp','tslp'))# Plot some selected variables in 
                                                    # 'o'. Type "?plot.beast" to see 
                                                    # more about vars
- plot(o, vars=c('s','t'),col=c('red','blue') ) # specify colors of selected subplots
+ plot(o, vars=c('s','t'),col=c('red','blue') )     # Specify colors of selected subplots
 
  plot(o$time, o$season$Y,type='l') # directly plot output: the fitted season
  plot(o$time, o$season$cpOccPr)    # directly plot output: season chgpt  prob
@@ -320,17 +341,28 @@ library(Rbeast)
 # so in beast(), the input parameters will be converted to metadata, prior, mcmc, and 
 # extra parameters as explained for the beast123() function. Or type 'View(beast)' to 
 # check the parameter assignment in the code.
-  
- out = beast(Yellowstone, freq=24,season='dummy', mcmc.samples=5000, tseg.min=20)
- plot(out)
  
- out=beast( 
+ 
+ # In R's terminology, the  number of datapoints per period is also called 'freq'. In this
+ # version, the 'freq' argument is obsolete and replaced by 'period'.
+ 
+ # period=deltat*number_of_datapoints_per_period = 1.0*24=24 because deltat is set to 1.0 by
+ # default and this signal has 24 samples per period. 
+ out = beast(Yellowstone, period=24.0, mcmc.samples=5000, tseg.min=20)
+ 
+ # period=deltat*number_of_datapoints_per_period = 1/24*24=1.0.
+ # out = beast(Yellowstone, deltat=1/24 period=1.0, mcmc.samples=5000, tseg.min=20)
+  
+ out = beast( 
      Yellowstone,            # Yellowstone: a pure numeric vector wo time info
-     start=1981.51, deltat=1/24, freq  = 24,  
+     start   = 1981.51, 
+     deltat  = 1/24,         
+     period  = 1.0,          # period=delta*number_of_datapoints_per_period
      season    = 'harmonic', # periodic compnt exisits,fitted as a harmonic curve 
      scp.minmax    = c(0,3), # min and max numbers of seasonal changpts allowed
      sorder.minmax = c(1,5), # min and max harmonic orders allowed
      sseg.min      = 24,     # the min length of segments btw neighboring chnpts
+	                         # '24' means 24 datapoints; the unit is datapoint.
      tcp.minmax    = c(0,10),# min and max numbers of changpts allowed in the trend
      torder.minmax = c(0,1), #  min and maxx polynomial orders to fit trend
      tseg.min      = 24,     # the min length of segments btw neighboring trend chnpts
@@ -355,7 +387,7 @@ library(Rbeast)
 # only available on Win x64 machines, not Mac or Linux.
 
 \dontrun{
- beast(Yellowstone, freq=24, gui=TRUE) 
+ beast(Yellowstone, period=24, gui=TRUE) 
 }
 
 #------------------------------------Example 6----------------------------------------#
@@ -372,9 +404,9 @@ library(Rbeast)
  o = beast(Nile)  # start=1871, delta=1, and freq=1 taken from Nile itself
  plot(o)
  
- o = beast(Nile,            # the same as above. The user-supplied values (i.e., 2011,
-           start=2011,      # 24434) are ignored bcz Nile has its own time attributes.
-           freq =24434,     # Its frequency tag is 1 (i.e., trend-only), so season='none'
+ o = beast(Nile,            #   the same as above. The user-supplied values (i.e., 2023,
+           start=2023,       # 9999) are ignored bcz Nile carries its own time attributes.
+           period=9999,       # Its frequency tag is 1 (i.e., trend-only), so season='none'
            season='harmonic' # is used instead of the supplied 'harmonic'
 		   )
 } 
@@ -392,14 +424,16 @@ library(Rbeast)
 						   
  plot(o)                   # WRONG Results: The result has a suprious seasonal component 
 							  
- o=beast(NileVec,season='none') # Correct WAY to call: Use season='none' for trend-only 
+ o=beast(NileVec,season='none') # The correct way to call: Use season='none' for trend-only 
                                 # analysis; the default time is the integer indices
                                 # "1:length(NileVec)'. 
+ print(o$time)							 
 								
- o=beast(NileVec,               # Recommended WAY to call: The true time attributes are 
+ o=beast(NileVec,               # Recommended way to call: The true time attributes are 
          start  = 1871,         # given explicitly through start and deltat (or freq if 
          deltat = 1,            # there is a  cyclic/seasonal cmponent). 
-         season = 'none')                                                
+         season = 'none')  
+ print(o$time)			 
  plot(o)
 }
 
@@ -418,10 +452,10 @@ library(Rbeast)
  out=beast(co2) # co2 is a ts object and its 'tsp' time attributes are used to get the
                 # true time info. No need to specify 'start','deltat', & freq explicity.
 				
- out=beast(co2,                  # The supplied time/freq values will be ignored bcz
-           start  = c(1959,1,15),# co2 is a ts object; the correct freq = 12 will be 
+ out=beast(co2,                  # The supplied time/period values will be ignored bcz
+           start  = c(1959,1,15),# co2 is a ts object; the correct period = 1 will be 
            deltat = 1/12,        # used.
-           freq   = 365)  
+           period = 365)  
  print(out)
  plot(out)
 } 
@@ -478,7 +512,8 @@ library(Rbeast)
   plot(out) # the result is wrong bcz the guessed freq via auto-correlation by beast 
             # is 2 rather than 12, so we recommend always specifying 'freq' explicitly
             # for those time series with a periodic component, as shown below.
-  out    = beast(births,start=c(1946,1,15), deltat=1/12, freq=12 )  
+  out    = beast(births,start=c(1946,1,15), deltat=1/12, freq  =12 )  
+  out    = beast(births,start=c(1946,1,15), deltat=1/12, period=1.0 )  
   plot(out)  
   
 }
@@ -488,21 +523,27 @@ library(Rbeast)
  
  \dontrun{
  data(covid19)
- newcases = covid19$newcases
+ plot(covid19$date, covid19$newcases, type='l')
+ 
+ newcases = sqrt( covid19$newcases )  # Apply a square root-transformation
  
  # This ts varies periodically every 7 days. 7 days can't be precisely represented 
- # in  the unit of year bcz some years has 365 days and others has 366. So, here we 
- # use  the date number as the time unit--the num of days lapsed since 1970-01-01. 
+ # in  the unit of year bcz some years has 365 days and others has 366. BEAST can hanlde 
+ # this in two ways.
+
+
+ #(1) Use the date number as the time unit--the num of days lapsed since 1970-01-01. 
+  
+  datenum  = as.numeric(covid19$date) 
+  o        = beast(newcases, start=min(datenum), deltat=1, period=7) 
+  o$time   = as.Date(o$time, origin='1970-01-01') # Convert from integers to Date.
+  plot(o)
  
- datenum = as.numeric(covid19$date) 
- o       = beast(newcases, start=min(datenum), deltat=1, freq=7) 
- o$time  = as.Date(o$time, origin='1970-01-01') # Convert from integers to Date.
- plot(o)
+ #(2) Use strings to explicitly specify deltat and period with a unit. 
  
- # Apply BEAST to the square root-transformed time series
- o        = beast(sqrt(newcases), start=min(datenum), deltat=1, freq=7) 
- o$time   = as.Date(o$time, origin='1970-01-01')  # Convert from integers to Date.
- plot(o)
+  startdate = covid19$date[1]
+  o         = beast(newcases, start=startdate, deltat='1day', period='7days') 
+  plot(o)
  
  }
  

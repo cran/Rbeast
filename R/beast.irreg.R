@@ -1,17 +1,22 @@
+#from . import Rbeast as rb
+
 beast.irreg <- function(  
                     y,    
-                    time, deltat, freq = NA,                  
-                    season=c('harmonic','dummy','none'),
+                    time, 
+					deltat = NULL , 
+					period = NULL,                  
+                    season = c('harmonic','dummy','none'),
                     scp.minmax=c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
                     tcp.minmax=c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
-                    detrend= FALSE,
-                    deseasonalize=FALSE,
+                    detrend       = FALSE,
+                    deseasonalize = FALSE,
                     mcmc.seed=0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
 					ci             = FALSE,
                     precValue      = 1.5,
                     precPriorType  = c('componentwise','uniform','constant','orderwise'),					
-                    print.options=TRUE,
-                    print.progress  =TRUE,					
+                    print.options  = TRUE,
+                    print.progress = TRUE,					
+					quiet          = FALSE,
                     gui=FALSE,...)
 {
 
@@ -30,7 +35,8 @@ beast.irreg <- function(
   # list is supported in this version for the multivariate cases
   #if ( !hasArg("y") || is.list(y) )  {  
   if ( !hasArg("y") )  {  
-    stop("Something is wrong with the input 'y'. Make sure that y is a vector")
+    stop(" The input 'y' is missing!")
+    #stop("Something is wrong with the input 'y'. Make sure that y is a vector")	
     invisible(return(NULL))         
   }  
   
@@ -42,8 +48,8 @@ beast.irreg <- function(
 	}	
 	y=as.vector(y);
   }  
-  c=class(y); 
-  if ( sum(c=='ts')>0 || sum(c=='zoo')>0 || sum(c=='xts')>0 )  {    
+  yClass=class(y); 
+  if ( sum(yClass=='ts')>0 || sum(yClass=='zoo')>0 || sum(yClass=='xts')>0 )  {    
 	y=as.vector(y);
   }  
   if (length(y)==1) {
@@ -62,19 +68,26 @@ beast.irreg <- function(
    metadata$time             = time
    #metadata$startTime       = start
    metadata$deltaTime        = deltat
-   if ( season!='none'){
-	metadata$period           = deltat*freq;
+   if ( season != 'none'){
+	metadata$period           = period;
    }   
    #metadata$whichDimIsTime   = 1
-   metadata$deseasonalize     =deseasonalize
-   metadata$detrend           =detrend
+   metadata$deseasonalize     = deseasonalize
+   metadata$detrend           = detrend
    metadata$missingValue      = NaN
    metadata$maxMissingRate    = 0.7500
    if ( hasArg('hasOutlier') ) {   
         hasOutlier =list(...)[['hasOutlier']]
 		metadata$hasOutlierCmpnt=as.logical(hasOutlier)		           
+   }		     
+   if ( is.null(period) && is.numeric(deltat) && season != 'none' && hasArg('freq')){
+        freq                = list(...)[['freq']]  
+		metadata$period     = deltat*freq		       
    }
-		  
+
+
+		
+		
 #......End of displaying MetaData ......
    prior = list()
    prior$modelPriorType	  = 1   
@@ -130,6 +143,7 @@ beast.irreg <- function(
    extra$printProgressBar     = print.progress
    extra$printOptions         = print.options
    extra$consoleWidth         = 0
+   extra$quiet                 = quiet
    #extra$numThreadsPerCPU     = 2
    #extra$numParThreads        = 0
  
@@ -147,6 +161,5 @@ beast.irreg <- function(
 	ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
  }
  		   
- invisible(return(ANS))
-    
+ invisible(return(ANS))    
 }

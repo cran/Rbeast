@@ -1,3 +1,3 @@
 #pragma once
 extern volatile int ctrl_C_Pressed;
-extern void RegisterCtrlCHandler();
+extern void RegisterCtrlCHandler(void);

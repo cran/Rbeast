@@ -1,3 +1,10 @@
+# CHANGES IN Rbeast 0.9.6
+
+* Fix the C23 issue upon the request of Dr. Brian D. Ripley (Jan 09,2023)
+* Also remove the freq arg in favor of period to specify the period of the 
+* the seasonal component (Jan 09,2023)
+
+
 # CHANGES IN Rbeast 0.9.5
 
 * Fix multiple bugs and add the citation info, thanks to many users.

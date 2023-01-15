@@ -30,7 +30,7 @@
   	\itemize{
     	\item If regular, individual times are determined from the time of the 1st data point \code{startTime} and the time span between consecutive points \code{deltaTime}, which are specified in the 2nd arg through \code{metadata$startTime and metadata$deltaTime}; if not given, \code{startTime} and \code{deltaTime} take a default 1.0.
 		
-		\item  If irregular or regular but unordered, the times have to be explicitly given through \code{metadata$time}. The BEAST model is currently formulated for regular data only, so internally, the \code{beast123} function will aggregate/re-bin irregular data into regular ones; for the aggregation, the  \code{metadata$deltaTime} parameter MUST also be also provided to specify the desired bin size or time interval.
+		\item  If irregular or regular but unordered, the times have to be explicitly given through \code{metadata$time}. The BEAST model is currently formulated for regular data only, so internally, the \code{beast123} function will aggregate/re-bin irregular data into regular ones; for the aggregation, the  \code{metadata$deltaTime} parameter should also be also provided to specify the desired bin size or time interval.
 	}
 
     \code{Y} can have a periodic component or have a trend component only. Use the argument \code{season} to specify the cases.
@@ -44,27 +44,46 @@
 
   \item{metadata}{
 
-	(optional). If present, \code{metadata} can be either an INTEGER specifying the known period of the cyclic/seasonal component or a LIST specifying various parameters to describe the 1st argument \code{Y}. If missing, default values will be used, but \code{metadata} must be explicitly specified if the input \code{Y} is a 2D matrix or 3D array. \code{metadata} is not part of BEAST's Bayesian formulation but just some additional info to interpret \code{Y}. Below are possible fields in \code{metadata}; not all of them are always needed, depending on the types of inputs (e.g., 1D, 2D or 3D; regular or irregular). 
+	(optional). If present, \code{metadata} may (1) a scalar value to specify the period of the input Y, (2) a vector of numbers, strings, or R Dates to specify the times of Y, or (3) more often, a LIST object specifying various parameters to describe the 1st argument \code{Y}. If missing, default values will be used. But \code{metadata} should be explicitly provided if the input \code{Y} is a 2D matrix or 3D array to avoid mis-interpreting the input Y. \code{metadata} is not part of BEAST's Bayesian formulation but just some additional info to interpret \code{Y}. If \code{metadata} is provided as a LIST, below are possible fields; not all of them are always needed, depending on the types of inputs (e.g., 1D, 2D or 3D; regular or irregular). 
 	
          	\itemize{
     		\item \code{metadata$whichDimIsTime}:  integer (<=3). Needed to specify which dimension of \code{Y} is time for a matrix or 3D array input. Ignored if the input \code{Y} is a vector.
-    		\item \code{metadata$isRegularOrdered}: logical (default to TRUE if missing). If TRUE,  the 1st argument \code{Y} is assumed to be regular and if FALSE,\code{Y} is irregular or regular but unordered in time.
-    		\item \code{metadata$time}: numeric or string values to specify the times for irregular \code{Y}. Needed ONLY if \code{isRegularOrdered} = \code{FALSE} (i.e. irregular inputs). Ignored if \code{isRegularOrdered} = \code{TRUE} (i.e., regular data for which \code{metadata$startTime} and \code{metadata$deltaTime} are used instead). Three ways of specifiying metadata$time are supported:
-          		\enumerate{
-    			\item  a vector of numerical values to indicate times. The unit of the times is irrelevant to BEAST as long as it remains consistent as the unit used for specifying other variables such as startTime and deltaTime. The length of the metadata$time vector must be the same as \code{Y}'s time dimension.
-    			\item a list of vectors to specify individual dates of the time series. Use \code{metadata$time$year},\code{metadata$time$month},and \code{metadata$time$day} to give the dates; or alternatively use \code{metadata$time$year} and \code{metadata$time$doy} where each value of the \code{doy} vector is a number within 1 and 365/366. Each vector must have the same length as the time dimension of \code{Y}.
-			\item a vector of date strings. Use \code{metadata$time$dateStr} for the date strings, and \code{metadata$time$strFmt} to specify the format for parsing \code{dateStr}. Three formats are currently supported:
-	          		\itemize{
-    					\item (a). All the date strings have a fixed pattern in terms of the relative positions of year, month, and day. For example, to extract 2001/12/02 etc from \code{metadata$time$dateStr} = c('P23R34-2001.1202333xd', 'O93X94-2002.1108133fd', 'TP3R34-2009.0122333td') use \code{strFmt}=\code{'P23R34-yyyy.mmdd333xd'} where \code{yyyy}, \code{mm}, and \code{dd} are the specifiers and other positions are wildcards and can be filled with any other letters different from \code{yyyy, mm and dd}.
-    					\item (b). All the date strings have a fixed pattern in terms of the relative positions of year and doy. For example, to extract 2001/045(day of year) from 'P23R342001888045', use strFmt='123123yyyy888doy' where \code{yyyy} and \code{doy} are the specifiers and other positions are wildcards and can be filled with any other letters different from yyyy, and doy. 'doy' must be three digit in length.
-    					\item (c). All the date strings have a fixed pattern in terms of the separation characters between year, month, and day. For example, to extract 2002/12/02 from '2002,12/02', '  2002 , 12/2', '2002,12  /02 ', use strFmt='Y,M/D' where the whitespaces are ignored. To get 2002/12/02 from '2--12, 2012 ', use strmFmt='D--M,Y'.
-		               } %\describe
+    		\item \code{metadata$isRegularOrdered}: logical. Obsolete and no longer used in this version.  Now, \code{metadata$time} is analyzed to determine whether the input is irregular or not; if \code{metadata$time} is missing,  \code{Y} is assumsed to be regular.
+    		\item \code{metadata$time}: a vector of the same length as \code{Y}'s time dimension to provide the times for datapoints. It can be a vector of numbers, Dates, or date strings; it can also be a list of vectors of year, months, and days. Possible formats include:
+      		 
+			   \enumerate{
+					\item a vector of numerical values [e.g., c(1984.23, 1984.27, 1984.36, ...)]. The unit of the times is irrelevant to BEAST as long as it is consistent with the unit used for specifying \code{startTime}, \code{deltaTime}, and \code{period}.
+					
+					\item a vector of R Dates [e.g., \code{as.Date}( c("1984-03-27", "1984-04-10", "1984-05-12",... )].
+					
+					\item a vector of char strings. Examples are:
+					   \itemize{
+						 \item  c("1984-03-27", "1984-04-10", "1984-05-12")
+						 \item  c("1984/03/27", "1984,04,10", "1984 05 12") (i.e., the delimiters differ as long as the YMD order is consistent)
+						 \item  c("LT4-1984-03-27",  "LT4-1984-04-10",  "LT4-1984+05,12")
+						 \item  c("LT4-1984087ndvi", "LT4-1984101ndvi", "LT4-1984133ndvi")
+						 \item  c("1984,,abc 3/ 27", "1984,,ddxfdd 4/ 10"  "ggd1984,, 5/ ttt 12")
+					   }
+					   BEAST uses several heuristics to automatically parse the date strings without a format specifier but may fail due to ambiguity (e.g., in "LC8-2020-09-20-1984", no way to tell if 2020 or 1984 is the year). To ensure correctness, use a list object as explained below to provide a date format specifier.
+					
+					\item a list object \code{time=list(datestr=..., strfmat='...')} consisting of a vector of date strings (\code{time$datestr}) and a format specifier (\code{time$strFmt}). The string \code{time$strFmt} specifies how to parse \code{dateStr}. Three formats are currently supported:
+					
+							\itemize{
+								\item (a). All the date strings have a fixed pattern in terms of the relative positions of Year, Month, and Day. For example, to extract 2001/12/02 etc from \code{time$dateStr} = c('P23R34-2001.1202333xd', 'O93X94-2002.1108133fd', 'TP3R34-2009.0122333td') use \code{time$strFmt}=\code{'P23R34-yyyy.mmdd333xd'} where \code{yyyy}, \code{mm}, and \code{dd} are the specifiers and other positions are wildcards and can be filled with any other letters different from \code{yyyy, mm and dd}.
+								\item (b). All the date strings have a fixed pattern in terms of the relative positions of year and doy. For example, to extract 2001/045(day of year) from 'P23R342001888045', use strFmt='123123yyyy888doy' where \code{yyyy} and \code{doy} are the specifiers and other positions are wildcards and can be filled with any other letters different from yyyy, and doy. 'doy' must be three digit in length.
+								\item (c). All the date strings have a fixed pattern in terms of the separation characters between year, month, and day. For example, to extract 2002/12/02 from '2002,12/02', '  2002 , 12/2', '2002,12  /02 ', use strFmt='Y,M/D' where the whitespaces are ignored. To get 2002/12/02 from '2--12, 2012 ', use strmFmt='D--M,Y'.	
+							 }  
+							 
+				   \item a list object of vectors to specify individual dates of the time series. Use \code{time$year},\code{time$month},and \code{time$day} to give the dates; or alternatively use \code{time$year} and \code{time$doy} where each value of the \code{doy} vector is a number within 1 and 365/366. Each vector must have the same length as the time dimension of \code{Y}.
 
-
-              		} %\enumerate{
+			} %\enumerate
+		  
+ 			
+					
                \item \code{metadata$startTime}: numeric (default to 1.0 if missing). It gives the time of the 1st data point. It can be specified as a scalar (e.g., 2021.23) or a vector of three values in the order of year, month, and day (e.g., \code{metadata$startTime} = \code{c(2021,1,24)}). \code{metadata$startTime} is needed for regular input data but optional for irregular data: If missing, startTime will be computed from \code{metadata$time} for irregular \code{Y}.
-               \item \code{metadata$deltaTime}: numeric. It specifies the time interval between consecutive data points. It is optional for regular data (default to 1.0 if not supplied), but has to be specified for irregular data because deltaTime is needed to aggregate/resample the irregular time series into regular ones.
-    		\item \code{metadata$freq}:  integer. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'} ) and ignored for trend-only data (i.e., \code{season='none'}). The "\code{freq}" parameter must be an INTEGER specifying the number of samples/values/points per cycle (e.g, a monthly time series with an annual period has a frequency of 12. If \code{freq} is absent, BEAST first attempts to guess its value via auto-correlation before fitting the model.
+               \item \code{metadata$deltaTime}: numeric or string. It specifies the time interval between consecutive data points. It is optional for regular data (default to 1.0 if not supplied), but should be specified for irregular data because deltaTime is needed to aggregate/resample the irregular time series into regular ones.  The unit of \code{deltaTime} needs to be consistent with \code{metadata$time}. If \code{metadata$time} takes a numeric vector, the unit of \code{deltaTime} is arbitrary and irrelevant to BEAST. If \code{time} takes a vector of Dates or date strings, the unit for \code{deltaTime} is assumed to Fractional YEAR. If needed, use a string instead of a number to specify whether the unit of deltaTime is day, month, or year. Examples include '7 days', '7d', '1/2 months', '1mn', '1.0 year', and '1y'.
+			   
+    		\item \code{metadata$period}:  numeric or string. Specify the period for the periodic/seasonal component in \code{Y}. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and not used for trend-only data (i.e., \code{season='none'}).  The period of the cyclic component should have a unit consisent with the unit of \code{deltaTime}. It holds that \code{period=deltaTime*freq} where \code{freq} is the number of data samples per period. (Note that the \code{freq} argument in earlier versions becomes obsolete and now is replaced by \code{period}.)  \code{period} or the number of data points per period is not a BEAST model parameter and it has to be specified by the user. But if \code{period} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model. If \code{period} <= 0, no seasonal/cyclic component is assumed (i.e, \code{season='none'}) and the trend-only model is used.  If needed, use a string to specify whether the unit of period is day, month, or year. Examples are '1.0 year', '12 months', '365d', '366 days'.
     		\item \code{metadata$missingValue}: numeric; a customized value to indicate bad/missing values in the time series, in addition to those NA or NaN values.
     		\item \code{metadata$maxMissingRate} a fractional number within [0, 1] as the maximum percentage of missing values, above which the time series will be skipped and won't be fitted by BEAST.
                } %\itemize{
@@ -134,6 +153,7 @@
 	(optional). a list object consisting of flags to control the outputs from the BEAST runs or configure other program setting. Below are possible parameters:
 
         \itemize{
+		    \item \code{extra$quiet}: logical (default to FALSE). If TRUE, no warning messages will be printed out. 
     		\item \code{extra$dumpInputData}: logical (default to FALSE). If TRUE, the input time series will be copied into the output. When the input \code{Y} is irregular (i.e., \code{metadata$isRegularOrdered=FALSE}), the dumped copies will be the aggregated regular time series. 
     		\item \code{extra$whichOutputDimIsTime}: integer (<=3). If the input \code{Y} is a 2D or 3D array (i.e., multiple time series such as stacked images), the \code{whichOutputDimIsTime} specifies which dimension is the time in the output variables. \code{whichOutputDimIsTime} defaults to 3 for 3D inputs and is ignored if the input is a vector (i.e., a single time series).	
 			
@@ -251,10 +271,10 @@
 		 \item \code{cp}: [Changepoints] a vector of length \code{metadata$seasonMaxKnotNum}; the most possible  changepoint locations in the seasonal component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {prior$trendMinSeptDist} and then picking up to a total \code{ncp} of the highest peaks in the filtered curve. If \code{ncp<seasonMaxKnotNum}, the remaining of the vector is filled with NaNs.
 		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{metadata$seasonMaxKnotNum}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaining elements if \code{ncp<seasonMaxKnotNum}.
 		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{metadata$seasonMaxKnotNum x 2}; the credibable intervals for the detected changepoints \code{cp}.
-		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{metadata$seasonMaxKnotNum}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
-		 \item \code{Y}: a vector of length N; the estimated trend component. It is the Bayesian model averaging of all the individual sampled trend.
-		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated trend component.
-		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated trend. One vector of the matrix is for the upper envelope and another for the lower envelope.
+		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{metadata$seasonMaxKnotNum}; the jumps in the fitted seasonal curves at the detected changepoints \code{cp}.
+		 \item \code{Y}: a vector of length N; the estimated seasonal component. It is the Bayesian model averaging of all the individual sampled seasonal curves.
+		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated seasonal component.
+		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated seasonal component. One vector of the matrix is for the upper envelope and another for the lower envelope.
 		 \item \code{amp}: [AMPlitude] a vector of length N;  the time-varying amplitude of the estimated seasonality.
 		 \item \code{ampSD}: [Standar Deviation of AMPlitude] a vector of length N; , the SD of the amplitude of the seasonality.
  
@@ -345,8 +365,9 @@
 
  # metadata is NOT part of BEAST itself, but some extra info to describe the input
  # time series Y. Below, the input Y is the 'Yellowstone' ts. 
+ 
  metadata                  = list()                                                 
- metadata$isRegularOrdered = TRUE         # Regular input
+ #metadata$isRegularOrdered = TRUE        # This arg not used any longer in this version
  metadata$whichDimIsTime   = 1            # Which dim of the input refer to time for 
                                           # 2D/3D inputs? Ignored for a single time 
                                           # series input.
@@ -432,12 +453,12 @@
 #  Handle irregular time series: ohio is a data frame of a Landsat NDVI series observed
 #  at unevely-spaced times
 \donttest{ 
+\dontrun{ 
 
  data(ohio)
  str(ohio)
   
  metadata                  = list()                                                 
- metadata$isRegularOrdered = FALSE     # The input data is irregular
  metadata$time             = ohio$time # Must supply individual times for irregular inputs
  metadata$deltaTime        = 1/12      # Must supply the desired time interval for aggregation
  metadata$period           = 1.0
@@ -448,7 +469,6 @@
  class(ohio$rdate)                      # Another accepted time format for beast123
  
  metadata = list()                                                 
- metadata$isRegularOrdered = FALSE      # The input data is irregular
  metadata$deltaTime        = 1/12       # Must supply the desired time interval for aggregation
  metadata$time             = ohio$rdate # Must supply individual times for irregular inputs
  
@@ -460,7 +480,6 @@
  ohio$M
  
  metadata = list()                                                 
- metadata$isRegularOrdered = FALSE   # The input data is irregular
  metadata$deltaTime        = 1/12    # Must supply the desired time interval for aggregation
  metadata$time$year        = ohio$Y
  metadata$time$month       = ohio$M
@@ -472,7 +491,6 @@
  ohio$doy
   
  metadata = list()                                                 
- metadata$isRegularOrdered = FALSE   # Irregular input 
  metadata$deltaTime        = 1/12    # Must supply the desired time interval for aggregation
  metadata$time$year        = ohio$Y
  metadata$time$doy         = ohio$doy
@@ -482,7 +500,6 @@
  ohio$time                           # Another accepted time format for beast123
   
  metadata = list()                                                 
- metadata$isRegularOrdered = FALSE     # Irregular input 
  metadata$deltaTime        = 1/12      # Must supply the desired time interval for aggregation
  metadata$time             = ohio$time # Fractional year
  
@@ -492,7 +509,6 @@
  ohio$datestr1                       # Another accepted time format for beast123
   
  metadata = list()                                                 
- metadata$isRegularOrdered = FALSE        # Irregular input 
  metadata$deltaTime        = 1/12         # Must supply the time interval for aggregation
  metadata$time$datestr     = ohio$datestr1  
  metadata$time$strfmt      = '????yyyy?mm?dd'  
@@ -503,7 +519,6 @@
  ##################################################################################### 
  ohio$datestr2                            # Another accepted time format for beast123  
  metadata = list()                                                 
- metadata$isRegularOrdered = FALSE        # Irregular input 
  metadata$deltaTime        = 1/12         # Must supply a desired time interval for aggregation
  metadata$time$datestr     = ohio$datestr2  
  metadata$time$strfmt      = '????yyyydoy????'  
@@ -513,12 +528,12 @@
  ##################################################################################### 
  ohio$datestr3                            # Another accepted time format for beast123  
  metadata = list()                                                 
- metadata$isRegularOrdered = FALSE        # Irregular input 
  metadata$deltaTime        = 1/12         # Must supply the desired time interval for aggregation
  metadata$time$datestr     = ohio$datestr3  
  metadata$time$strfmt      = 'Y,,M/D'  
  
  o=beast123(ohio$ndvi, metadata)          # Default values used for those missing parameters 
+}
 }
 
 
@@ -569,9 +584,11 @@
  imagestack$datestr                 # A character vector of 1066 date strings
  
  metadata                  = list()        
- metadata$isRegularOrdered = FALSE  # 'imagestack$ndvi' is an IRREGULAR input
  metadata$whichDimIsTime   = 3      # Which dim of the input refer to time for 3D inputs?
                                     # 1066 is the ts length, so dim is set to '3' here.
+                                    # In this example, this arg is not needed because 
+                                    # the time$datestr can also help to match and pick up
+                                    # the right time dimesion of imagestack$ndvi.
  metadata$time$datestr     =  imagestack$datestr 
  metadata$time$strfmt      =  'LT05_018032_20080311.yyyy-mm-dd'
  metadata$deltaTime        =  1/12  # Aggregate the irregular ts at a monthly interval:1/12 Yr

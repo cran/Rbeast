@@ -10,8 +10,9 @@
 \usage{
   beast.irreg(   
        y, 
-       time, deltat,
-       freq         = NA,  		   
+       time,        
+       deltat       = NULL,
+       period       = NULL,  		   
        season       = c('harmonic','dummy','none'),
        scp.minmax   = c(0,10),  sorder.minmax = c(0,5),  sseg.min = NULL,
        tcp.minmax   = c(0,10),  torder.minmax = c(0,1),  tseg.min = NULL,
@@ -27,6 +28,7 @@
        precPriorType  = c('componentwise','uniform','constant','orderwise'),
        print.options  = TRUE,
        print.progress = TRUE,
+	   quiet          = FALSE,
        gui            = FALSE,
        ...
       )
@@ -35,18 +37,48 @@
 
   \item{y}{ a vector for an irregular or unordered time series. Missing values such as NA and NaN are allowed.
 			\itemize{
-				\item  If \code{y} is regular (i.e., evenly-spaced in time), use the \code{\link[Rbeast]{beast}}function instead.
-				\item  If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
- 
+				\item  If \code{y} is regular and evenly-spaced in time, use the \code{\link[Rbeast]{beast}}function instead.
+				\item  If \code{y} is a matrix or 3D array (e.g., stacked images) consisting of multiple regular or irregular time series, use \code{\link[Rbeast]{beast123}} instead. 
             }  
-			If a list of multiple time series is provided for \code{y}, the multivariate version of the BEAST algorithm will be invoked to decompose the multiple time series and detect common changepoints altogether. This feature is \code{experimental} only and under further development. Check \code{\link[Rbeast]{ohio}} for a working example.
+			If \code{y} is a list of multiple time series, the multivariate version of the BEAST algorithm is invoked to decompose the multiple time series and detect common changepoints altogether. This feature is \code{experimental} and under further development. Check \code{\link[Rbeast]{ohio}} for a working example.
   }
 
-  \item{time}{ a vector of the same length as \code{y}; the time vector of datapoints of \code{y}. It can be a numeric vector or a vector of Dates. If your time is formatted as strings or vectors of year, months, and days, use \code{beast123()} instead where more formats are supported.}
-  
-  \item{deltat}{ numeric; a user-specified time interval to aggregate \code{y} based on \code{time} into a regular time series. The BEAST model is currently formulated for regular data only, so internally, the \code{beast.irreg} function will aggregate/re-bin irregular data into regular ones; for the aggregation, the  \code{deltat} MUST be provided to specify the desired bin size or time interval. The unit of delta needs to be consistent with \code{time}. If \code{time} takes a numeric vector, the unit is arbitrary and irrelevant to beast. If \code{time} takes a vector of Dates, the unit  is assumed to YEAR; for example, if the desired time interval is 1 month (or 1 day), deltat should be 1/12 (or 1/365).}  
+  \item{time}{ a vector of the same length as \code{y}'s time dimension to provide the times for datapoints. It can be a vector of numbers, Dates, or date strings; it can also be a list of vectors of year, months, and days. Possible formats include:
+      		 
+       \enumerate{
+    	    \item a vector of numerical values [e.g., c(1984.23, 1984.27, 1984.36, ...)]. The unit of the times is irrelevant to BEAST as long as it is consistent with the unit used for specifying \code{startTime}, \code{deltaTime}, and \code{period}.
+			
+			\item a vector of R Dates [e.g., \code{as.Date}( c("1984-03-27", "1984-04-10", "1984-05-12",... )].
+			
+			\item a vector of char strings. Examples are:
+			   \itemize{
+			     \item  c("1984-03-27", "1984-04-10", "1984-05-12")
+				 \item  c("1984/03/27", "1984,04,10", "1984 05 12") (i.e., the delimiters differ as long as the YMD order is consistent)
+				 \item  c("LT4-1984-03-27",  "LT4-1984-04-10",  "LT4-1984+05,12")
+				 \item  c("LT4-1984087ndvi", "LT4-1984101ndvi", "LT4-1984133ndvi")
+				 \item  c("1984,,abc 3/ 27", "1984,,ddxfdd 4/ 10"  "ggd1984,, 5/ ttt 12")
+			   }
+			   BEAST uses several heuristics to automatically parse the date strings without a format specifier but may fail due to ambiguity (e.g., in "LC8-2020-09-20-1984", no way to tell if 2020 or 1984 is the year). To ensure correctness, use a list object as explained below to provide a date format specifier.
+			
+  		    \item a list object \code{time=list(datestr=..., strfmat='...')} consisting of a vector of date strings (\code{time$datestr}) and a format specifier (\code{time$strFmt}). The string \code{time$strFmt} specifies how to parse \code{dateStr}. Three formats are currently supported:
+			
+	          		\itemize{
+    					\item (a). All the date strings have a fixed pattern in terms of the relative positions of Year, Month, and Day. For example, to extract 2001/12/02 etc from \code{time$dateStr} = c('P23R34-2001.1202333xd', 'O93X94-2002.1108133fd', 'TP3R34-2009.0122333td') use \code{time$strFmt}=\code{'P23R34-yyyy.mmdd333xd'} where \code{yyyy}, \code{mm}, and \code{dd} are the specifiers and other positions are wildcards and can be filled with any other letters different from \code{yyyy, mm and dd}.
+    					\item (b). All the date strings have a fixed pattern in terms of the relative positions of year and doy. For example, to extract 2001/045(day of year) from 'P23R342001888045', use strFmt='123123yyyy888doy' where \code{yyyy} and \code{doy} are the specifiers and other positions are wildcards and can be filled with any other letters different from yyyy, and doy. 'doy' must be three digit in length.
+    					\item (c). All the date strings have a fixed pattern in terms of the separation characters between year, month, and day. For example, to extract 2002/12/02 from '2002,12/02', '  2002 , 12/2', '2002,12  /02 ', use strFmt='Y,M/D' where the whitespaces are ignored. To get 2002/12/02 from '2--12, 2012 ', use strmFmt='D--M,Y'.	
+		             }  
+					 
+		   \item a list object of vectors to specify individual dates of the time series. Use \code{time$year},\code{time$month},and \code{time$day} to give the dates; or alternatively use \code{time$year} and \code{time$doy} where each value of the \code{doy} vector is a number within 1 and 365/366. Each vector must have the same length as the time dimension of \code{Y}.
 
-  \item{freq}{ numeric. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and ignored for trend-only data (i.e., \code{season='none'}). It specifies the number of samples/datapoints per cycle (e.g, a time series of monthly observations with an annual period has a frequency of 12); it may be a decimal real number (e.g., a time series of bi-hourly observations with a period of 37.5 hrs has a freq of 37.5/2=18.75). The period of the cyclic component in the unit of time is \code{period=deltat*freq}. \code{freq} is not a model parameter of BEAST and it has to be specified by the user. If \code{freq} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model, but in this case, \code{freq} is assumed to be an integer. }
+    } %\enumerate
+  
+  }
+  
+  \item{deltat}{ a number or a string to specify a time interval for aggregatting the irregular \code{y} into a regular time series. The BEAST model is currently formulated for regular data only for fast computational, so internally, the \code{beast.irreg} function will aggregate/re-bin irregular data into regular ones. For the aggregation, \code{deltat} is needed to specify the desired bin size or time interval; if missing, a best guess will be used. The unit of \code{deltat} needs to be consistent with \code{time}. If \code{time} takes a numeric vector, the unit of \code{deltat} is arbitrary and irrelevant to beast. If \code{time} takes a vector of Dates or date strings, the unit for \code{deltat} is assumed to Fractional YEAR. If needed, use a string instead of a number to specify whether the unit of deltat is day, month, or year. Examples include '7 days', '7d', '1/2 months', '1mn', '1.0 year', and '1y'.
+  
+  }  
+
+  \item{period}{ a number or a string to specify the period for the periodic/seasonal component in \code{y}. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and not used for trend-only data (i.e., \code{season='none'}).  The period of the cyclic component should have a unit consisent with the unit of \code{delta}. It holds that \code{period=deltat*freq} where \code{freq} is the number of data samples per period. (Note that the \code{freq} argument in earlier versions becomes obsolete and now is replaced by \code{period}.)    \code{period} or the number of data points per period is not a BEAST model parameter and it has to be specified by the user. But if \code{period} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model. If \code{period} <= 0, no seasonal/cyclic component is assumed (i.e, \code{season='none'}) and the trend-only model is used.  If needed, use a string to specify whether the unit of period is day, month, or year. Examples include '1.0 year', '12 months', '365d', '366 days'.  }
   
   \item{season}{ characters (default to 'harmonic'); specify if \code{y} has a periodic component or not. Three strings are possible.
 				\itemize{
@@ -60,7 +92,6 @@
   }
 
 
-  
   
   \item{sorder.minmax}{ a vector of 2 integers (>=1); the min and max harmonic orders considered to fit the seasonal component. \code{sorder.minmax} is used only used if the time series has a seasonal component (i.e., \code{season='harmonic'}) and ignored for trend-only data or when \code{season='dummy'}. If the min and max orders are equal (\code{sorder.minmax[1]=sorder.minmax[2]}), BEAST assumes a constant harmonic order used and won't infer the posterior probability of harmonic orders.
   }
@@ -112,6 +143,8 @@
   
   \item{print.progress}{ boolean;If \code{TRUE}, a progressbar will be displayed. }	
   
+  \item{quiet}{ boolean. If \code{TRUE}, warning messages are suppressed and not printed.}	
+ 	
   
   \item{gui}{ boolean. If \code{TRUE}, BEAST will be run in a GUI demonstration mode, with a GUI window to show an animation of the MCMC sampling in the model space step by step. Note that "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac systems.}	
  	
@@ -122,7 +155,7 @@
 \value{
   The output is an object of class "beast". It is a list, consisting of the following variables. In the explanations below, we assume the input \code{y} is a single time series of length \code{N}:
 
-  \item{time}{a vector of size \code{1xN}: the times at the \code{N} sampled locations. By default, it is simply set to \code{1:N}}
+  \item{time}{a vector of size \code{1xN}: the times at the \code{N} sampled locations. By default, it is simply set to \code{1:N}} if the input arguments \code{delta}, 'start', or \code{time} are missing.
   \item{data}{a vector, matrix, or 3D array; this is a copy of the input \code{data} if extra$dumpInputData = TRUE. If extra$dumpInputData=FALSE, it is set to NULL. If the original input \code{data} is irregular, the copy here is the regular version aggregated from the original at the time interval specified by metadata$deltaTime. }
   \item{marg_lik}{numeric; the average of the model marginal likelihood; the larger marg_lik, the better the fitting for a given time series.}
   \item{R2}{numeric; the R-square of the model fitting.}
@@ -195,10 +228,10 @@
 		 \item \code{cp}: [Changepoints] a vector of length \code{scp.max=scp.minmax[2]}; the most possible  changepoint locations in the seasonal component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of {sseg.min} and then picking up to a total \code{ncp} of the highest peaks in the filtered curve. If \code{ncp<scp.max}, the remaining of the vector is filled with NaNs.
 		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{scp.max}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaining elements if \code{ncp<scp.max}.
 		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{scp.max x 2}; the credibable intervals for the detected changepoints \code{cp}.
-		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{scp.max}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
-		 \item \code{Y}: a vector of length N; the estimated trend component. It is the Bayesian model averaging of all the individual sampled trend.
-		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated trend component.
-		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated trend. One vector of the matrix is for the upper envelope and another for the lower envelope.
+		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{scp.max}; the jumps in the fitted seasonal curves at the detected changepoints \code{cp}.
+		 \item \code{Y}: a vector of length N; the estimated seasonal component. It is the Bayesian model averaging of all the individual sampled seasonal curve.
+		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated seasonal component.
+		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated seasonal curve. One vector of the matrix is for the upper envelope and another for the lower envelope.
 		 \item \code{amp}: [AMPlitude] a vector of length N;  the time-varying amplitude of the estimated seasonality.
 		 \item \code{ampSD}: [Standar Deviation of AMPlitude] a vector of length N; , the SD of the amplitude of the seasonality.
  
@@ -256,28 +289,34 @@ library(Rbeast)
 
  data(ohio)
  str(ohio)
-
+ plot(ohio$rdate, ohio$ndvi,type='o') # ndvi is irregularly spaced and unordered in time
+ 
 ######################################################################################
 # Below, 'time' is given as numeric values, which can be of any arbitray unit. Although
 # here 1/12 can be interepreted as 1/12 year or 1 month, BEAST itself doesn't care about
-# the time unit. So, the unit of 1/12 is irrelevant for BEAST. 'freq' is missing and a
-# guess of it is used.
+# the time unit. So, the unit of 1/12 is irrelevant for BEAST. 'freq' or 'period' is missing
+# and a# guess of it is used.
 
  o=beast.irreg(ohio$ndvi, time=ohio$time,deltat=1/12) 
  plot(o)
  print(o)
 
 ######################################################################################
-# Aggregrate the time series at a monthly interval (deltat=1/12) and xplictly provide
-# the 'freq' arg
+# Aggregrate the time series at a monthly interval (deltat=1/12) and explictly provide
+# the 'freq' or 'period' arg
 
- o=beast.irreg(ohio$ndvi, time=ohio$time,deltat=1/12, freq=12) 
+ o=beast.irreg(ohio$ndvi, time=ohio$time,deltat=1/12, period=1.0) 
+#o=beast.irreg(ohio$ndvi, time=ohio$time,deltat=1/12, freq  =12) 
 
+}
+
+\dontrun{
 ######################################################################################
-# Aggregate the time series at a half-monthly time interval, and the freq becomes 24,
-# that is, PERIOD (1 year) = deltat (1/24 year ) X  freq (24)
+# Aggregate the time series at a half-monthly time interval, and the 'freq' becomes 24 
+# while the period is still 1. That is, PERIOD (1.0)=deltat(1/24) X  freq (24)
 
- o=beast.irreg(ohio$ndvi, time=ohio$time,deltat=1/24, freq=24) 
+ o=beast.irreg(ohio$ndvi, time=ohio$time,deltat=1/24, freq   = 24) 
+#o=beast.irreg(ohio$ndvi, time=ohio$time,deltat=1/24, period = 1) 
 
 ######################################################################################
 # 'time' is given as R's dates. The unit is YEAR. 1/12 refers to 1/12 year or 1 month
@@ -285,8 +324,49 @@ library(Rbeast)
  o=beast.irreg(ohio$ndvi, time=ohio$rdate,deltat=1/12) 
 
 ######################################################################################
-# If the input time has formats (e.g., date strings) other than the above two, use the 
-# beast123() function instead.
+# 'time' is given as data strings. The unit is YEAR. 1/12 refers to 1/12 year or 1 month
+
+
+ o=beast.irreg(ohio$ndvi, time=ohio$datestr1,deltat=1/12)  #"LT4-1984-03-27"  (YYYY-MM-DD)
+ o=beast.irreg(ohio$ndvi, time=ohio$datestr2,deltat=1/12)  #"LT4-1984087ndvi" (YYYYDOY)
+ o=beast.irreg(ohio$ndvi, time=ohio$datestr3,deltat=1/12)  #"1984,, 3/ 27"    (YYYY M D)
+ 
+
+
+######################################################################################
+# 'time' is given as data strings, with a format specifier
+
+ 
+
+ TIME =list()
+ TIME$datestr = ohio$datestr1
+ TIME$strfmt  = "LT4-YYYY-MM-DD"   # "LT4-1984-03-27"
+ o=beast.irreg(ohio$ndvi, time=TIME,deltat=1/12)  
+ 
+ TIME =list()
+ TIME$datestr = ohio$datestr2
+ TIME$strfmt  = "LT4-YYYYDOYndvi"   # LT4-1984087ndvi
+ o=beast.irreg(ohio$ndvi, time=TIME,deltat=1/12)   
+ 
+
+######################################################################################
+# 'time' is given as  a list object
+
+ 
+
+ TIME = list()
+ 
+ TIME$year  = ohio$Y
+ TIME$month = ohio$M
+ TIME$day   = ohio$D
+ o=beast.irreg(ohio$ndvi, time=TIME,deltat=1/12)   
+ 
+ 
+ TIME = list() 
+ TIME$year  = ohio$Y
+ TIME$doy   = ohio$doy 
+ o=beast.irreg(ohio$ndvi, time=TIME, deltat=1/12)    
+ 
 
 }
 

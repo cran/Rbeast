@@ -11,7 +11,7 @@
 #include "beastv2_io.h"
 static LRESULT CALLBACK DialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
 static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
-static HICON CreateMyIcon( ) {
+static HICON CreateMyIcon(void) {
 	static BYTE ANDmaskIcon[]={ 0xFF,0xFF,0xFF,0xFF,   
 			0xFF,0xFF,0xC3,0xFF,   
 			0xFF,0xFF,0x00,0xFF,   
@@ -128,9 +128,9 @@ static void  ClassRegisterDialog(char* wndClassName)
 		MessageBox(NULL,"DialogBox Class Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
 	}
 }
-extern void BEAST2_InitGlobalData();
-extern void BEAST2_AllocatePlotData();
-extern void BEAST2_GeneratePlotData();
+extern void BEAST2_InitGlobalData(void);
+extern void BEAST2_AllocatePlotData(void);
+extern void BEAST2_GeneratePlotData(void);
 extern void BEAST2_DrawPlots(HDC hdc);
 DWORD WINAPI beast_thread(__in LPVOID dummy_GLOBAL_OPTIONS) {
 	#if R_INTERFACE==1
@@ -473,9 +473,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam) 
 			char str[100];
 			wsprintf(str,"Chain #%d is finished\r\n",gData.curChainNumber);
 			LoggerInsert(str);
-			sprintf(str,"Mean number of scp is %8.2f\r\n",gData.sN);
+			snprintf(str,99,"Mean number of scp is %8.2f\r\n",gData.sN);
 			LoggerInsert(str);
-			sprintf(str,"Mean number of tcp is %8.2f\r\n",gData.tN);
+			snprintf(str,99,"Mean number of tcp is %8.2f\r\n",gData.tN);
 			LoggerInsert(str);
 		}
 		LeaveCriticalSection(&gData.cs);

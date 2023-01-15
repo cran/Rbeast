@@ -29,9 +29,9 @@ extern void local_pcg_gamma(local_pcg32_random_t* rng,F32PTR rnd,F32 a,int N);
 extern void local_pcg_wishart_unit_lowtriangle_zeroout(local_pcg32_random_t* rng,F32PTR rnd,F32PTR tmp,I32 m,F32 df);
 extern void local_pcg_wishart_unit_lowtriangle_zeroout_notmp(local_pcg32_random_t* rng,F32PTR wishrnd,I32 m,F32 df);
 extern void local_pcg_invwishart_upper(local_pcg32_random_t* rng,F32PTR iwrnd_upper,F32PTR iwrnd_upper_inv,F32PTR tmp,I32 m,F32PTR Qup,F32 df);
-void SetupPCG_GENERIC();
-void SetupPCG_AVX2();
-void SetupPCG_AVX512();
+void SetupPCG_GENERIC(void);
+void SetupPCG_AVX2(void);
+void SetupPCG_AVX512(void);
 #define VSLStreamStatePtr													  local_pcg32_random_t														 
 #define r_vslNewStream(stream,METHOD_dummy,seed)							  local_pcg_set_seed(stream,0x853c49e6748fea9bULL,seed)  
 #define r_viRngUniformBits32(  METHOD_dummy,stream,N,rnd)				  local_pcg_random(&stream,rnd,N)

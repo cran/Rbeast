@@ -264,7 +264,7 @@ void MoveCOLsWithinMatrix(F32PTR X,I32 N,I32 Kstart,I32 Kend,I32 Knewstart) {
 	else
 	{
 		rI32 segStartIdx=Kend+1;
-		while (true) {
+		while (_True_) {
 			segStartIdx=segStartIdx - j;
 			if (segStartIdx > Kstart) {
 				r_cblas_scopy(j * N,X+(segStartIdx-1) * N,1L,X+((segStartIdx+j)- 1) * N,1);

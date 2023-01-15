@@ -29,7 +29,7 @@
 #ifdef WIN64_OS	
 #include "abc_win32_demo.h"
 #endif
-void beast2_main_corev4_gui()
+void beast2_main_corev4_gui(void)
 {
 #ifdef WIN64_OS	
 	MemPointers MEM=(MemPointers){ .init=mem_init,};
@@ -138,7 +138,7 @@ void beast2_main_corev4_gui()
 	for (U32 pixelIndex=1; pixelIndex <=NUM_PIXELS; pixelIndex++)
 	{
 		F32PTR MEMBUF=Xnewterm; 
-		BEAST2_fetch_next_timeSeries(&yInfo,pixelIndex,MEMBUF,&(opt->io));
+		BEAST2_fetch_timeSeries(&yInfo,pixelIndex,MEMBUF,&(opt->io));
 		F32PTR  Xtmp=Xt_mars;
 		U08     skipCurrentPixel=BEAST2_preprocess_timeSeries(&yInfo,MODEL.b,Xtmp,opt);
 #ifdef __DEBUG__
@@ -898,7 +898,7 @@ void beast2_main_corev4_gui()
 #undef _okn_1
 					}
 					if (skipCurrentPixel) {
-						r_warning("\nWARNING(#%d):The max number of bad iterations exceeded. Can't decompose the current time series\n",skipCurrentPixel);
+						q_warning("\nWARNING(#%d):The max number of bad iterations exceeded. Can't decompose the current time series\n",skipCurrentPixel);
 						break;
 					}
 					EnterCriticalSection(&gData.cs);

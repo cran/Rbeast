@@ -2,20 +2,20 @@
 #include "abc_000_warning.h"
 #if defined(WIN64_OS) 
 #include "abc_win32_demo.h"
-void BEAST2_InitGlobalData() {
+void BEAST2_InitGlobalData(void) {
 	style=(Style) {
-			.hMargin=3,
-			.rEdit=0.1,
-			.hgtButtonBar=30,
-			.wButton=72,
-			.sep=10,
-			.vButtonRatio=0.7,
-			.vScrollRatio=0.5,
-			.labelGap=8,
+			.hMargin=3.f,
+			.rEdit=0.1f,
+			.hgtButtonBar=30.f,
+			.wButton=72.f,
+			.sep=10.f,
+			.vButtonRatio=0.7f,
+			.vScrollRatio=0.5f,
+			.labelGap=8.f,
 			.rFig={ 0.3,0.7/2. * 2/3.,0.7/2./3,0.7/2. * 2./3,0.7/2./3 },
-			.fractionLabel=0.6,
-			.fractionEdit=0.5,
-			.widthDialg=270,
+			.fractionLabel=0.6f,
+			.fractionEdit=0.5f,
+			.widthDialg=270.f,
 	};
 	memset(hBitmap,0,sizeof(HBITMAP)* 5);
 	memset(hBufferBitmap,0,sizeof(HBITMAP)* 5);
@@ -32,7 +32,7 @@ void BEAST2_InitGlobalData() {
 	gData.status=RUN;
 	gData.optStatus=NotAssigned;
 }
-void BEAST2_AllocatePlotData()
+void BEAST2_AllocatePlotData(void)
 {
 	gData.plotData[0][0]=malloc(sizeof(int)*gData.N * 2); 
 	gData.plotData[0][1]=malloc(sizeof(int)*gData.N * 2); 
@@ -49,7 +49,7 @@ void BEAST2_AllocatePlotData()
 	gData.plotData[3][4]=malloc(sizeof(int)*gData.N * 4); 
 	gData.plotData[4][0]=malloc(sizeof(int)*gData.N * 2); 
 }
-void BEAST2_GeneratePlotData()
+void BEAST2_GeneratePlotData(void)
 {
 	int N=gData.N;
 	int sample=gData.sample;
@@ -59,8 +59,8 @@ void BEAST2_GeneratePlotData()
 	F32 b;
 	I32PTR data;
 	I32PTR ptsPerPoly;
-	W=gData.w[0];
-	H=gData.h[0];
+	W=(F32) gData.w[0];
+	H=(F32) gData.h[0];
 	Ymax=gData.yMax;
 	Ymin=gData.yMin;
 	dX=W/N;

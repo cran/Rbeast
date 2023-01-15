@@ -6,6 +6,7 @@
 #include "abc_date.h"
 #include "abc_common.h"   
 #include "abc_ide_util.h" 
+#include "abc_vec.h" 
 static int IsLeapYear(int year) { return (year%4==0 && year%100 !=0)||(year%400==0);}
 static int GetNumDays(int year) { return IsLeapYear(year) ? 366 : 365; }
 static const int DAYS[2][13]={
@@ -72,10 +73,22 @@ int64_t CountLeapYears(int64_t year)
 	return leaps - badLeaps+extraLeaps - fakeLeaps;
 }
 float YDOYtoF32time(int year,int doy) {
-	return (float)year+((float)doy - 0.5)/GetNumDays(year);
+	return (float)year+((float)doy - 0.5f)/(float) GetNumDays(year);
 }
 float YMDtoF32time(int year,int mon,int day) { 
 	return YDOYtoF32time(year,Date2Doy(year,mon,day)); 
+}
+#include "math.h"
+int F32time2YDOY(F32 fyear,int* doy) {
+	int yr=fyear;
+	*doy=(int) round( (fyear - yr) * GetNumDays(yr)+0.5f);
+	return yr;
+}
+int F32time2YMD(F32 fyear,int*mon,int *day) {
+	int doy;
+	int yr=F32time2YDOY(fyear,&doy);	 
+	Doy2Date(doy,yr,day,mon);
+	return yr;
 }
 int64_t datenum(int year,int mon,int day) {
 	int64_t numYears=year - 1753;
@@ -106,6 +119,11 @@ int civil_from_days(int days,int * yr,int*mn,int* day)
 	*mn=m;
 	*day=d;
 	return 0;
+}
+int F32time2DateNum(F32 fyear) {
+	int mon,day;
+	int yr=F32time2YMD(fyear,&mon,&day);
+	return days_from_civil(yr,mon,day);
 }
 float fractional_civil_from_days(int days)
 {
@@ -247,5 +265,500 @@ float  Str2F32time_fmt3(char* datestr,DateFmtPattern3* pattern) {
 	int mon=p[0]=='M' ? n1 : (p[1]=='M' ? n2 : n3);
 	int day=p[0]=='D' ? n1 : (p[1]=='D' ? n2 : n3);
 	return YMDtoF32time(year,mon,day);
+}
+INLINE static int is_dot(char c)          { return c=='.'; }
+INLINE static int is_slash(char c)        { return c=='/'; }
+INLINE static int is_digit(char c)        {  return c >='0' && c <='9';}
+INLINE static int is_letter(char c)       {  return (c >='a' && c <='z' )||(c >='A' && c <='Z');}
+INLINE static int is_alphanumeric(char c) {  return (c >='0' && c <='9')||(c >='a' && c <='z')||(c >='A' && c <='Z'); }
+int get_word_size(char* s)         { int i=0;	while (is_letter(s[i++])){};  	 return --i; }
+int get_alphanumeric_size(char* s) { int i=0;	while (is_alphanumeric(s[i++])) {}; return --i;}
+int get_intger_size(char* s)       { int i=0; while (is_digit(s[i++])) {};	 	 return --i; }
+int get_slash_size(char* s)       { int i=0; while (is_slash(s[i++])) {};	 	 return --i; }
+int get_number_size(char* s,int * ndots) {
+	int i=*ndots=0;
+	while (is_digit(s[i])||is_dot(s[i])) {
+		*ndots+=is_dot(s[i]);
+		i++;
+	};
+	return i;
+}
+char* goto_validchar(char* s) { while (!is_alphanumeric(*s) && *s !=0) { s++; }	return s; }
+char* goto_validchar_dot_slash(char* s) {while (!is_alphanumeric(*s) && !is_dot(*s) && !is_slash(*s)  && *s !=0) { s++; }	return s;}
+static int split_numstr(char* s,int nPartMax,int* startidx,int* nchar,char* type) {
+	char* s0=s;
+	int   nPart=0;
+	while (*s !=0 && nPart < nPartMax) {
+		s=goto_validchar_dot_slash(s);
+		if (is_digit(*s)||is_dot(*s) ) {
+			int ndots;
+			int nlen=get_number_size(s,&ndots);
+			if (ndots >=2) {
+				return -1L;
+			}
+			nchar[nPart]=nlen;
+			startidx[nPart]=s - s0;
+			type[nPart]='N';
+			nPart++;
+			s=s+nlen;
+		}
+		else if (is_letter(*s)) {
+			int nlen=get_word_size(s);
+			nchar[nPart]=nlen;
+			startidx[nPart]=s - s0;
+			type[nPart]='W';
+			nPart++;
+			s=s+nlen;
+		}
+		else if (is_slash(*s)) {
+			int nlen=get_slash_size(s);
+			nchar[nPart]=nlen;
+			startidx[nPart]=s - s0;
+			type[nPart]='S';
+			nPart++;
+			s=s+nlen;
+		}
+	}
+	return nPart;
+}
+INLINE static char char_toupper(char s) { return s >='a' && s <='z' ? s-32 : s; }
+double extract_fyear(char* s) {
+	int  nPartMax=4;
+	int  startIdx[4],nchar[4];
+	char type[4]={ 0,};
+	int  nPart=split_numstr(s,nPartMax,startIdx,nchar,type);
+	double nan=(1.0/0.) * 0.;
+	if (nPart <=0||type[0] !='N'||type[nPart-1] !='W') {
+		return nan;
+	}
+	double x[4];
+	int   nNumber=0;
+	for (int i=0; i < nPartMax; i++){
+		if (type[i] !='N') continue;
+		char* ss=s+startIdx[i];
+		int   len=nchar[i];
+		char  old=ss[len]; ss[len]=0; x[nNumber++]=atof(ss); ss[len]=old;
+	}
+	char* ss=s+startIdx[nPart-1];
+	char  letter=char_toupper(ss[0]);
+	double y=nan;
+	if (nPart==2 ) {       
+		y=x[0];
+	}
+	else if (nPart==4 && type[1]=='S' && type[2]=='N'){
+		 y=x[0]/x[1];	
+	}
+#define _IsAlmostInteger(x)  ( fabs(x-round(x)) <1e-5 )
+	double z=nan;
+	if (letter=='D') {
+		double nyr1=y/366;
+		double nyr2=y/365;
+		if      (_IsAlmostInteger(nyr1) ) 	z=nyr1;
+		else if (_IsAlmostInteger(nyr2)) 	z=nyr2;
+		else  	z=y/365 ;
+	}
+	else if (letter=='M') {
+		z=y/12;	  
+	}
+	else if (letter=='Y') {
+		z=y  ;
+	}
+	return z;
+}
+int split_datestr(char* s,int nPartMax,int* startidx,int* nchar,char* type) {
+	char* s0=s;
+	int   nPart=0;
+	while (*s !=0 && nPart < nPartMax) {
+		s=goto_validchar(s);
+		if (is_digit(*s)) {
+			int nlen=get_intger_size(s);
+			nchar[nPart]=nlen;
+			startidx[nPart]=s - s0;
+			char typePart='N';
+			if (startidx[nPart] > 0 && is_letter(s0[startidx[nPart]-1])) {
+				typePart='A';
+			}
+			if (is_letter(s[nlen])) {
+				typePart='A';
+			}
+			type[nPart]=typePart;
+			nPart++;
+			s=s+nlen;
+		}
+		else if (is_letter(*s)) {
+			int nlen=get_word_size(s);
+			nchar[nPart]=nlen;
+			startidx[nPart]=s - s0;
+			type[nPart]='L';
+			nPart++;
+			s=s+nlen;
+		}
+	}
+	return nPart;
+}
+static int cmp_months(char* s) {
+	static char* months[]={ "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+	for (int i=0; i < 12;++i) {
+		int diff=strcicmp_nfirst(s,months[i],3);
+		if (diff==0) {
+			return i+1;
+		}
+	}
+	return -1;
+}
+float * strings_to_fyears(char *s,int * strstart,int n) {
+    #define NPARTMAX 16
+	int* startidx=malloc(sizeof(int) * ( n * NPARTMAX * 2  ));
+	int* partlength=startidx+n * NPARTMAX;
+	int  i=0; 
+	char parttype[NPARTMAX]={ 0 };
+	int  nPart=split_datestr(s+strstart[i],NPARTMAX,startidx+i * NPARTMAX,partlength+i * NPARTMAX,parttype);
+	for (i=1; i < n; i++) {
+		char newparttype[16]={ 0 };
+		int  newnPart=split_datestr(s+strstart[i],NPARTMAX,startidx+i * NPARTMAX,partlength+i * NPARTMAX,newparttype);
+		if (nPart !=newnPart||memcmp(parttype,newparttype,NPARTMAX) !=0) {
+			free(startidx);
+			r_printf("ERROR: the input date strings have inconsisent formats and cann't be automatically parsed. Use time$datestr and time$strfmat to specify the format.\n");
+			return NULL;
+		}			
+	}
+	int nNumber=0,nWord=0,nANumber=0,nNumberANumber=0,nNumber8=0,nNumber7=0;
+	int idxNumber[NPARTMAX],idxWord[NPARTMAX],idxANumber[NPARTMAX],idxNumANumber[NPARTMAX],idxNumber8[NPARTMAX],idxNumber7[NPARTMAX];
+	int partLenMin[NPARTMAX],partLenMax[NPARTMAX];
+	for (int i=0; i < nPart; i++) {
+		char pattern=parttype[i];
+		if (pattern=='N') {
+			idxNumber[nNumber++]=i;
+			idxNumANumber[nNumberANumber++]=i;
+		}	else if (pattern=='A') {
+			idxANumber[nANumber++]=i;
+			idxNumANumber[nNumberANumber++]=i;
+		}else if (pattern=='L') {
+			idxWord[nWord++]=i;
+		}
+		int* partLengthRow=partlength+i;
+		partLenMin[i]=*partLengthRow;
+		partLenMax[i]=*partLengthRow;
+		for (int j=0; j < n; j++) {
+			partLenMin[i]=min(partLenMin[i],*partLengthRow);
+			partLenMax[i]=max(partLenMax[i],*partLengthRow);	
+			partLengthRow+=NPARTMAX;
+		}
+		if (partLenMin[i]==8 && partLenMax[i]==8 && pattern !='L') {
+			idxNumber8[nNumber8++]=i;	 
+		}
+		if (partLenMin[i]==7 && partLenMax[i]==7 && pattern !='L') {
+			idxNumber7[nNumber7++]=i;
+		}
+	}
+	int* year=malloc(sizeof(int) * n * 4);
+	int* month=year+n;
+	int* day=month+n;
+	int* tmp=day+n;
+	int DONE=0;
+	if (nNumberANumber==3||nNumber==3) {
+		int yearFound=0,monthFound=0,dayFound=0;			 
+		for (int J=0; J < 3;++J) {
+			int   minv=999999,maxv=-999999;
+			F64   meanv=0;
+			int  idx=nNumberANumber==3 ? idxNumANumber[J] : idxNumber[J];
+			for (int i=0; i < n;++i) {
+				int   sidx=*(startidx+i * NPARTMAX+idx);
+				int   slen=*(partlength+i * NPARTMAX+idx);
+				char* ss=s+strstart[i]+sidx;
+				char  old=ss[slen]; ss[slen]=0; int value=atoi(ss); ss[slen]=old;
+				meanv+=value;
+				if (minv > value) minv=value;
+				if (maxv < value) maxv=value;
+				tmp[i]=value;
+			}
+			if (partLenMin[idx]==4 && partLenMax[idx]==4) {
+				if (yearFound==0) {
+					yearFound=1;
+					memcpy(year,tmp,sizeof(int) * n);
+					continue;
+				}
+			}
+			if ( (maxv==12||maxv==11) && partLenMax[idx] < 4) {
+				if (monthFound==0) {
+					monthFound=1;
+					memcpy(month,tmp,sizeof(int) * n);
+					continue;
+				}
+			}
+			if ( (maxv >=28 && maxv <=31 ) && partLenMax[idx] < 4) {
+				if (dayFound==0) {
+					dayFound=1;
+					memcpy(day,tmp,sizeof(int) * n);
+					continue;
+				}
+			}
+			if (minv < 1||maxv > 12) {
+				if (minv < 1||maxv > 31) {
+					if (yearFound==0) {
+						yearFound=1;
+						memcpy(year,tmp,sizeof(int) * n);
+					}
+				}	else {
+					if (dayFound==0) {
+						dayFound=1;
+						memcpy(day,tmp,sizeof(int) * n);
+					}
+				}
+			} else {
+				if (monthFound==0) {
+					monthFound=1;
+					memcpy(month,tmp,sizeof(int) * n);
+				}
+			}
+		}
+		if (yearFound==1 && monthFound==1 && dayFound==1) {
+			DONE=1;
+		}
+	}
+	if (nNumberANumber==2||nNumber==2 ) {
+		int yearFound=0,monthFound=0,dayFound=0;			 
+		for (int J=0; J < 2;++J) {
+			int   minv=999999,maxv=-999999;
+			F64   meanv=0;
+			int   idx=nNumberANumber==2 ? idxNumANumber[J] : idxNumber[J];
+			for (int i=0; i < n;++i) {
+				int   sidx=*(startidx+i * NPARTMAX+idx);
+				int   slen=*(partlength+i * NPARTMAX+idx);
+				char* ss=s+strstart[i]+sidx;
+				char  old=ss[slen]; ss[slen]=0; int value=atoi(ss); ss[slen]=old;
+				meanv+=value;
+				if (minv > value) minv=value;
+				if (maxv < value) maxv=value;
+				tmp[i]=value;
+			}
+			if (partLenMin[idx]==4 && partLenMax[idx]==4) {
+				if (yearFound==0) {
+					yearFound=1;
+					memcpy(year,tmp,sizeof(int) * n);
+					continue;
+				}
+			}
+			if ((maxv==12||maxv==11) && partLenMax[idx] <=2) {
+				if (monthFound==0) {
+					monthFound=1;
+					memcpy(month,tmp,sizeof(int) * n);
+					continue;
+				}
+			}
+			if (maxv <=12 && minv >=1 && partLenMax[idx] <=2) {
+				if (monthFound==0) {
+					monthFound=1;
+					memcpy(month,tmp,sizeof(int) * n);
+				}
+			} 
+		}
+		if (yearFound==1 && monthFound==1 ) {
+			DONE=3;
+		}
+	}
+	if (!DONE && (nNumberANumber==2||nNumber==2) && nWord==1) {
+		int yearFound=0,monthFound=0,dayFound=0;			 
+		for (int J=0; J < 2;++J) {
+			int   minv=999999,maxv=-999999;
+			F64   meanv=0;
+			int   idx=nNumberANumber==2 ? idxNumANumber[J] : idxNumber[J];
+			for (int i=0; i < n;++i) {
+				int   sidx=*(startidx+i * NPARTMAX+idx);
+				int   slen=*(partlength+i * NPARTMAX+idx);
+				char* ss=s+strstart[i]+sidx;
+				char  old=ss[slen]; ss[slen]=0; int value=atoi(ss); ss[slen]=old;
+				meanv+=value;
+				if (minv > value) minv=value;
+				if (maxv < value) maxv=value;
+				tmp[i]=value;
+			}
+			if (minv >=1 && maxv <=31 && partLenMin[idx]<4) {
+				if (dayFound==0) {
+					dayFound=1;
+					memcpy(day,tmp,sizeof(int) * n);
+				}
+			} 
+			else if (partLenMin[idx] >=4) {
+				if (yearFound==0) {
+					yearFound=1;
+					memcpy(year,tmp,sizeof(int) * n);
+				}
+			}		 
+		} 
+		int allMatched=1;
+		int idx=idxWord[0];
+		for (int i=0; i < n;++i) {
+			int   sidx=*(startidx+i * NPARTMAX+idx);
+			int   slen=*(partlength+i * NPARTMAX+idx);
+			char* ss=s+strstart[i]+sidx;
+			char  old=ss[slen]; ss[slen]=0; int value=cmp_months(ss); ss[slen]=old;
+			tmp[i]=value;
+			if (value < 0) {
+				allMatched=0;
+				break;
+			}
+		}
+		if (allMatched) {
+			monthFound=1;
+			memcpy(month,tmp,sizeof(int) * n);
+		}
+		if (yearFound==1 && monthFound==1 && dayFound==1) {
+			DONE=1;
+		}
+	}
+	if (!DONE && (nNumberANumber==1) && nWord==1) {
+		int yearFound=0,monthFound=0,dayFound=0;			 
+		for (int J=0; J < 1;++J) {
+			int   minv=999999,maxv=-999999;
+			F64   meanv=0;
+			int   idx=idxNumANumber[J];
+			for (int i=0; i < n;++i) {
+				int   sidx=*(startidx+i * NPARTMAX+idx);
+				int   slen=*(partlength+i * NPARTMAX+idx);
+				char* ss=s+strstart[i]+sidx;
+				char  old=ss[slen]; ss[slen]=0; int value=atoi(ss); ss[slen]=old;
+				meanv+=value;
+				if (minv > value) minv=value;
+				if (maxv < value) maxv=value;
+				tmp[i]=value;
+			}
+			if (partLenMin[idx]==4 && partLenMax[idx]==4) {
+				if (yearFound==0) {
+					yearFound=1;
+					memcpy(year,tmp,sizeof(int) * n);
+					continue;
+				}
+			}
+		} 
+		int allMatched=1;
+		int idx=idxWord[0];
+		for (int i=0; i < n;++i) {
+			int   sidx=*(startidx+i * NPARTMAX+idx);
+			int   slen=*(partlength+i * NPARTMAX+idx);
+			char* ss=s+strstart[i]+sidx;
+			char  old=ss[slen]; ss[slen]=0; int value=cmp_months(ss); ss[slen]=old;
+			tmp[i]=value;
+			if (value < 0) {
+				allMatched=0;
+				break;
+			}
+		}
+		if (allMatched) {
+			monthFound=1;
+			memcpy(month,tmp,sizeof(int) * n);
+		}
+		if (yearFound==1 && monthFound==1  ) {
+			DONE=3;
+		}
+	}
+	if (!DONE && nNumber8 > 0) {
+		for (int J=0; J < nNumber8;++J) {		 
+			int  idx=idxNumber8[J];
+			int  zero='0';
+			for (int i=0; i < n;++i) {
+				int   sidx=*(startidx+i * NPARTMAX+idx);
+				int   slen=*(partlength+i * NPARTMAX+idx);
+				char* ss=s+strstart[i]+sidx;
+				year[i]=(ss[0] - zero) * 1000+(ss[1] - zero) * 100+(ss[2] - zero) * 10+(ss[3] - zero);
+				month[i]=(ss[4] - zero) * 10+(ss[5] - zero) * 1;
+				day[i]=(ss[6] - zero) * 10+(ss[7] - zero) * 1;
+			}
+			int minv,maxv;
+			i32_maxidx(year,n,&maxv);
+			i32_minidx(year,n,&minv);
+			if (maxv > 8000) continue;
+			i32_maxidx(month,n,&maxv);
+			i32_minidx(month,n,&minv);
+			if (minv < 1||maxv>12) {
+				continue;
+			}
+			i32_maxidx(day,n,&maxv);
+			i32_minidx(day,n,&minv);
+			if (minv < 1||maxv>31) {
+				continue;
+			}
+			DONE=1;
+			break;		 
+		}
+	}
+	if (!DONE && nNumber8 > 0) {
+		for (int J=0; J < nNumber8;++J) {
+			int  idx=idxNumber8[J];
+			int  zero='0';
+			for (int i=0; i < n;++i) {
+				int   sidx=*(startidx+i * NPARTMAX+idx);
+				int   slen=*(partlength+i * NPARTMAX+idx);
+				char* ss=s+strstart[i]+sidx;
+				year[i]=(ss[0] - zero) * 1000+(ss[1] - zero) * 100+(ss[2] - zero) * 10+(ss[3] - zero);
+				day[i]=(ss[4] - zero) * 10+(ss[5] - zero) * 1;
+				month[i]=(ss[6] - zero) * 10+(ss[7] - zero) * 1;
+			}
+			int minv,maxv;
+			i32_maxidx(year,n,&maxv);
+			i32_minidx(year,n,&minv);
+			if (maxv > 8000) continue;
+			i32_maxidx(month,n,&maxv);
+			i32_minidx(month,n,&minv);
+			if (minv < 1||maxv>12) {
+				continue;
+			}
+			i32_maxidx(day,n,&maxv);
+			i32_minidx(day,n,&minv);
+			if (minv < 1||maxv>31) {
+				continue;
+			}
+			DONE=1;
+			break;
+		}
+	}
+	if (!DONE && nNumber7 > 0) {
+		for (int J=0; J < nNumber7;++J) {
+			int  idx=idxNumber7[J];
+			int  zero='0';
+			for (int i=0; i < n;++i) {
+				int   sidx=*(startidx+i * NPARTMAX+idx);
+				int   slen=*(partlength+i * NPARTMAX+idx);
+				char* ss=s+strstart[i]+sidx;
+				year[i]=(ss[0] - zero) * 1000+(ss[1] - zero) * 100+(ss[2] - zero) * 10+(ss[3] - zero);
+				day[i]=(ss[4] - zero) * 100+(ss[5] - zero) * 10+(ss[6] - zero) * 1;
+			}
+			int minv,maxv;
+			i32_maxidx(year,n,&maxv);
+			i32_minidx(year,n,&minv);
+			if (maxv > 4000) continue;
+			i32_maxidx(day,n,&maxv);
+			i32_minidx(day,n,&minv);
+			if (minv < 1||maxv>366) {
+				continue;
+			}
+			DONE=2;
+			break;		 
+		}
+	}
+	F32PTR out=NULL;
+	if (DONE) {
+		out=malloc(sizeof(F32) * n);
+		if (DONE==1) {
+			r_printf("INFO: '%s' interpreted as %04d-%02d-%02d (Y-M-D)\n",s,year[0],month[0],day[0]);
+			for (int i=0; i < n; i++) {
+				out[i]=YMDtoF32time(year[i],month[i],day[i]);
+			}
+		} else if (DONE==2)	 {
+			r_printf("INFO: '%s' interpreted as %04d-%03d (Year-DOY)\n",s,year[0],day[0]);
+			for (int i=0; i < n; i++) {
+				out[i]=YDOYtoF32time(year[i],day[i]);
+			}
+		}
+		else if (DONE==3) {
+			r_printf("INFO: '%s' interpreted as %04d-%02d (Year-Month)\n",s,year[0],month[0]);
+			for (int i=0; i < n; i++) {
+				out[i]=year[i]+month[i]/12.0-1.0/24.0;
+			}
+		}
+	}
+	free(startidx);
+	free(year);
+	return out;
 }
 #include "abc_000_warning.h"

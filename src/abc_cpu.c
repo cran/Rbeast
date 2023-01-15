@@ -33,7 +33,7 @@
             }
             return bIsWow64;
         }
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             #ifdef _M_X64
                     return 1;
             #else
@@ -51,7 +51,7 @@
             return ((uint64_t)edx << 32)|eax;
         }
         #define _XCR_XFEATURE_ENABLED_MASK  0
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             return 1;
         }
     #elif defined (SOLARIS_OS)
@@ -70,7 +70,7 @@
             __asm__ ("xgetbv" : "=a"(eax),"=d"(edx) : "c"(index));
             return ((uint64_t)edx << 32)|eax;
         }
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             return 1;
         }
         #warning "Warning:No cpuid intrinsic defined for compiler."
@@ -82,7 +82,7 @@
         uint64_t xgetbv(unsigned int index) {            
             return 0;
         }
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             return 1;
         }
         #warning "No cpuid intrinsic defined for compiler: a placeholder created!"
@@ -95,7 +95,7 @@
         uint64_t xgetbv(unsigned int index) {
             return 0;
         }
-        int detect_OS_x64() {
+        int detect_OS_x64(void) {
             return 1;
         }
 #else
@@ -104,12 +104,12 @@
 static void cpu_print(const char* label,uint8_t yes) {
     r_printf("%s%s\n",label,(yes ? "Yes" : "No"));
 }
-uint8_t detect_OS_AVX(){
-    bool avxSupported=false;
+uint8_t detect_OS_AVX(void){
+    Bool avxSupported=_False_;
     int  cpuInfo[4];
     cpuid(cpuInfo,1,0);
-    bool osUsesXSAVE_XRSTORE=(cpuInfo[2] & (1 << 27)) !=0;
-    bool cpuAVXSuport=(cpuInfo[2] & (1 << 28)) !=0;
+    Bool osUsesXSAVE_XRSTORE=(cpuInfo[2] & (1 << 27)) !=0;
+    Bool cpuAVXSuport=(cpuInfo[2] & (1 << 28)) !=0;
     if (osUsesXSAVE_XRSTORE && cpuAVXSuport)
     {
         uint64_t xcrFeatureMask=xgetbv(_XCR_XFEATURE_ENABLED_MASK);
@@ -117,9 +117,9 @@ uint8_t detect_OS_AVX(){
     }
     return avxSupported;
 }
-bool detect_OS_AVX512(){
+Bool detect_OS_AVX512(void){
     if (!detect_OS_AVX())
-        return false;
+        return _False_;
     uint64_t xcrFeatureMask=xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xe6)==0xe6;
 }
@@ -139,16 +139,15 @@ void detect_host(struct cpu_x86 *cpu){
     char vendor[13];
     get_vendor_string(vendor);
     if (strcmp(vendor,"GenuineIntel")==0){
-        cpu->Vendor_Intel=true;
+        cpu->Vendor_Intel=_True_;
     }else if (strcmp(vendor,"AuthenticAMD")==0){
-        cpu->Vendor_AMD=true;
+        cpu->Vendor_AMD=_True_;
     }
     int info[4];
     cpuid(info,0,0);
     int nIds=info[0];
     cpuid(info,0x80000000,0);
     uint32_t nExIds=info[0];
-    r_printf("%d\n",nIds);
     if (nIds >=0x00000001){
         cpuid(info,0x00000001,0);
         cpu->HW_MMX=(info[3] & ((uint32_t)1 << 23)) !=0;
@@ -204,7 +203,7 @@ void detect_host(struct cpu_x86 *cpu){
         cpu->HW_XOP=(info[2] & ((int)1 << 11)) !=0;
     }
 }
-void printinfo(struct cpu_x86 *cpu) {
+void print_cpuinfo(struct cpu_x86 *cpu) {
     r_printf("CPU Vendor:\n");
     cpu_print("    AMD=",cpu->Vendor_AMD);
     cpu_print("    Intel=",cpu->Vendor_Intel);
@@ -269,15 +268,13 @@ void printinfo(struct cpu_x86 *cpu) {
     cpu_print("    Safe to use AVX512:  ",cpu->HW_AVX512_F && cpu->OS_AVX512);
     r_printf("\n");
 }
-void cpu_print_info(){
+void detect_print_cpu() {
     struct cpu_x86 cpuinfo;
      detect_host(&cpuinfo);
-     printinfo(&cpuinfo);
+     print_cpuinfo(&cpuinfo);
 }
-#undef bool
-void i386_cpuid_caches () {
-    int i;
-    for (i=0; i < 32; i++) {
+void i386_cpuid_caches (Bool quiet) {
+    for (int i=0; i < 32; i++) {
         uint32_t eax,ebx,ecx,edx; 
         eax=4; 
         ecx=i; 
@@ -315,29 +312,30 @@ void i386_cpuid_caches () {
         unsigned int cache_physical_line_partitions=((ebx >>=12) & 0x3FF)+1;
         unsigned int cache_ways_of_associativity=((ebx >>=10) & 0x3FF)+1;
         size_t cache_total_size=cache_ways_of_associativity * cache_physical_line_partitions * cache_coherency_line_size * cache_sets;
-        r_printf(
-            "Cache ID %d:\n"
-            "- Level: %d\n"
-            "- Type: %s\n"
-            "- Sets: %d\n"
-            "- System Coherency Line Size: %d bytes\n"
-            "- Physical Line partitions: %d\n"
-            "- Ways of associativity: %d\n"
-            "- Total Size: %zu bytes (%zu kb)\n"
-            "- Is fully associative: %s\n"
-            "- Is Self Initializing: %s\n"
-            "\n"
-            ,i
-            ,cache_level
-            ,cache_type_string
-            ,cache_sets
-            ,cache_coherency_line_size
-            ,cache_physical_line_partitions
-            ,cache_ways_of_associativity
-            ,cache_total_size,cache_total_size >> 10
-            ,cache_is_fully_associative ? "true" : "false"
-            ,cache_is_self_initializing ? "true" : "false"
-        );
+        if (!quiet)
+            r_printf(
+                "Cache ID %d:\n"
+                "- Level: %d\n"
+                "- Type: %s\n"
+                "- Sets: %d\n"
+                "- System Coherency Line Size: %d bytes\n"
+                "- Physical Line partitions: %d\n"
+                "- Ways of associativity: %d\n"
+                "- Total Size: %zu bytes (%zu kb)\n"
+                "- Is fully associative: %s\n"
+                "- Is Self Initializing: %s\n"
+                "\n"
+                ,i
+                ,cache_level
+                ,cache_type_string
+                ,cache_sets
+                ,cache_coherency_line_size
+                ,cache_physical_line_partitions
+                ,cache_ways_of_associativity
+                ,cache_total_size,cache_total_size >> 10
+                ,cache_is_fully_associative ? "true" : "false"
+                ,cache_is_self_initializing ? "true" : "false"
+            );
     }
 }
 #include "abc_000_warning.h"

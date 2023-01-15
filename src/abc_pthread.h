@@ -1,7 +1,7 @@
 #pragma once
 #include "abc_000_macro.h"
-extern int get_thread_stacksize();
-extern int GetNumCores();
+extern int get_thread_stacksize(void);
+extern int GetNumCores(void);
 #if defined(WIN64_OS)||defined(WIN32_OS)
  #define WIN32_LEAN_AND_MEAN
  #include <windows.h> 
@@ -153,8 +153,8 @@ static INLINE int pthread_join(pthread_t thread,void **retvalue_ptr)
 static INLINE  pthread_t  pthread_self(void) {
     return (pthread_t) GetCurrentThreadId();
 }
-extern int  GetCPUInfo();
-extern void PrintCPUInfo();
+extern int  GetCPUInfo(void);
+extern void PrintCPUInfo(void);
 extern void CPU_ZERO(cpu_set_t* cpus);
 extern void CPU_SET(int i,cpu_set_t* cpus);
 extern int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (void*),void* arg);
@@ -171,6 +171,8 @@ static int  pthread_create(pthread_t* tid,const pthread_attr_t* attr,void* (*sta
 	    #include <pthread.h>
 #elif   defined(MAC_OS) 
     #include <mach/thread_policy.h> 
+    #include <mach/thread_act.h> 
+    #include <sys/sysctl.h> 
     #include <pthread.h>
     #include <sys/types.h> 
     #include <unistd.h>   

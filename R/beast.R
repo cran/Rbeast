@@ -1,19 +1,21 @@
 beast <- function(  y,                        
-				    start  = 1, deltat = 1, 
-					season = c('harmonic','dummy', 'svd','none'),
-					freq   = NA,                  
-					scp.minmax=c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
-					tcp.minmax=c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
-					detrend   = FALSE, deseasonalize=FALSE,
-					mcmc.seed =0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
+				    start   = 1, 
+					deltat  = 1, 
+					season  = c('harmonic','dummy', 'svd','none'),
+					period  = NULL,                  
+					scp.minmax = c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
+					tcp.minmax = c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
+					detrend       = FALSE, 
+					deseasonalize = FALSE,
+					mcmc.seed  = 0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
 					ci             = FALSE,
 					precValue      = 1.5,
 					precPriorType  = c('componentwise','uniform','constant','orderwise'),
 					print.options  = TRUE,
 					print.progress = TRUE,
- 					gui = FALSE,...)
+					quiet          = FALSE,
+ 					gui            = FALSE,...)
 {
-
   #start  = 1; deltat = 1 
   #season ='harmonic';
   #freq   = NA                  
@@ -27,14 +29,15 @@ beast <- function(  y,
   precPriorType = match.arg(precPriorType)
   
   # list is supported in this version for the multivariate cases
-  #if ( !hasArg("y") || is.list(y) )  {  
+  # if ( !hasArg("y") || is.list(y) )  {  
   if ( !hasArg("y") )  {  
-    stop("Something is wrong with the input 'y'. Make sure that y is a vector")
+    stop(" The input 'y' is missing!")
+	#stop("Something is wrong with the input 'y'. Make sure that y is a vector")
     invisible(return(NULL))         
   }  
   
   if ( is.matrix(y) )  {
-    dims=dim(y)
+    dims = dim(y)
 	if (dims[1]>1 && dims[2]>1) {	
 		stop("If there are multiple time series to process (e.g., stacked images), pls use the beast123() function. Type ?beast123 for more information!")
 		invisible(return(NULL))
@@ -42,29 +45,31 @@ beast <- function(  y,
 	y=as.vector(y);
   }  
    
-  yclass=class(y); 
+  yclass = class(y); 
   if (  sum( yclass=='ts' | yclass=='zoo' | yclass=='xts' ) > 0  ){      
      if ( sum(yclass=='ts') > 0 ) {
-		  tsp    = attributes(y)$tsp
-		  start  = tsp[1]
-		  end    = tsp[2]
-		  deltat = (end-start)/(length(y)-1)
-		  freq   = tsp[3]
-		  if (  freq==1 && season!='none'){
-		    warning("The input is a object of class 'ts' with a frequency of 1 -- trend-only data with no periodic component; season='none' is used instead.");
-		    season = 'none'
+		  tsp     = attributes(y)$tsp
+		  start   = tsp[1]
+		  end     = tsp[2]
+		  deltat  = (end-start)/(length(y)-1)
+		  freq    = tsp[3] 
+		  period  = freq *deltat
+		  if ( freq == 1 && season != 'none'){
+		    season = 'none'	;
+            period = NULL;
+		    if (!quiet) warning("The input is a object of class 'ts' with a frequency of 1: trend-only data with no periodic component; season='none' is used.");		   
 		  } else if (freq >1 && season=='none'){
+		    season = 'harmonic'
 			msg=sprintf("The input is a object of class 'ts' with a frequency of %d (i.e., with a periodic component); season='harmonic' is used instead.", freq)
-			warning(msg);
-			season='harmonic'
+			if (!quiet)  warning(msg);
 		  }
 	 } else {
-	    warning("The input is a object of class 'zoo' or 'xts'. Its time attributes are not ignored, and only the data vector is used.");  
+	    if (!quiet) warning("The input is a object of class 'zoo' or 'xts'. Its time attributes are not ignored, and only the data vector is used.");  
     	y=as.vector(y);
 	 }     
   }
  
-  if (length(y)==1) {
+  if ( length(y) == 1 ) {
   	stop("Something is wrong with the input 'y'. Make sure that y is a vector")
 	invisible(return(NULL))
   }
@@ -78,9 +83,8 @@ beast <- function(  y,
 	   argname2 = names(syscall)[[3]]
 	   
 	   if( is.null(argname2) ){argname2=''}
-       if (is.numeric(arg2) && length(arg2)==1 && argname2=='') {
-          msg    = sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,freq=%d)\n', arg2);   
-		  warning(msg);
+       if (is.numeric(arg2) && length(arg2)==1 && argname2=='') {  
+		  if (!quiet) warning(sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,freq=%d)\n', arg2));
 		  freq=arg2;
           invisible( return( beast.old(y,freq) ) )
        }
@@ -89,11 +93,13 @@ beast <- function(  y,
         
           valname2 = deparse(syscall[[3]])
           if (  argname2 == '' && valname2 =='opt' )     {
-              s=sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,opt)\n');  warning(s);
+              s=sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,opt)\n'); 
+              if (!quiet)warning(s);
 			  opt=arg2;
 			  invisible( return( beast.old(y,opt) )  )
           } else if (argname2 == 'option' )    {
-              s  =sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,option=)\n');  warning(s);
+              s  =sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,option=)\n');  
+			  if (!quiet) warning(s);
 			  opt=arg2;
 			  invisible( return( beast.old(y,option=opt) )  )
           }
@@ -105,13 +111,11 @@ beast <- function(  y,
    # substitute(alist(...))
    # ...names()
    # ...length()
-   # ...1
-   
+   # ...1   
    # tmplist=list(...)
 	
  #################################################################################
  #################################################################################  
-
 
  #......Start of displaying 'MetaData' ......
    metadata = list()
@@ -119,9 +123,7 @@ beast <- function(  y,
    metadata$season           = season   
    metadata$startTime        = start
    metadata$deltaTime        = deltat
-   if ( season!='none'){
-     metadata$period         = deltat*freq;
-   }   
+   metadata$period           = period;
    if ( season=='svd' ){
 		if (freq<=1.1 || is.na(freq) ) {
 	     	stop('When season=svd, freq must be specified and larger than 1.')
@@ -135,8 +137,18 @@ beast <- function(  y,
    metadata$missingValue      = NaN
    metadata$maxMissingRate    = 0.75
    if ( hasArg('hasOutlier') ) {
-        hasOutlier =list(...)[['hasOutlier']]   
-		metadata$hasOutlierCmpnt=as.logical(hasOutlier)		           
+        hasOutlier               = list(...)[['hasOutlier']]   
+		metadata$hasOutlierCmpnt = as.logical(hasOutlier)		           
+   }
+
+   cat(is.null(period))
+    cat(is.numeric(deltat))
+	    cat(season != 'none')
+		   cat(hasArg('freq'))
+		   
+   if ( is.null(period) && is.numeric(deltat) && season != 'none' && hasArg('freq')){
+        freq                = list(...)[['freq']]  
+		metadata$period     = deltat*freq		       
    }
 
 			
@@ -162,6 +174,7 @@ beast <- function(  y,
         prior$outlierMaxKnotNum	= list(...)[['ocp']] 
    }     
    prior$K_MAX            = 500   
+   prior$precPriorType    = precPriorType
    
 #......End of displaying pripr ......
 
@@ -193,9 +206,10 @@ beast <- function(  y,
    extra$tallyPosNegSeasonJump= TRUE
    extra$tallyPosNegTrendJump = TRUE
    extra$tallyIncDecTrendJump = TRUE
-   extra$printProgressBar     = TRUE
+   extra$printProgressBar     = print.progress
    extra$printOptions         = TRUE
    extra$consoleWidth         = 0
+   extra$quiet                = quiet
    if ( hasArg('randcoeff') ) {    
         extra$useMeanOrRndBeta	= list(...)[['randcoeff']] 
    }  else {

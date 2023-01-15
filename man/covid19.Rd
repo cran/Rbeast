@@ -17,24 +17,31 @@
 
  library(Rbeast)
  data(covid19)  
+ plot(covid19$date, covid19$newcases, type='l')
  
  \dontrun{
- newcases = covid19$newcases
+  
+ # Apply a square root-transformation
+ newcases = sqrt( covid19$newcases )  
  
- # This time series has a periodical variation of 7 days. 7 days can't be precisely 
- # represented in  the unit of year bcz some years has 365 days and others has 366. 
- # So, here we use  the date number as the time unit (i.e., the numeber of days lapsed 
- #  since 1970-01-01). 
+ # This time series varies periodically every 7 days. 7 days can't be precisely  
+ # represented in the unit of year bcz some years has 365 days and others has 366.
+ # BEAST can hanlde this in two ways.
+
+
+ #(1) Use the date number as the time unit--the num of days lapsed since 1970-01-01. 
+  
+  datenum  = as.numeric(covid19$date) 
+  o        = beast(newcases, start=min(datenum), deltat=1, period=7) 
+  o$time   = as.Date(o$time, origin='1970-01-01') # Convert from integers to Date.
+  plot(o)
  
- datenum = as.numeric(covid19$date) 
- o       = beast(newcases, start=min(datenum), deltat=1, freq=7) 
- o$time  = as.Date(o$time, origin='1970-01-01') # Convert from integers to Date.
- plot(o)
+ #(2) Use strings to explicitly specify deltat and period with a unit. 
  
- # Apply BEAST to the square root-transformed time series
- o        = beast(sqrt(newcases), start=min(datenum), deltat=1, freq=7) 
- o$time   = as.Date(o$time, origin='1970-01-01')  # Convert from integers to Date.
- plot(o)
+  startdate = covid19$date[1]
+  o         = beast(newcases, start=startdate, deltat='1day', period='7days') 
+  plot(o)
+ 
  }
  
 }

@@ -34,7 +34,7 @@ int CountSetBits64(uint64_t x) {
     x+=x >> 32;  
     return x & 0x7f;
 }
-int GetNumCores()  {
+int GetNumCores(void)  {
 #if defined(_WIN32)||defined(WIN64_OS)    
     uint32_t count;
 	count=GetCPUInfo(); 
@@ -58,7 +58,7 @@ int GetNumCores()  {
 }
 #if defined(_WIN32)||defined(WIN64_OS)
 typedef struct __CPUINFO {
-    DWORD (WINAPI* GetActiveProcessorGroupCount)     ();
+    DWORD (WINAPI* GetActiveProcessorGroupCount)     (void);
     DWORD (WINAPI* GetActiveProcessorCount)          (WORD GroupNumber);
     BOOL  (WINAPI* GetLogicalProcessorInformationEx) (
             LOGICAL_PROCESSOR_RELATIONSHIP           RelationshipType,        
@@ -105,7 +105,7 @@ typedef struct __CPUINFO1 {
 } CPUINFO;
 static CPUFUCINFO cpuFunc={0,};
 static CPUINFO    cpuInfo={0,};
-static void InitCPUFuncs( ) {
+static void InitCPUFuncs(void) {
     if (cpuFunc.isInitilized)  {
         return;
     }
@@ -122,7 +122,7 @@ static void InitCPUFuncs( ) {
     cpuFunc.GetNumaAvailableMemoryNode=GetProcAddress(kerHandle,"GetNumaAvailableMemoryNode");
     cpuFunc.isInitilized=1;
 }
-static int  GetCoreNumbers_WIN32() {
+static int  GetCoreNumbers_WIN32(void) {
     cpuInfo=(CPUINFO){ 0,};
     SYSTEM_INFO   sysinfo;
     GetSystemInfo(&sysinfo);   
@@ -131,7 +131,7 @@ static int  GetCoreNumbers_WIN32() {
     uint64_t currentGroupAffinity;
     return cpuInfo.logicalProcessorCount;
 }
-static int GetCoreNumbers_WIN7V1() {
+static int GetCoreNumbers_WIN7V1(void) {
     cpuInfo=(CPUINFO){ 0,};
     InitCPUFuncs();
     if (NULL==cpuFunc.GetActiveProcessorGroupCount)   {
@@ -152,7 +152,7 @@ static int GetCoreNumbers_WIN7V1() {
     cpuInfo.numaNodeCount=numaCount+1L;
     return cpuInfo.logicalProcessorCount; 
 }
-static int GetCoreNumbers_WINXP()
+static int GetCoreNumbers_WINXP(void)
 {         
     cpuInfo=(CPUINFO){ 0,};
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer=NULL;
@@ -211,7 +211,7 @@ static int GetCoreNumbers_WINXP()
     free(buffer);
     return cpuInfo.logicalProcessorCount;
 }
-static int GetCoreNumbers_WIN7V2() {
+static int GetCoreNumbers_WIN7V2(void) {
     #ifdef WIN64_OS
     cpuInfo=(CPUINFO){0,};
     InitCPUFuncs();
@@ -279,7 +279,7 @@ static int GetCoreNumbers_WIN7V2() {
     #endif
      return 0;
 }
-static void RankCPU() {
+static void RankCPU(void) {
 #ifdef WIN64_OS
     int nGrp=cpuInfo.processorGroupCount;
     int curGrp=cpuInfo.currentGroup;
@@ -372,14 +372,14 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
 #endif
 #if defined(_WIN32)||defined(WIN64_OS)
     #if _WIN32_WINNT >=0x0602
-        int get_thread_stacksize() {
+        int get_thread_stacksize(void) {
             ULONG_PTR lowLimit;
             ULONG_PTR highLimit; 
             GetCurrentThreadStackLimits(&lowLimit,&highLimit);
             return (highLimit - lowLimit);
         }
     #else
-        int get_thread_stacksize() {
+        int get_thread_stacksize(void) {
              NT_TIB* tib=(NT_TIB*)NtCurrentTeb();
              LPVOID   StackLimit=tib->StackLimit;
              LPVOID   StackBase=tib->StackBase;
@@ -402,7 +402,7 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
         return 0;        
     }
 #elif defined(LINUX_OS) 
-int get_thread_stacksize() {
+int get_thread_stacksize(void) {
     pthread_attr_t attr;
     size_t   stksize;
     void*    stkaddr;
@@ -412,7 +412,7 @@ int get_thread_stacksize() {
     return stksize;
 }
 #else 
-int get_thread_stacksize() {
+int get_thread_stacksize(void) {
     return  0;
     }
 #endif
