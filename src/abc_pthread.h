@@ -1,5 +1,6 @@
 #pragma once
 #include "abc_000_macro.h"
+#include <inttypes.h>
 extern int get_thread_stacksize(void);
 extern int GetNumCores(void);
 #if defined(WIN64_OS)||defined(WIN32_OS)
@@ -75,6 +76,7 @@ static INLINE int	pthread_attr_setstacksize(pthread_attr_t* tattr,size_t  size) 
        tattr->dwStackSize=size;
        return 0;
 }
+extern int pthread_attr_getstacksize_win32(pthread_attr_t* attr,size_t* stacksize);
 static int pthread_attr_getstacksize(pthread_attr_t* attr,size_t* stacksize) {
     return pthread_attr_getstacksize_win32(attr,stacksize);
 }
@@ -176,7 +178,6 @@ static int  pthread_create(pthread_t* tid,const pthread_attr_t* attr,void* (*sta
     #include <pthread.h>
     #include <sys/types.h> 
     #include <unistd.h>   
-    #include <inttypes.h>
     #define SYSCTL_CORE_COUNT   "machdep.cpu.core_count"
     typedef struct cpu_set {    uint32_t    count; } cpu_set_t;
     static inline void   CPU_ZERO(cpu_set_t* cs) {

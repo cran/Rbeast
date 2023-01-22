@@ -55,3 +55,4 @@ struct cpu_x86 {
 extern void detect_print_cpu(void);
 extern void detect_host(struct cpu_x86* cpu);
 extern void i386_cpuid_caches(Bool quiet);
+extern void print_cpuinfo(struct cpu_x86* cpu);

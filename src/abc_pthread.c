@@ -1,15 +1,24 @@
 #include "abc_000_warning.h"
 #include "abc_000_macro.h"
+#include "abc_ide_util.h"  
 #if defined(_WIN32)||defined(WIN64_OS)
     #include "abc_pthread.h"
 #elif defined(MAC_OS)
 	#include <sys/param.h>
 	#include <sys/sysctl.h>
 #elif defined(LINUX_OS)||defined(SOLARIS_OS)
-	#include <unistd.h>
+	#include <unistd.h> 
 #endif
-#include <inttypes.h>
-#include "abc_ide_util.h" 
+#if  defined(LINUX_OS) 
+    #ifndef _GNU_SOURCE
+        #define _GNU_SOURCE
+    #endif
+    #include <sched.h>  
+    #include <pthread.h>
+#elif defined(SOLARIS_OS)
+    #include <sched.h>  
+    #include <pthread.h>
+#endif
 int CountSetBits32(uint32_t x)  {
     x=x - ((x >> 1) & 0x55555555);
     x=(x & 0x33333333)+((x >> 2) & 0x33333333);
@@ -340,7 +349,7 @@ void PrintCPUInfo() {
  void CPU_ZERO(cpu_set_t* cpus) {
     memset(cpus,0,sizeof(cpu_set_t));
 }
- void CPU_SET(int i,cpu_set_t* cpus) {     
+void CPU_SET(int i,cpu_set_t* cpus) {     
     #ifdef WIN64_OS
     cpus->ProcNumber.Group=cpuInfo.cpuGroup[i];
     cpus->ProcNumber.Number=cpuInfo.numCPUCoresToUseber[i];
@@ -386,7 +395,9 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
              return  StackLimit;
         }
     #endif
-    static void * __getstacksize(void * arg) {  *((size_t*) arg)=get_thread_stacksize();  return 0; }
+    static void * __getstacksize(void * arg) {  
+        *((size_t*) arg)=get_thread_stacksize();  return 0; 
+    }
     int pthread_attr_getstacksize_win32(pthread_attr_t* attr,size_t* stacksize) {
         static int default_stacksize=0;
         if (attr->dwStackSize > 0) {

@@ -6,6 +6,7 @@
 #include "abc_sort.h"
 #include "abc_vec.h" 
 #include "abc_blas_lapack_lib.h"
+#include "abc_rand_pcg_local.h"
 static INLINE int isSpace(char c) {return (c==' '||c=='\t'||c=='\n');}
 int get_word(char* str) {
 	int i=0,wordlen=0;
@@ -551,7 +552,6 @@ void EnableFloatExcetion(void) {
 	#include "fenv.h" 
 void EnableFloatExcetion(void) {
 	#if defined(LINUX_OS) 
-	feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW); 
 	#endif
 }
 #endif

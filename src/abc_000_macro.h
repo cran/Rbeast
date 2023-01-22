@@ -1,6 +1,6 @@
 #pragma once
-#define R_INTERFACE    0
-#define M_INTERFACE    1
+#define R_INTERFACE   1
+#define M_INTERFACE   0
 #define P_INTERFACE    0
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0

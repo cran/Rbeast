@@ -41,6 +41,7 @@ int  GetNumOfDim(const void * ptr);
 void GetDimensions(const void * ptr,int dims[],int ndims);
 int  GetNumberOfElements(const void* ptr);
 I32  GetNumberOfFields(const void* structVar);
+int IsClass(void* ptr,char* class);
 int IsCell(void* ptr);
 int IsChar(void* ptr);
 int IsEmpty(void* ptr);

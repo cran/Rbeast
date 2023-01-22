@@ -1,5 +1,6 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
+#include "abc_datatype.h"
  #if M_INTERFACE==1 && !defined(MSVC_COMPILER)
 	#include "inttypes.h"
 	#include "mex.h"

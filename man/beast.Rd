@@ -31,7 +31,7 @@
          precPriorType  = c('componentwise','uniform','constant','orderwise'),
          print.options  = TRUE,
          print.progress = TRUE,		 
-		 quiet          = FALSE,		 
+         quiet          = FALSE,		 
          gui            = FALSE,
          ...
       )
@@ -67,7 +67,7 @@
   
   }
   
-  \item{period}{ numeric or string. Specify the period for the periodic/seasonal component in \code{y}. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and not used for trend-only data (i.e., \code{season='none'}).  The period of the cyclic component should have a unit consisent with the unit of \code{deltat}. It holds that \code{period=deltat*freq} where \code{freq} is the number of data samples per period. (Note that the \code{freq} argument in earlier versions becomes obsolete and now is replaced by \code{period}.)  \code{period} or the number of data points per period is not a BEAST model parameter and it has to be specified by the user. But if \code{period} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model. If \code{period} <= 0, no seasonal/cyclic component is assumed (i.e, \code{season='none'}) and the trend-only model is used.  If needed, use a string to specify whether the unit of period is day, month, or year. Examples are '1.0 year', '12 months', '365d', '366 days'.}
+  \item{period}{ numeric or string. Specify the period for the periodic/seasonal component in \code{y}. Needed only for data with a periodic/cyclic component (i.e., season=\code{'harmonic'} or \code{'dummy'}) and not used for trend-only data (i.e., \code{season='none'}).  The period of the cyclic component should have a unit consisent with the unit of \code{deltat}. It holds that \code{period=deltat*freq} where \code{freq} is the number of data samples per period. (Note that the \code{freq} argument in earlier versions becomes obsolete and now is replaced by \code{period}. \code{freq} is still supported but\code{period} takes precedence if both are provided.)  \code{period} or the number of data points per period is not a BEAST model parameter and it has to be specified by the user. But if \code{period} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model. If \code{period} <= 0, \code{season='none'} is assumed, and  the trend-only model is fitted without a seasonal/cyclic component. If needed, use a string to specify whether the unit of period is day, month, or year. Examples are '1.0 year', '12 months', '365d', '366 days'.}
   
   \item{sorder.minmax}{ a vector of 2 integers (>=1); the min and max harmonic orders considered to fit the seasonal component. \code{sorder.minmax} is used only used if the time series has a seasonal component (i.e., \code{season='harmonic'}) and ignored for trend-only data or when \code{season='dummy'}. If the min and max orders are equal (\code{sorder.minmax[1]=sorder.minmax[2]}), BEAST assumes a constant harmonic order used and won't infer the posterior probability of harmonic orders. }
   
@@ -251,10 +251,10 @@ library(Rbeast)
 \donttest{
 
 #------------------------------------Example 1----------------------------------------#
-# 'googletrend_beach' is the monthly Google search popularity of 'beach' in the US 
-# from 2004 to 2022, obtained from Google Trends. Sudden changes in the time series
-# coincide with known extreme  weather events (e.g., 2006 North American Blizzard, 2011
-# US hottest summer on record, Record warm January in 2016) or the covid19 outbreak
+# 'googletrend_beach' is the monthly Google Trend popularity of searching for 'beach' 
+# in the US from 2004 to 2022. Sudden changes in the time series coincide with known 
+# extreme  weather events (e.g., 2006 North American Blizzard, 2011 US hottest summer 
+# on record, Record warm January in 2016) or the covid19 outbreak.
 
  out <- beast(googletrend_beach)
  
@@ -269,13 +269,14 @@ library(Rbeast)
 #------------------------------------Example 2----------------------------------------#
 # Yellowstone is a half-monthly satellite time series of 774 NDVI(vegetation greeness) 
 # observations starting from July 1-15,1981(i.e., start=c(1981,7,7)) at a Yellowstone
-# site. It has 24 data points per year (i.e., freq=24). Note that the beast function 
-# hanldes only evenly-spaced regular time series. Irregular data need to be first 
-# aggegrated at a regular time interval of your choice--the aggregation functionality 
-# is implemented in beast.irreg() and beast123().
+# forest site. It has 24 data points per year (i.e., freq=24). Note that the beast 
+# function  hanldes only evenly-spaced regular time series. Irregular data need to be
+# first  aggegrated at a regular time interval of your choice--the aggregation 
+# functionality is implemented in beast.irreg() and beast123().
 
  data(Yellowstone)
- plot(Yellowstone)
+ plot( 1981.5+(0:773)/24, Yellowstone, type='l')  # A sudden drop in greenness in 1988 
+                                                  # due to the 1988 Yellowstone Fire
 
 # Yellowstone is not a object of class 'ts' but a pure vector without time attributes. 
 # Below, no extra argument is supplied, so default values (i.e.,start=1, deltat=1) are 
@@ -302,13 +303,13 @@ library(Rbeast)
  o=beast(Yellowstone, start=1981.5137,            deltat=1/24,  period=1.0) 
  
  # Use a string to explictly specify a time unit so that times are intepreted as dates
- # o=beast(Yellowstone, start=1981.5137,   deltat='1/24 year', period=1.0) 
- # o=beast(Yellowstone, start=1981.5137,   deltat='0.5 mon',   period=1.0) 
- # o=beast(Yellowstone, start=1981.5137,   deltat=1/24,        period='1 yr') 
- # o=beast(Yellowstone, start=1981.5137,   deltat=1/24,        period='365 days')
+ # o=beast(Yellowstone, start=1981.5137, deltat='1/24 year', period=1.0) # 1.0 = 1 yr
+ # o=beast(Yellowstone, start=1981.5137, deltat='0.5 mon',   period=1.0) # 1.0 = 1 yr
+ # o=beast(Yellowstone, start=1981.5137, deltat=1/24, period='1 yr')    # 1/24 = 1/24 yr
+ # o=beast(Yellowstone, start=1981.5137, deltat=1/24, period='365 days')# 1/24 = 1/24 yr
   
  # (2) start is provided as YMD, the unit is year: deltat=1/24 year=0.5 month
- #o=beast(Yellowstone, start=c(1981,7,7),         deltat=1/24,  period=1.0)
+ # o=beast(Yellowstone, start=c(1981,7,7),         deltat=1/24,  period=1.0)
 
  # (3) start is provided as Date, the unit is year: deltat=1/24 year=0.5 month
  #o=beast(Yellowstone, start=as.Date('1981-7-7'), deltat=1/24, period=1.0)  
@@ -404,9 +405,9 @@ library(Rbeast)
  o = beast(Nile)  # start=1871, delta=1, and freq=1 taken from Nile itself
  plot(o)
  
- o = beast(Nile,            #   the same as above. The user-supplied values (i.e., 2023,
+ o = beast(Nile,             # the same as above. The user-supplied values (i.e., 2023,
            start=2023,       # 9999) are ignored bcz Nile carries its own time attributes.
-           period=9999,       # Its frequency tag is 1 (i.e., trend-only), so season='none'
+           period=9999,      # Its frequency tag is 1 (i.e., trend-only), so season='none'
            season='harmonic' # is used instead of the supplied 'harmonic'
 		   )
 } 

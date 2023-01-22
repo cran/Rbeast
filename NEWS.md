@@ -1,8 +1,14 @@
+# CHANGES IN Rbeast 0.9.7
+
+* Fix the C23 and clang 16 issue upon the request of Dr. Brian D. Ripley (Jan 20,2023):
+  feenableexcept not defined for clang16 with -std=gnu2x. No implicit function declarations
+  are allowed. 'false','true', and 'bool' are keywords in C23.
+
 # CHANGES IN Rbeast 0.9.6
 
 * Fix the C23 issue upon the request of Dr. Brian D. Ripley (Jan 09,2023)
-* Also remove the freq arg in favor of period to specify the period of the 
-* the seasonal component (Jan 09,2023)
+* Also remove the freq arg in favor of period to specify the period of the
+ the seasonal component (Jan 09,2023)
 
 
 # CHANGES IN Rbeast 0.9.5

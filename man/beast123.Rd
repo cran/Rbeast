@@ -438,6 +438,7 @@
                                     # decreasing trend slopes 
  extra$printProgressBar     = TRUE
  extra$printOptions         = TRUE
+ extra$quiet                = FALSE # print warning messages, if any
  extra$consoleWidth         = 0     # If 0, the console width is from the current console
  extra$numThreadsPerCPU     = 2     # 'numThreadsPerCPU' and 'numParThreads' are used to 
  extra$numParThreads        = 0     # configure multithreading runs; they're used only if
