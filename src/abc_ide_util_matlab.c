@@ -231,6 +231,15 @@ void   GetDimensions(const void * ptr,int dims[],int ndims) {
 		dims[i]=mxdims[i];
 	}	
 }
+void  * SetDimensions(const void* ptr,int dims[],int ndims) {
+	if (!ptr) return;
+	mwSize mwdims[20];
+	for (int i=0; i < ndims; i++) mwdims[i]=dims[i];
+	mwSize ndimension=ndims;
+	int res=mxSetDimensions(ptr,mwdims,ndimension);
+	mwSize* p=mxGetDimensions(ptr);
+	return ptr;
+}
 int    GetNumberOfElements(const void * ptr)
 { 
 	if (mxIsChar(ptr)) {

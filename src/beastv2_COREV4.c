@@ -314,7 +314,7 @@ int beast2_main_corev4(void)   {
 					if (yInfo.nMissing > 0 && Knewterm > 0 )  
 						f32_mat_multirows_set_by_submat(Xnewterm,Npad,Knewterm,Xt_zeroBackup,yInfo.rowsMissing,yInfo.nMissing);
 					if (NewCol.k2_old !=KOLD && NewCol.k2_new !=NewCol.k2_old)
-						MoveCOLsWithinMatrix(Xt_mars,Npad,NewCol.k2_old+1,KOLD,NewCol.k2_new+1);
+						shift_lastcols_within_matrix(Xt_mars,Npad,NewCol.k2_old+1,KOLD,NewCol.k2_new+1);
 					if (Knewterm !=0)
 						SCPY(Knewterm*Npad,Xnewterm,Xt_mars+(NewCol.k1-1) * Npad);
 					basis->UpdateGoodVec(basis,&NEW,Npad16);
@@ -447,7 +447,7 @@ int beast2_main_corev4(void)   {
 						if (result->xorder !=NULL) {
 							TORDER_PTR  ORDER=basis->ORDER;
 							for (I32 i=0; i <=nKnot;++i) {
-								I16 r1=KNOT[i-1],r2=KNOT[i]-1;
+								I32 r1=KNOT[i-1],r2=KNOT[i]-1;
 								r_ippsAddC_32s_ISfs(ORDER[i],result->xorder+r1 - 1,r2 - r1+1,0);
 							}
 						}
@@ -873,7 +873,7 @@ int beast2_main_corev4(void)   {
 			I32   oMAXNUMKNOT=MODEL.oid >=0 ? MODEL.b[MODEL.oid].prior.maxKnotNum : -9999999;
 			I32   sMINSEPDIST=MODEL.sid >=0 ? MODEL.b[MODEL.sid].prior.minSepDist : -9999999;
 			I32   tMINSEPDIST=MODEL.tid >=0 ? MODEL.b[MODEL.tid].prior.minSepDist : -9999999;
-			I32   oMINSEPDIST=MODEL.oid >=0 ? 1 : -9999999;
+			I32   oMINSEPDIST=MODEL.oid >=0 ? 0 : -9999999;  
 			if (extra.computeSeasonChngpt && MODEL.sid >=0)  	{
 				cptNumber=sMAXNUMKNOT;
 				trueCptNumber=FindChangepoint((F32PTR)result.scpOccPr,mem,threshold,cptList,cptCIList,N,sMINSEPDIST,cptNumber);

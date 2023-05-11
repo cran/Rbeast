@@ -9,6 +9,9 @@
 \title{Bayesian time series decomposition for changepoint, trend, and periodicity or seasonality}
 \description{
    A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations. BEAST is useful for changepoint detection (e.g., breakpoints or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation.
+   \cr \cr
+   \if{html}{\figure{Nile.jpg}{options: width="95\%" alt="Figure: Nile.jpg"}}
+   \if{latex}{\figure{Nile.pdf}{options: width=10cm}}
   }
 \usage{
   beast(   

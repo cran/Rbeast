@@ -168,10 +168,8 @@ static DIR *opendir (const char *dirname);
 static _WDIR *_wopendir (const wchar_t *dirname);
 static struct dirent *readdir (DIR *dirp);
 static struct _wdirent *_wreaddir (_WDIR *dirp);
-static int readdir_r(
-    DIR *dirp,struct dirent *entry,struct dirent **result);
-static int _wreaddir_r(
-    _WDIR *dirp,struct _wdirent *entry,struct _wdirent **result);
+static struct dirent*  readdir_r(    DIR *dirp,struct dirent *entry,int *result);
+static int _wreaddir_r(   _WDIR *dirp,struct _wdirent *entry,struct _wdirent **result);
 static int closedir (DIR *dirp);
 static int _wclosedir (_WDIR *dirp);
 static void rewinddir (DIR* dirp);
@@ -412,16 +410,17 @@ exit_free:
 }
 static struct dirent* readdir(   DIR *dirp)
 {
-    struct dirent *entry=NULL;
-    (void) readdir_r (dirp,&dirp->ent,&entry);
+    int result;
+    struct dirent* entry=readdir_r (dirp,&dirp->ent,&result);
     return entry;
 }
-static int
+static   struct dirent*
 readdir_r(
     DIR *dirp,
     struct dirent *entry,
-    struct dirent **result)
+    int *status)
 {
+    struct dirent* result;
     WIN32_FIND_DATAW *datap;
     datap=dirent_next (dirp->wdirp);
     if (datap) {
@@ -457,10 +456,12 @@ readdir_r(
             entry->d_off=-1;
             entry->d_reclen=0;
         }
-        *result=entry;
+        result=entry;
     } else {
-        *result=NULL;
+        result=NULL;
     }
+    status[0]=0; 
+    return result;
     return 0;
 }
 static int closedir(    DIR *dirp)
@@ -522,7 +523,9 @@ static int scandir(
                     break;
                 }
             }
-            if (readdir_r (dir,tmp,&entry)==0) {
+            int status;
+            entry=readdir_r(dir,tmp,&status);
+            if (status==0) {
                 if (entry !=NULL) {
                     int pass;
                     if (filter) {

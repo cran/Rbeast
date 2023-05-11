@@ -251,7 +251,7 @@ plotbutton <- function (x,y,w1,w2,r,str, cex) {
   text(x+w1/2,     y-w2/2,     str,font=1,cex=cex,col='#FF0000')
 }
 
-plot.field <-function(nx,ny, yExtra, w){
+pplot.field <-function(nx,ny, yExtra, w){
  
     par(  oma=c(0,0,0,0) )      #the margin between the device oboarard and figure brder
     par(  mar=c(.0,.0,.0,.0) )  #the margin between the figure boarder and plot border 	
@@ -293,7 +293,8 @@ plot.field <-function(nx,ny, yExtra, w){
 	
 }
 
-plot.count <- function(nx,ny, yExtra, w, count) {
+# plot.count will be considerd as a class generic method
+pplot.count <- function(nx,ny, yExtra, w, count) {
 	count = ifelse(count>999,999,count);
 	#bnum=paste('No. of bombs left: ', formatC(sum(img)-sum(right),format='d',digits=3),' '  ) ;
 	#bnum= paste('Bombs left:', formatC(count,format='d',digits=3),sep=''  ) ;
@@ -317,7 +318,7 @@ plot.count <- function(nx,ny, yExtra, w, count) {
 	#legend(.5, -3.5,bnum,xjust=0, yjust=0.5, cex=1.2,text.col="blue", box.col="red",bg="yellow")   
 }
 
-plot.buttons <-function(nx,ny, yExtra, w) {	
+pplot.buttons <-function(nx,ny, yExtra, w) {	
 	# Buttons
 	r  = 0.1
 	w1 = min((nx-2*r)*0.25,5);
@@ -404,10 +405,10 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
  ########################################################################
  # Configure plotting area 
  ##################################################################
- plot.field(nx,ny, yExtra, w)
+ pplot.field(nx,ny, yExtra, w)
  count=sum(img)-sum(right)
- plot.count(nx,ny, yExtra, w,  count)
- plot.buttons(nx,ny,yExtra,w);
+ pplot.count(nx,ny, yExtra, w,  count)
+ pplot.buttons(nx,ny,yExtra,w);
  
  #######################################################################
  numCol=c('blue','green','red','brown','gold','darkviolet','purple','pink' )
@@ -523,10 +524,10 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
       curButton<<-0;      
   
      #Once a plot is created, you can add to the plot, but nothing can be removed. You need to redraw the plot without the legend.	 #https://stackoverflow.com/questions/7365464/remove-legend-in-r
-     plot.field(nx,ny, yExtra, w)
+     pplot.field(nx,ny, yExtra, w)
 	 count=sum(img)-sum(right)
-	 plot.count(nx,ny, yExtra, w,  count)
-	 plot.buttons(nx,ny,yExtra,w);
+	 pplot.count(nx,ny, yExtra, w,  count)
+	 pplot.buttons(nx,ny,yExtra,w);
   
       return(NULL)
     }
@@ -613,7 +614,7 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
           }
 		
 			count=sum(img)-sum(right)
-			plot.count(nx,ny, yExtra, w,  count)    
+			pplot.count(nx,ny, yExtra, w,  count)    
 	
         }
         else # already flaged
@@ -622,7 +623,7 @@ minesweeper <- function(height=15, width=12, prob=0.1) {
           right[j,i]<<-0;
           
 		  count=sum(img)-sum(right)
-		  plot.count(nx,ny, yExtra, w,  count)             
+		  pplot.count(nx,ny, yExtra, w,  count)             
         }
         
         

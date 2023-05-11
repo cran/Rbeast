@@ -257,26 +257,6 @@ void XtX_ByGroup(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR XtX,I32 N,I32 Kn
 		XtX+=Ksegcol*Knew;
 	}
 }
-void MoveCOLsWithinMatrix(F32PTR X,I32 N,I32 Kstart,I32 Kend,I32 Knewstart) {
-	rI32 j=Knewstart - Kstart;
-	if (j < 0||Knewstart > Kend)
-		r_cblas_scopy((Kend-Kstart+1)*N,X+(Kstart-1)*N,1,X+(Knewstart-1)*N,1);
-	else
-	{
-		rI32 segStartIdx=Kend+1;
-		while (_True_) {
-			segStartIdx=segStartIdx - j;
-			if (segStartIdx > Kstart) {
-				r_cblas_scopy(j * N,X+(segStartIdx-1) * N,1L,X+((segStartIdx+j)- 1) * N,1);
-			}
-			else {
-				j=(segStartIdx+j) - Kstart;
-				r_cblas_scopy(j *N,X+(Kstart - 1)*N,1L,X+(Knewstart-1) * N,1);
-				break;
-			}
-		}
-	}
-}
 void MR_EvaluateModel(
 	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
 	BEAST2_YINFO_PTR yInfo,BEAST2_HyperPar *hyperPar,F32PTR precVec,VOID_PTR stream )

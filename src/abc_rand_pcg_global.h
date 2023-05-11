@@ -10,8 +10,10 @@ extern void pcg_wishart_unit_lowtriangle_zeroout_notmp(F32PTR wishrnd,I32 m,F32 
 extern void pcg_invwishart_upper(F32PTR iwrnd_upper,F32PTR iwrnd_upper_inv,F32PTR tmp,I32 m,F32PTR Qup,F32 df);
 typedef struct GAUSS_CONSTANT {
 	F32    x[64];
-	U32    yRatio[63];
-	F32    yInverse[63];
-	F32    PARAM_R,INV_PARAM_R;
+	F32    yRatio[63];	
+	I16    indices[125];
+	F32    amax;
+	F32    exp_lamda;
+	I32    inflectionId;
 } GAUSS_CONSTANT;
 extern GAUSS_CONSTANT GAUSS;

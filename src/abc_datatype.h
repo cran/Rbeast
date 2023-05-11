@@ -2,7 +2,7 @@
 #include <inttypes.h> 
 #include <float.h>
 #include "abc_000_macro.h"
-#define FLOAT_TYPE 4  
+#define FLOAT_TYPE 4    
 #ifdef FLOAT
 #undef FLOAT
 #endif
@@ -26,8 +26,8 @@
 #endif
 #define IsInf(f)  (  (f) >FLOAT_MAX||(f)< FLOAT_MIN)
 #ifdef __cplusplus
-extern "C" {
-#endif
+	extern "C" {
+#endif 
 	typedef float     F32;
 	typedef double    F64;
 	typedef int64_t   I64;
@@ -86,29 +86,15 @@ extern "C" {
 		DATA_STRUCT,
 		DATA_UNKNOWN
 	} DATA_TYPE;
-#ifdef __cplusplus
-}
-#endif
-#if R_INTERFACE==1||P_INTERFACE==1
-	#ifndef Bool
-		#define  Bool  unsigned char
-	#endif
-#elif M_INTERFACE==1
-	#ifndef Bool
-		 #include "mex.h"
-		 #define  Bool  bool     
-    #endif
-#endif
 enum { _False_=0,_True_=1 };
-#ifdef CLANG_COMPILER
-	#undef sign   
-	#undef warning 
-#endif
 #if defined (MSVC_COMPILER)
-	static INLINE F32  getNaN(void) { return (F32)1e38f * (F32)1e38f * (F32)0.f; }
+	static INLINE float  getNaN(void) { return (float)1e38f * (float)1e38f * (float)0.f; }
 #else
-	static INLINE F32  getNaN(void) { return (F32) (0.0/0.0); }
+	static INLINE float  getNaN(void) { return (float)(0.0/0.0); }
 #endif
 #include <string.h>   
 #define  free0(p)     if(p){ free(p);p=NULL;}
 #define  malloc0(n)   calloc(1L,n)
+#ifdef __cplusplus
+}
+#endif

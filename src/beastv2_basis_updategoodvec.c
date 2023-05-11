@@ -14,17 +14,17 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,
 	if (flag==BIRTH) 
 		r_ippsSet_8u(0,goodVec+(newKnot - MINSEP) - 1,2 * MINSEP+1);	
 	else if (flag==DEATH) {
-		I16 oldKnot=knotList[newIdx - 1]; 
-		I16 r1=knotList[(newIdx - 1) - 1];
-		I16 r2=knotList[(newIdx+1) - 1] - 1;
+		I32 oldKnot=knotList[newIdx - 1]; 
+		I32 r1=knotList[(newIdx - 1) - 1];
+		I32 r2=knotList[(newIdx+1) - 1] - 1;
 		r_ippsSet_8u(1,goodVec+(oldKnot - MINSEP) - 1,2 * MINSEP+1);
 		r_ippsSet_8u(0,goodVec+(r1)-1,MINSEP+1);
 		r_ippsSet_8u(0,goodVec+(r2 - MINSEP+1) - 1,MINSEP);
 	}
 	else if (flag==MOVE) {
-		I16 oldKnot=knotList[newIdx - 1];
-		I16 r1=knotList[(newIdx - 1) - 1];
-		I16 r2=knotList[(newIdx+1) - 1] - 1;
+		I32 oldKnot=knotList[newIdx - 1];
+		I32 r1=knotList[(newIdx - 1) - 1];
+		I32 r2=knotList[(newIdx+1) - 1] - 1;
 		r_ippsSet_8u(1,goodVec+(oldKnot - MINSEP) - 1,2 * MINSEP+1);
 		r_ippsSet_8u(0,goodVec+(newKnot - MINSEP) - 1,2 * MINSEP+1);
 		r_ippsSet_8u(0,goodVec+(r1)-1,MINSEP+1);

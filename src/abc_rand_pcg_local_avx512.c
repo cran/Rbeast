@@ -42,6 +42,8 @@ void avx512_pcg_set_seed(local_pcg32_random_t* rng,U64 initstate,U64 initseq)
 	__m512i state512=_mm512_set_epi64(rng->state512[7],rng->state512[6],rng->state512[5],rng->state512[4],
 									   rng->state512[3],rng->state512[2],rng->state512[1],rng->state512[0]);
 	pcg_get_lcg_multiplier_shift_multistep(8L,PCG_DEFAULT_MULTIPLIER_64,rng->increment512,&rng->MULTIPLIER_8steps,&rng->INCREMENT_8steps);
+	extern void init_gauss_rnd();
+	init_gauss_rnd(); 
 }
 static __mmask16        masktemplate[16];
 static INLINE void      FillMaskTemplate(void) { for (I32 i=0; i < 16; i++)    masktemplate[i]=(1UL << i) - 1UL; }

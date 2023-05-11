@@ -98,7 +98,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	 	
 	dT = io->meta.deltaTime;
 	if (unitFormat == 1) snprintf(msg, 99, "%g days", dT);
-	if (unitFormat == 2) snprintf(msg, 99, "%g year = %g months = %g days)", dT, dT * 12, dT * 365);
+	if (unitFormat == 2) snprintf(msg, 99, "%g year = %g months = %g days", dT, dT * 12, dT * 365);
 	if (unitFormat == 3) snprintf(msg, 99, "%g (unknown unit)", dT);
 	if (!io->T.needReordered && io->T.needAggregate && !io->meta.isRegular) {
 	Print("%sPreprocessing%s : Aggregate irregular data into a regular interval of %s\n", 1L, em1, em2, msg );
@@ -113,19 +113,19 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 		if (unitFormat == 2) snprintf(msg, 99, "%g year = %g months = %g days", period, period * 12, period * 365);
 		if (unitFormat == 3) snprintf(msg, 99, "%g (unknown unit)", period);
 
-	Print("%shasSeasonCmpnt%s: %-5s | period = %s. The model 'Y=Trend+Season+Error' is fitted.\n", hasAny, em1, em2, logicals[!!meta->hasSeasonCmpnt], msg);
+	Print("%sHasSeasonCmpnt%s: %-5s | period = %s. The model 'Y=Trend+Season+Error' is fitted.\n", hasAny, em1, em2, logicals[!!meta->hasSeasonCmpnt], msg);
 	Print("              : Num_of_DataPoints_per_Period = period/deltaTime = %g/%g = %g\n", hasAny, meta->period* meta->deltaTime,meta->deltaTime, meta->period);
-	Print("%shasOutlierCmpt%s: %-5s | If true, Y=Trend+Season+Outlier+Error fitted instead of Y=Trend+Season+Error\n", hasAny, em1, em2, logicals[!!meta->hasOutlierCmpnt]);
+	Print("%sHasOutlierCmpt%s: %-5s | If true, Y=Trend+Season+Outlier+Error fitted instead of Y=Trend+Season+Error\n", hasAny, em1, em2, logicals[!!meta->hasOutlierCmpnt]);
 	} else{
 	Print("%shasSeasonCmpnt%s: %-5s | no periodic or seasonal component. The model Y=Trend+Error is fitted.\n", hasAny, em1, em2, logicals[!!meta->hasSeasonCmpnt]);
-	Print("%shasOutlierCmpt%s: %-5s | If true, Y=Trend+Outlier+Error (experimental) is fitted instead of Y=Trend+Error \n", hasAny, em1, em2, logicals[!!meta->hasOutlierCmpnt]);		
+	Print("%sHasOutlierCmpt%s: %-5s | If true, Y=Trend+Outlier+Error (experimental) is fitted instead of Y=Trend+Error \n", hasAny, em1, em2, logicals[!!meta->hasOutlierCmpnt]);		
 	}
 	Print("%sDeseasonalize%s : %-5s | If true, remove a global seasonal  cmpnt before running BEAST & add it back after BEAST\n", hasSeasonCmpnt, em1, em2, logicals[!!meta->deseasonalize]);
 	Print("%sDetrend%s       : %-5s | If true, remove a global trend component before running BEAST & add it back after BEAST\n", hasAny, em1, em2, logicals[!!meta->detrend]);
 
 	if (IsNaN(meta->missingValue)) msg[0] = 0;
 	else                           snprintf(msg, 99, " or %g ", meta->missingValue);
-	Print("%smissingValue%s  : NaN %s flagged as missing values \n", 1L, em1, em2, msg);
+	Print("%sMissingValue%s  : NaN %s flagged as missing values \n", 1L, em1, em2, msg);
 	Print("%sMissingRate%s   : if more than %g%% of data is missing, BEAST will skip it.\n", 1L, em1, em2, meta->maxMissingRate * 100);
 
 	Print("%s", hasAny, "\n");
@@ -139,14 +139,14 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	Print("%c--------------------------------------------------%c\n", hasAny, comment, comment);
 	Print("%s", hasAny, "\n");	
 	Print("%c......Start of displaying 'MetaData' ......\n", hasAny, comment); 
-	Print("metadata                = %-10s %c metadata used to interpret the input data\n",	hasAny, emptyList,comment);
+	Print("metadata                = %-10s %c metadata is used to interpret the input data\n",	hasAny, emptyList,comment);
 	//Print("  metadata%cisRegular        = %s\n", hasAny, filler, logicals[!!meta->isRegular]);
 	//Print("  metadata%cisOrdered        = %s\n", hasAny, filler, logicals[!!meta->isOrdered]);
 	//Print("  metadata%cneedAggregate    = %s\n",	hasAny,		filler, logicals[!!meta->needAggregate]);
 	Print("metadata%cseason         = 'none'     %c trend-only data with no periodic variation\n",     !hasSeasonCmpnt, filler, comment)                                //no seasonal cmpnt
-	Print("metadata%cseason         = 'harmonic' %c fit a harmonic model to the peroidic component\n", hasSeasonCmpnt&&meta->seasonForm =='S', filler, comment)  //haromic season basis
-	Print("metadata%cseason         = 'dummy'    %c fit a dummy model to the peroidic component\n",    hasSeasonCmpnt&&meta->seasonForm =='D', filler, comment)
-	Print("metadata%cseason         = 'svd'      %c fit the peroidic component with singlular-vector-decomposition bases \n",      hasSeasonCmpnt&&meta->seasonForm =='V', filler, comment)
+	Print("metadata%cseason         = 'harmonic' %c fit a harmonic model to the periodic component\n", hasSeasonCmpnt&&meta->seasonForm =='S', filler, comment)  //haromic season basis
+	Print("metadata%cseason         = 'dummy'    %c fit a dummy model to the periodic component\n",    hasSeasonCmpnt&&meta->seasonForm =='D', filler, comment)
+	Print("metadata%cseason         = 'svd'      %c fit the periodic component with singlular-vector-decomposition bases \n",      hasSeasonCmpnt&&meta->seasonForm =='V', filler, comment)
 	if (io->meta.isDate) {
 		if (io->T.asDailyTS) {			
 			F32 start = fractional_civil_from_days( (int) meta->startTime);
@@ -215,7 +215,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	A(MCMC_PTR) mcmc = &(opt->mcmc);
 
 	Print("%c......Start of displaying 'mcmc' ......\n", hasAny, comment);
-	Print("mcmc                           = %-10s %c mcmc used to specify the inference algorithm\n",	 hasAny, emptyList,comment);
+	Print("mcmc                           = %-10s %c mcmc is used to specify the inference algorithm\n",	 hasAny, emptyList,comment);
 	Print("mcmc%cseed                      = %d\n", hasAny, filler, mcmc->seed);
 	Print("mcmc%csamples                   = %d\n", hasAny, filler, mcmc->samples);
 	Print("mcmc%cthinningFactor            = %d\n", hasAny, filler, mcmc->thinningFactor);
@@ -231,7 +231,7 @@ void BEAST2_print_options(A(OPTIONS_PTR)  opt)
 	A(EXTRA_PTR) extra = &(opt->extra);
 
 	Print("%c......Start of displaying 'extra' ......\n", hasAny, comment); 
-	Print("extra                      = %-10s %c extra used to configure output/computing options\n", hasAny, emptyList,comment);
+	Print("extra                      = %-10s %c extra is used to configure output/computing options\n", hasAny, emptyList,comment);
 	Print("extra%cdumpInputData        = %s\n", hasAny,      filler, logicals[!!extra->dumpInputData]);
 	Print("extra%cwhichOutputDimIsTime = %d\n", hasAny,	   filler, extra->whichOutputDimIsTime );
 	Print("extra%ccomputeCredible      = %s\n", hasAny,      filler, logicals[!!extra->computeCredible]);

@@ -6,71 +6,39 @@
 #include "abc_date.h"
 #include "abc_common.h"   
 #include "abc_ide_util.h" 
-#include "abc_vec.h" 
-static int IsLeapYear(int year) { return (year%4==0 && year%100 !=0)||(year%400==0);}
-static int GetNumDays(int year) { return IsLeapYear(year) ? 366 : 365; }
+#include "abc_vec.h"      
+#include "abc_sort.h"     
 static const int DAYS[2][13]={
 	{ 0,0,31,59,90,120,151,181,212,243,273,304,334 },
 	{ 0,0,31,60,91,121,152,182,213,244,274,305,335 }
 };
-int Date2Doy(int year,int mon,int day) { 	return DAYS[IsLeapYear(year)][mon]+day; }
-int Doy2Date(int doy,int y,int* d,int* m){
-		static int month[13]={ 0,31,28,31,30,31,30,31,31,30,31,30,31 };
-		if (IsLeapYear(y))	month[2]=29;
-		int i;
-		for (i=1; i <=12; i++) 		{
-			if (doy <=month[i])
+static int DAYS_Per_MONTH[13]={ 0,31,28,31,30,31,30,31,31,30,31,30,31 };
+static int IsLeapYear(int year) { return (year%4==0 && year%100 !=0)||(year%400==0);}
+static int GetNumDays(int year) { return IsLeapYear(year) ? 366 : 365;                           }
+static int Date2Doy(int year,int mon,int day)      { return DAYS[IsLeapYear(year)][mon]+day; }
+static int Doy2Date(int doy,int y,int* d,int* m) {
+		DAYS_Per_MONTH[2]=IsLeapYear(y) ? 29 : 28;	
+		int mon;
+		for (mon=1; mon <=12; mon++) 	{
+			if ( doy <=DAYS_Per_MONTH[mon] )
 				break;
-			doy=doy - month[i];
+			doy -=DAYS_Per_MONTH[mon];
 		}
 		*d=doy;
-		*m=i;
+		*m=mon;
 		return 0;
 }
-int IsValidDate(int year,int mon,int day )
-{
-	int is_valid=1,is_leap=0;
-	if (year >=1800 && year <=9999)	{
-		is_leap=(year%4==0 && year%100 !=0)||(year%400==0);
-		if (mon >=1 && mon <=12) 		{
-			if (mon==2) 	{
-				if (is_leap && day==29){
-					is_valid=1;
-				} 
-				else if (day > 28)
-				{
-					is_valid=0;
-				}
-			}
-			else if (mon==4||mon==6||mon==9||mon==11)
-			{	
-				if (day > 30) {
-					is_valid=0;
-				}
-			}
-			else if (day > 31)
-			{  
-				is_valid=0;
-			}
-		}
-		else
-		{
-			is_valid=0;
-		}
+static int IsDateValid(int year,int mon,int day ) {
+	if (year <  -9999||year > 9999)
+		return 0;
+	if (!(mon >=1 && mon <=12))
+		return 0;
+	int DAYS=DAYS_Per_MONTH[mon];
+	if (mon==2) 	{
+		int is_leap=(year%4==0 && year%100 !=0)||(year%400==0);
+		DAYS=is_leap ? 29 : 28;
 	}
-	else
-	{
-		is_valid=0;
-	}
-	return is_valid;
-}
-int64_t CountLeapYears(int64_t year)
-{
-	static int64_t fakeLeaps=(1753/4) - (1753/100)+(1753/400);
-	int64_t leaps=year/4;
-	int64_t badLeaps=year/100;
-	int64_t extraLeaps=year/400;
-	return leaps - badLeaps+extraLeaps - fakeLeaps;
+	return day<=DAYS;
 }
 float YDOYtoF32time(int year,int doy) {
 	return (float)year+((float)doy - 0.5f)/(float) GetNumDays(year);
@@ -90,6 +58,13 @@ int F32time2YMD(F32 fyear,int*mon,int *day) {
 	Doy2Date(doy,yr,day,mon);
 	return yr;
 }
+int64_t CountLeapYears(int64_t year) {
+	static int64_t fakeLeaps=(1753/4) - (1753/100)+(1753/400);
+	int64_t leaps=year/4;
+	int64_t badLeaps=year/100;
+	int64_t extraLeaps=year/400;
+	return leaps - badLeaps+extraLeaps - fakeLeaps;
+}
 int64_t datenum(int year,int mon,int day) {
 	int64_t numYears=year - 1753;
 	int64_t leapYears=CountLeapYears(year);
@@ -104,8 +79,7 @@ int days_from_civil(int y,unsigned m,unsigned d) {
 	const unsigned doe=yoe * 365+yoe/4 - yoe/100+doy;         
 	return era * 146097+doe - 719468;
 }
-int civil_from_days(int days,int * yr,int*mn,int* day) 
-{ 
+int civil_from_days(int days,int * yr,int*mn,int* day)  { 
 	days+=719468;
 	const int era=(days >=0 ? days : days - 146096)/146097;
 	const unsigned doe=(days - era * 146097);          
@@ -202,23 +176,6 @@ static char* _FindCharOccurrence(char* s,char c,int* numTimes) {
 	}	
 	return pLast;
 }
-static void insertionSort(void * arr[],char *index,int n)
-{
-	int i,j;	
-	for (i=1; i < n; i++)
-	{
-		void* key=arr[i];
-		char  idx=index[i];
-		j=i - 1;
-		while (j >=0 && arr[j] > key)	{
-			arr[j+1]=arr[j];
-			index[j+1]=index[j];
-			j=j - 1;
-		}
-		arr[j+1]=key;
-		index[j+1]=idx;
-	}
-}
 int    GetStrPattern_fmt3(char* fmtstr,DateFmtPattern3* pattern) {
 	ToUpper(fmtstr);
 	int nTimes;
@@ -232,7 +189,7 @@ int    GetStrPattern_fmt3(char* fmtstr,DateFmtPattern3* pattern) {
 	pattern->order[1]='M';
 	pattern->order[2]='D';
 	char* pts[]={ yearPt,monPt,dayPt };
-	insertionSort(pts,pattern->order,3);
+	VOIDPTR_InsertionSort(pts,pattern->order,3);
 	int64_t len;
 	len=(pts[1] - 1) - (pts[0]+1)+1;
 	if (len <=0) return 0;

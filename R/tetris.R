@@ -161,7 +161,7 @@ tetris <- function(height=25, width=14, speed=0.6) {
     rect(x0, y0,x1,y1,col='#111111',border='#777777' )    
   }
   
-  plot.field <-function(nx,ny, yExtra, w){
+  pplot.field <-function(nx,ny, yExtra, w){
     
     par(  oma=c(0,0,0,0) )      #the margin between the device oboarard and figure brder
     par(  mar=c(.0,.0,.0,.0) )  #the margin between the figure boarder and plot border 	
@@ -204,7 +204,7 @@ tetris <- function(height=25, width=14, speed=0.6) {
   
  
   ####################################################################
-  plot.buttons <-function(nx,ny, yExtra, w) {	
+  pplot.buttons <-function(nx,ny, yExtra, w) {	
   
     plotbutton <- function (x,y,w1,w2,r,str, cex) {  
       polygon( c(x +r , x +r,    x+w1 -r, x+w1 -r ), 
@@ -233,7 +233,7 @@ tetris <- function(height=25, width=14, speed=0.6) {
     
   }
   
-  plot.count <- function(nx,ny, yExtra, w, count) {
+  pplot.count <- function(nx,ny, yExtra, w, count) {
     count = ifelse(count>999,999,count);
     #bnum=paste('No. of bombs left: ', formatC(sum(img)-sum(right),format='d',digits=3),' '  ) ;
     #bnum= paste('Bombs left:', formatC(count,format='d',digits=3),sep=''  ) ;
@@ -354,10 +354,10 @@ tetris <- function(height=25, width=14, speed=0.6) {
     #plot.count(nx,ny,yExtra,w,SCORE);
   }
   replot.allfigs =function(){
-    plot.field(nx,ny, yExtra, w)
+    pplot.field(nx,ny, yExtra, w)
     plotij.allgrid()
-    plot.buttons(nx,ny,yExtra,w);
-    plot.count(nx,ny,yExtra,w,SCORE);
+    pplot.buttons(nx,ny,yExtra,w);
+    pplot.count(nx,ny,yExtra,w,SCORE);
 #    for (i in 1:nx) {
 #      for (j in 1:ny){
 #        if (img[j,i] >0)  plotij.close(i,j,1)

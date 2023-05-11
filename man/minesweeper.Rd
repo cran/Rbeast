@@ -5,13 +5,16 @@
 \title{The Minesweeper game in R}
 \description{
    A poor man's implementation of the minesweeper game in R. Yes, you are right: it has nothing to do with time series decomposition, changepoint detection, and time series segmentation. Its only remote connection to Rbeast is that this is a practice script I wrote to learn R graphics for implementing Rbeast.
+   \cr \cr
+   \if{html}{\figure{minesweeper.png}{options: width="35\%" alt="Figure: minesweeper.png"}}
+   \if{latex}{\figure{minesweeper.pdf}{options: width=5cm}}
   }
 \usage{
 	minesweeper(height=15, width=12, prob=0.1) 
 }
 \arguments{
   
-  \item{height}{integer; number of rows of the mine grid along the vertical direction.}
+  \item{height}{integer; number of rows of the mine grid along the vertical direction.  }
   \item{width}{integer; number of columns of the mine grid along the horizontal direction.}
   \item{prob}{ numeric; a fraction between 0 and 1 to specify the probability of mine occurrence in the mine grid.}   
  

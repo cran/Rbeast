@@ -21,10 +21,9 @@ void listFiles(const char *path,const char * ext)
 		strcat(fullpath,"/");
 		strcat(fullpath,dp->d_name);
 		if (dp->d_type==DT_REG ) {
-			char * const ext=strrchr(dp->d_name,'.');
-			if (ext !=NULL && ext !=dp->d_name)
-			{
-				if (strcmp(ext,".tif")==0){
+			char * const pext=strrchr(dp->d_name,'.');
+			if (pext !=NULL && pext !=dp->d_name)		{
+				if (strcmp(pext,".tif")==0){
 					r_printf("%s\n",dp->d_name);
 				}				
 			}

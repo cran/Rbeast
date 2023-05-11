@@ -1,4 +1,4 @@
-﻿#include <math.h>
+#include <math.h>
 #include <string.h>
 #include "abc_000_warning.h"
 #include "abc_datatype.h"
@@ -385,23 +385,57 @@ I64 i08_sum(I08PTR x,int N) {
 	return sum;
 #undef UNROLL_NUMBER
 }
-void f32_transpose_inplace(F32PTR Mat,I32 ROW,I32 COL) { 
-	I32 totalElement=ROW * COL;
-	for (I32 start=0; start < totalElement; start++) {
-		I32 next=start;
-		I32 i=0;
-		do {
-			++i;
-			next=(next%COL) * ROW+next/COL;
-		} while (next > start);
-		if (next < start||i==1) continue;
-		F32 tmp=Mat[next=start];
-		do {
-			i=(next%COL) * ROW+next/COL;
-			Mat[next]=(i==start) ? tmp : Mat[i];
-			next=i;
-		} while (next > start);
+int i32_insert_noduplicate(I32PTR x,I32 N,I32PTR Xnew,I32 Nnew) {
+	for (int i=0; i < Nnew; i++) {
+		int newvalue=Xnew[i];
+		int matched=_False_;
+		for (int j=0; j < N; j++) {
+			if (x[j]==newvalue) {
+				matched=_True_;
+				break;
+			}
+		}
+		if (!matched) {
+			x[N++]=newvalue;
+		}
 	}
+	return N;
+}
+int i32_unique_inplace(I32PTR x,int N) {
+	int Nuniq=0;
+	int next=0;
+	while (next < N) {
+		int xcur=x[next];
+		while (next < (N - 1) && x[next+1]==xcur) {
+			next++;
+		}
+		int matched=0;
+		for (int i=0; i < Nuniq;++i) {
+			if (x[i]==xcur) {
+				matched=1;
+				break;
+			}
+		}
+		if (!matched) {
+			x[Nuniq++]=xcur;
+		}
+		next++;
+	}
+	return Nuniq;
+}
+int i32_exclude_inplace(I32PTR x,int N,I32PTR excludeList,I32 Nexclude) {
+	if (x==NULL||excludeList==NULL) return N;
+	for (int i=0; i < Nexclude && N>0; i++) {
+		int xcur=excludeList[i];
+		for (int j=0; j < N; j++) {
+			if (x[j]==xcur) {
+				x[j]=x[N - 1];
+				N--;
+				break;
+			}
+		}
+	}
+	return N;
 }
 void f32_fill_val_matrixdiag(F32PTR mat,const F32 value,I32 N) {
 	for (int i=0; i < N;++i) {

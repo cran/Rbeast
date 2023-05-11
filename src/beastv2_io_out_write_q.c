@@ -1,4 +1,4 @@
-﻿#include "abc_000_warning.h"
+#include "abc_000_warning.h"
 #include "abc_001_config.h"
 #include <stdio.h>
 #include "abc_ide_util.h"

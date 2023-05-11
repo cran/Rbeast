@@ -1,6 +1,6 @@
 #pragma once
-#define R_INTERFACE   1
-#define M_INTERFACE   0
+#define R_INTERFACE   0
+#define M_INTERFACE   1
 #define P_INTERFACE    0
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
@@ -100,6 +100,10 @@
 #if defined(__aarch64__)
     #define  ARM64_OS
 #endif
+#if defined(__powerpc)||defined(__powerpc__)||defined(__powerpc64__)||defined(__POWERPC__)||defined(__ppc__)||defined(__PPC__)||defined(_ARCH_PPC) \
+     ||defined(__PPC64__)||defined(__ppc64__)||defined(_ARCH_PPC64)
+	#define POWERPC_OS
+#endif
 #if defined(TARGET_32) && defined (MSVC_COMPILER)
 	#define _CRT_SECURE_NO_WARNINGS
 	#pragma warning (disable: 4703) 
@@ -128,15 +132,6 @@
     # define ALIGN32_BEG
     # define ALIGN32_END __attribute__((aligned(32)))
 #endif
-#define _in_
-#define _inout_
-#define _out_
-#define max(a,b)			(((a) > (b)) ? (a) : (b))
-#define min(a,b)			(((a) < (b)) ? (a) : (b))
-#define mv(n,src,dest)	r_cblas_scopy( n,src,1L,dest,1L) 
-#define cp(n,src,dest)    memcpy(dest,src,sizeof(F32)*(size_t)(n))
-#define SCPY(n,src,dest)  memcpy(dest,src,sizeof(F32)*(size_t)(n))
-#define FILL0(dest,n)       memset(dest,0L,sizeof(F32)*(size_t)(n))
 	#define DIAG_STR(s) #s
 	#define DIAG_JOINSTR(x,y) DIAG_STR(x ## y)
 	#ifdef MSVC_COMPILER
@@ -281,3 +276,12 @@
           DIAG_DO_PRAGMA(GCC optimization_level 3) \
           DIAG_DO_PRAGMA(GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")) \
           DIAG_DO_PRAGMA(GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell"))  
+#define _in_
+#define _inout_
+#define _out_
+#define max(a,b)			(((a) > (b)) ? (a) : (b))
+#define min(a,b)			(((a) < (b)) ? (a) : (b))
+#define mv(n,src,dest)	r_cblas_scopy( n,src,1L,dest,1L) 
+#define cp(n,src,dest)    memcpy(dest,src,sizeof(F32)*(size_t)(n))
+#define SCPY(n,src,dest)  memcpy(dest,src,sizeof(F32)*(size_t)(n))
+#define FILL0(dest,n)       memset(dest,0L,sizeof(F32)*(size_t)(n))

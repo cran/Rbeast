@@ -1,3 +1,8 @@
+# CHANGES IN Rbeast 0.9.8
+
+* Fix the warning message regarding "long long unsigned int[0]' [-Warray-bounds]"
+
+
 # CHANGES IN Rbeast 0.9.7
 
 * Fix the C23 and clang 16 issue upon the request of Dr. Brian D. Ripley (Jan 20,2023):

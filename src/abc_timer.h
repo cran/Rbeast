@@ -1,6 +1,9 @@
 #pragma once
 #include "abc_000_macro.h"
 #include "abc_datatype.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifdef MSVC_COMPILER
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>          
@@ -57,3 +60,6 @@ static INLINE unsigned long long readTSC(void) {
 }
 extern void               tic(void);
 extern unsigned long long toc(void);
+#ifdef __cplusplus
+}
+#endif

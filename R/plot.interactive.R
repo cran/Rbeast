@@ -3,7 +3,10 @@
 #pushViewport(D)
 #popViewport()
 
-plot.interactive =function (o, index=1, ncpStat='mode') {
+# change to pplot.interactive because the R checker complains about 
+#  "Mismatches for apparent methods not registered". Basically, R 
+# think plot.interactive is a class generic methods
+pplot.interactive =function (o, index=1, ncpStat='mode') {
   
 if ( length(o$marg_lik)> 1 ) {
     # more than time series is present

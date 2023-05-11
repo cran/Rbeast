@@ -5,6 +5,9 @@
 \title{The Tetris game in R}
 \description{
    A poor man's implementation of the Tetris game in R. Yes, you are right again: it has nothing to do with time series decomposition, changepoint detection, and time series segmentation. Its only remote connection to Rbeast is that this is a practice script I wrote to learn R graphics for implementing Rbeast.
+   \cr \cr
+   \if{html}{\figure{tetris.png}{options: width="30\%" alt="Figure: tetris.png"}}
+   \if{latex}{\figure{tetris.pdf}{options: width=5cm}}
   }
 \usage{
 	tetris(height=25, width=14, speed=0.6) 

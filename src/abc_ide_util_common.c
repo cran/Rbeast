@@ -31,7 +31,7 @@ void printProgress(F32 pct,I32 width,char * buf,I32 firstTimeRun)
 	buf[width - 1]=']';
 	buf[width]=0;
 #if R_INTERFACE==1
-	Rprintf("\r%s",buf);
+	Rprintf("\r%s",buf); 
 #elif P_INTERFACE==1
 	r_printf("\r%s",buf);
 #elif M_INTERFACE==1

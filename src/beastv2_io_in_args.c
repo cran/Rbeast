@@ -634,8 +634,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 				o.seasonMinKnotNum=(tmp=GetField123Check(S,"seasonMinKnotNum",10)) ? GetScalar(tmp) : (m.seasonMinKnotNum=1);
 				o.seasonMaxKnotNum=(tmp=GetField123Check(S,"seasonMaxKnotNum",10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum=1);
 			}
-			o.trendMinOrder=(tmp=GetField123Check(S,"trendMinOrder",10)) ?    GetScalar(tmp) : (m.trendMinOrder=1);
-			o.trendMaxOrder=(tmp=GetField123Check(S,"trendMaxOrder",10)) ?    GetScalar(tmp) : (m.trendMaxOrder=1);
+			o.trendMinOrder=(tmp=GetField123Check(S,"trendMinOrder",10)) ?   GetScalar(tmp) : (m.trendMinOrder=1);
+			o.trendMaxOrder=(tmp=GetField123Check(S,"trendMaxOrder",10)) ?   GetScalar(tmp) : (m.trendMaxOrder=1);
 			o.trendMinSepDist=(tmp=GetField123Check(S,"trendMinSepDist",10)) ?  GetScalar(tmp) : (m.trendMinSepDist=1);
 			o.trendMinKnotNum=(tmp=GetField123Check(S,"trendMinKnotNum",10)) ?  GetScalar(tmp) : (m.trendMinKnotNum=1);			
 			o.trendMaxKnotNum=(tmp=GetField123Check(S,"trendMaxKnotNum",10)) ?  GetScalar(tmp) : (m.trendMaxKnotNum=1);
@@ -675,19 +675,17 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	I32 period=io->meta.period;
 	I32 N=io->N;
 	if (io->meta.hasSeasonCmpnt) {
-		if (m.seasonMinOrder)    o.seasonMinOrder=1L;				   o.seasonMinOrder=min(o.seasonMinOrder,period/2 - 1);    o.seasonMinOrder=max(o.seasonMinOrder,1L);
-		if (m.seasonMaxOrder)    o.seasonMaxOrder=(period/2 - 1);      o.seasonMaxOrder=min(o.seasonMaxOrder,(period/2 - 1));  o.seasonMaxOrder=max(o.seasonMaxOrder,o.seasonMinOrder);
-		if (m.seasonMinSepDist||o.seasonMinSepDist <=0)				   o.seasonMinSepDist=period/2;       o.seasonMinSepDist=max(o.seasonMinSepDist,o.seasonMaxOrder);		 o.seasonMinSepDist=min(o.seasonMinSepDist,N/2 - 1); 
-		if (m.seasonMinKnotNum)  o.seasonMinKnotNum=0;                   o.seasonMinKnotNum=max(min(o.seasonMaxKnotNum,o.seasonMinKnotNum),0);
-		if (m.seasonMaxKnotNum)  o.seasonMaxKnotNum=min(floor(N/(o.seasonMinSepDist+1) - 1.f),5);  o.seasonMaxKnotNum=min(o.seasonMaxKnotNum,floor(N/(o.seasonMinSepDist+1) - 1.f));
+		if (m.seasonMinOrder)                                o.seasonMinOrder=1L;				   o.seasonMinOrder=min(o.seasonMinOrder,period/2 - 1);    o.seasonMinOrder=max(o.seasonMinOrder,1L);
+		if (m.seasonMaxOrder)                                o.seasonMaxOrder=(period/2 - 1);      o.seasonMaxOrder=min(o.seasonMaxOrder,(period/2 - 1));  o.seasonMaxOrder=max(o.seasonMaxOrder,o.seasonMinOrder);
+		if (m.seasonMinSepDist||o.seasonMinSepDist <=0)   o.seasonMinSepDist=period/2;          o.seasonMinSepDist=max(o.seasonMinSepDist,o.seasonMaxOrder);		 o.seasonMinSepDist=min(o.seasonMinSepDist,N/2 - 1); 
+		if (m.seasonMinKnotNum)                              o.seasonMinKnotNum=0;                   o.seasonMinKnotNum=max(min(o.seasonMaxKnotNum,o.seasonMinKnotNum),0);
+		if (m.seasonMaxKnotNum)                              o.seasonMaxKnotNum=min(floor(N/(o.seasonMinSepDist+1) - 1.f),5);  o.seasonMaxKnotNum=min(o.seasonMaxKnotNum,floor(N/(o.seasonMinSepDist+1) - 1.f));   o.seasonMaxKnotNum=max(o.seasonMaxKnotNum,o.seasonMinKnotNum);
 	}
-	if (m.trendMinOrder)     o.trendMinOrder=0L;				   o.trendMinOrder=max(o.trendMinOrder,0L);
-	if (m.trendMaxOrder)     o.trendMaxOrder=1L;				   o.trendMaxOrder=max(o.trendMaxOrder,o.trendMinOrder);	
-	if (m.trendMinSepDist||o.trendMinSepDist <=0)				   o.trendMinSepDist=io->meta.hasSeasonCmpnt? period/2: 3 ;
-	if (m.trendMinKnotNum)   o.trendMinKnotNum=0;	               o.trendMinKnotNum=max(min(o.trendMaxKnotNum,o.trendMinKnotNum),0);
-	if (m.trendMaxKnotNum)   o.trendMaxKnotNum=min(floor(N/(o.trendMinSepDist+1) - 1.f),10); o.trendMaxKnotNum=min(o.trendMaxKnotNum,floor(N/(o.trendMinSepDist+1) - 1.f));
-	o.trendMinSepDist=max(o.trendMinSepDist,(o.trendMaxOrder+1));
-	o.trendMinSepDist=min(o.trendMinSepDist,N/2 - 1);
+	if (m.trendMinOrder)                             o.trendMinOrder=0L;				                      o.trendMinOrder=max(o.trendMinOrder,0L);
+	if (m.trendMaxOrder)                             o.trendMaxOrder=1L;				                      o.trendMaxOrder=max(o.trendMaxOrder,o.trendMinOrder);	
+	if (m.trendMinSepDist||o.trendMinSepDist <=0) o.trendMinSepDist=io->meta.hasSeasonCmpnt? period/2: 3 ; o.trendMinSepDist=max(o.trendMinSepDist,o.trendMaxOrder+1);	o.trendMinSepDist=min(o.trendMinSepDist,N/2 - 1);
+	if (m.trendMinKnotNum)                           o.trendMinKnotNum=0;	                                      o.trendMinKnotNum=max(min(o.trendMaxKnotNum,o.trendMinKnotNum),0);
+	if (m.trendMaxKnotNum)                           o.trendMaxKnotNum=min(floor(N/(o.trendMinSepDist+1) - 1.f),10); o.trendMaxKnotNum=min(o.trendMaxKnotNum,floor(N/(o.trendMinSepDist+1) - 1.f)); o.trendMaxKnotNum=max(o.trendMaxKnotNum,o.trendMinKnotNum);
 	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum=o.trendMaxKnotNum;      o.outlierMaxKnotNum=max(o.outlierMaxKnotNum,1L); 
 	if (m.K_MAX )            o.K_MAX=500;                  
 	if (m.sigFactor)         o.sigFactor=1.8;            o.sigFactor=max(o.sigFactor,1.02);

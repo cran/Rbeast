@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include "abc_000_macro.h"
+#include "abc_001_config.h"
 #include "abc_mem.h"
 #include "abc_datatype.h"       
 char* word_wrap(char* str,int LINE_LENGTH);

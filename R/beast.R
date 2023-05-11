@@ -31,8 +31,7 @@ beast <- function(  y,
   # list is supported in this version for the multivariate cases
   # if ( !hasArg("y") || is.list(y) )  {  
   if ( !hasArg("y") )  {  
-    stop(" The input 'y' is missing!")
-	#stop("Something is wrong with the input 'y'. Make sure that y is a vector")
+    stop(" The input 'y' is missing!") 	#stop("Something is wrong with the input 'y'. Make sure that y is a vector")
     invisible(return(NULL))         
   }  
   
@@ -52,15 +51,15 @@ beast <- function(  y,
 		  start   = tsp[1]
 		  end     = tsp[2]
 		  deltat  = (end-start)/(length(y)-1)
-		  freq    = tsp[3] 
-		  period  = freq *deltat
-		  if ( freq == 1 && season != 'none'){
+		  freq_ts = tsp[3] 
+		  period  = freq_ts *deltat
+		  if ( freq_ts == 1 && season != 'none'){
 		    season = 'none'	;
             period = NULL;
 		    if (!quiet) warning("The input is a object of class 'ts' with a frequency of 1: trend-only data with no periodic component; season='none' is used.");		   
-		  } else if (freq >1 && season=='none'){
+		  } else if (freq_ts >1 && season=='none'){
 		    season = 'harmonic'
-			msg=sprintf("The input is a object of class 'ts' with a frequency of %d (i.e., with a periodic component); season='harmonic' is used instead.", freq)
+			msg=sprintf("The input is a object of class 'ts' with a frequency of %d (i.e., with a periodic component); season='harmonic' is used instead.", freq_ts)
 			if (!quiet)  warning(msg);
 		  }
 	 } else {
@@ -85,8 +84,8 @@ beast <- function(  y,
 	   if( is.null(argname2) ){argname2=''}
        if (is.numeric(arg2) && length(arg2)==1 && argname2=='') {  
 		  if (!quiet) warning(sprintf('Switching to the old interface of Rbeast v0.2: beast(Y,freq=%d)\n', arg2));
-		  freq=arg2;
-          invisible( return( beast.old(y,freq) ) )
+		  freq_old=arg2;
+          invisible( return( beast.old(y,freq_old) ) )
        }
      
        if (is.list(arg2)) {
@@ -98,7 +97,7 @@ beast <- function(  y,
 			  opt=arg2;
 			  invisible( return( beast.old(y,opt) )  )
           } else if (argname2 == 'option' )    {
-              s  =sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,option=)\n');  
+              s  =sprintf('Switching to the old interace of Rbeast v0.2: beast(Y,option)\n');  
 			  if (!quiet) warning(s);
 			  opt=arg2;
 			  invisible( return( beast.old(y,option=opt) )  )
@@ -124,9 +123,22 @@ beast <- function(  y,
    metadata$startTime        = start
    metadata$deltaTime        = deltat
    metadata$period           = period;
-   if ( season=='svd' ){
-		if (freq<=1.1 || is.na(freq) ) {
-	     	stop('When season=svd, freq must be specified and larger than 1.')
+   
+   #cat(is.null(period))
+   #cat(is.numeric(deltat))
+   #cat(season != 'none')
+   #cat(hasArg('freq'))
+   #  This is the old interface that uses freq to specify the period
+   if ( is.null(period) && is.numeric(deltat) && season != 'none' && hasArg('freq')){
+        freq                = list(...)[['freq']]  
+		metadata$period     = deltat*freq		       
+   }
+   
+   if ( season=='svd' ){       
+        freq       = metadata$period/deltat
+		notInteger = abs(as.integer(freq) - freq) > 0.00001
+		if (notInteger || is.null(freq) || freq<=1.1 || is.na(freq) ) {
+	     	stop('When season=svd, freq (i.e., period/deltat) must be an integer larger than 1.')
 		    invisible(return(NULL))
 		}
 		metadata$svdTerms=svdbasis(y,freq,deseasonalize)
@@ -141,17 +153,7 @@ beast <- function(  y,
 		metadata$hasOutlierCmpnt = as.logical(hasOutlier)		           
    }
 
-   cat(is.null(period))
-    cat(is.numeric(deltat))
-	    cat(season != 'none')
-		   cat(hasArg('freq'))
-		   
-   if ( is.null(period) && is.numeric(deltat) && season != 'none' && hasArg('freq')){
-        freq                = list(...)[['freq']]  
-		metadata$period     = deltat*freq		       
-   }
-
-			
+	
    
 #......End of displaying MetaData ......
    prior = list()

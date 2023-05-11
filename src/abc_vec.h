@@ -50,6 +50,9 @@ extern "C" {
 	extern I32 i08_find_nth_onebyte_binvec(U08PTR binvec,I32 N,I32 nth);
 	extern I32 i08_find_nth_onebyte_binvec_v2(U08PTR binvec,I32 N,I32 numOneBytes,U32 rnd);
 	extern I64 i08_sum(I08PTR x,int N);
+	extern int i32_insert_noduplicate(I32PTR x,I32 N,I32PTR Xnew,I32 Nnew);
+	extern int i32_unique_inplace(I32PTR x,int N);
+	extern int i32_exclude_inplace(I32PTR x,int N,I32PTR excludeList,I32 Nexclude);
 	extern void f32_sumfilter(const F32PTR X,F32PTR Y,int N,int winSize);
 	extern F32  f32_corr_rmse_nan(const F32PTR X,const F32PTR Y,int N,F32PTR rmse);
 	extern void  f32_truncate_inplace(const F32PTR X,F32 value,int N);
@@ -78,6 +81,9 @@ extern "C" {
 	void f32_set_nan_by_value(F32PTR a,I32 N,F32 missingValue);
 	int f32_normalize_multicols_zeroout_nans(F32PTR Y,I32PTR BadRowIndices,I32 ldy,I32 N,I32 q,F32PTR mean,F32PTR sd);
 	extern void f32_transpose_inplace(F32PTR Mat,I32 ROW,I32 COL);
+	extern void i32_transpose_inplace(I32PTR Mat,I32 NROW,I32 NCOL);
+	void i32_transpose_inplace_prev(I32PTR Mat,I32 NROW,I32 NCOL);
+	void i32_transpose_inplace_prev_two_ends(I32PTR Mat,I32 NROW,I32 NCOL);
 	extern void f32_fill_val_matrixdiag(F32PTR mat,const F32 value,I32 N);
 	extern void f32_add_val_matrixdiag(F32PTR mat,const F32 value,I32 N);
 	extern F32 f32_sum_matrixdiag(F32PTR mat,I32 N);

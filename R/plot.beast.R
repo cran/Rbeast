@@ -26,7 +26,7 @@ plot.beast<-function(
   ncpStat=match.arg(ncpStat)
   
   if(interactive & base::interactive() ){  
-    plot.interactive(x, index,ncpStat)
+    pplot.interactive(x, index,ncpStat)
     invisible(return(NULL)) #invisible will return back.
   }
  

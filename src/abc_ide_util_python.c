@@ -480,6 +480,22 @@ void GetDimensions(const void* ptr,int dims[],int ndims) {
         dims[0]=PyObject_Size(ptr);
     }   
 }
+void * SetDimensions(const void* ptr,int dims[],int ndims) {
+    if (PyArray_Check(ptr)) {
+        PyArray_Dims newshape;
+        npy_intp  newdims[100];
+        newshape.len=ndims;
+        newshape.ptr=newdims;
+         for (int i=0; i < ndims; i++) {
+             newdims[i]=dims[i];
+        }
+         PyObject *newptr=PyArray_Newshape(ptr,&newshape,NPY_ANYORDER);
+         return newptr;
+    }
+    return NULL;
+    if (PyList_Check(ptr)||PyTuple_Check(ptr)) {
+    }
+}
 int  GetNumberOfElements(const void* ptr) {
     if (PyArray_Check(ptr)) {
         return PyArray_SIZE(ptr);

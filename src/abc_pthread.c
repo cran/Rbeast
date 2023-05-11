@@ -388,12 +388,40 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
             return (highLimit - lowLimit);
         }
     #else
+        #if defined(MSVC_COMPILER)
         int get_thread_stacksize(void) {
              NT_TIB* tib=(NT_TIB*)NtCurrentTeb();
              LPVOID   StackLimit=tib->StackLimit;
              LPVOID   StackBase=tib->StackBase;
              return  StackLimit;
         }
+        #elif  defined(GCC_COMPILER)
+            static INLINE unsigned __int64 readgsqword_bad(unsigned __int64 Offset) {
+                unsigned char ret;
+                __asm__( "mov{" "q" " %%" "gs" ":%[offset],%[ret]|%[ret],%%" "gs" ":%[offset]}" 
+                         : [ret] "=r" (ret) 
+                        : [offset] "m" ((*(unsigned __int64*)(size_t)Offset)));
+                return ret; 
+            }
+            static INLINE unsigned __int64  readgsqword_good(unsigned __int64 Offset) {
+                unsigned __int64 ret;
+                unsigned __int64 volatile Offset1=Offset;
+                __asm__("mov{" "q" " %%" "gs" ":%[offset],%[ret]|%[ret],%%" "gs" ":%[offset]}"
+                    : [ret] "=r" (ret)
+                    : [offset] "m" ((*(unsigned __int64*)(size_t)Offset1)));
+                return ret;
+            }
+            int get_thread_stacksize(void) {
+                NT_TIB* tib=(NT_TIB*)readgsqword_good(FIELD_OFFSET(NT_TIB,Self));
+                LPVOID   StackLimit=tib->StackLimit;
+                LPVOID   StackBase=tib->StackBase;
+                return  StackLimit;
+            }  
+       #else
+        int get_thread_stacksize(void) { 
+             return  0;
+        }
+       #endif
     #endif
     static void * __getstacksize(void * arg) {  
         *((size_t*) arg)=get_thread_stacksize();  return 0; 

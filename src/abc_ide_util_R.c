@@ -159,6 +159,16 @@ void GetDimensions(const void * ptr,int dims[],int ndims) {
 	}
 	UNPROTECT(1);
 }
+void * SetDimensions(const void* ptr,int dims[],int ndims) {
+	if (!ptr) return NULL;
+	SEXP  tmp=PROTECT(allocVector(INTSXP,ndims));	
+	for (int i=0; i < ndims; i++) 	{
+		INTEGER(tmp)[i]=dims[i];
+	}
+	setAttrib(ptr,R_DimSymbol,tmp);
+	UNPROTECT(1);
+	return ptr;
+}
 int GetNumberOfElements(const void * ptr) {	
 	return Rf_length((SEXP)ptr);
 }

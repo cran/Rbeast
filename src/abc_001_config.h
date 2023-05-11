@@ -110,3 +110,17 @@
 		#include "numpy/arrayobject.h"
 	#endif
 #endif
+#if R_INTERFACE==1||P_INTERFACE==1
+	#ifndef Bool
+		#define  Bool  unsigned char
+	#endif
+#elif M_INTERFACE==1
+	#ifndef Bool
+		 #include "mex.h"
+		 #define  Bool  bool     
+    #endif
+#endif
+#ifdef CLANG_COMPILER
+	#undef sign    
+	#undef warning 
+#endif

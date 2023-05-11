@@ -10,22 +10,15 @@
         #include <Windows.h>
         #include <intrin.h>
         #define _XCR_XFEATURE_ENABLED_MASK  0 
-        void    cpuid(int32_t out[4],int32_t eax,int32_t ecx) {
-            __cpuidex(out,eax,ecx); 
-        }
-        __int64 xgetbv(unsigned int x)     {
-            return _xgetbv(x);  
-        }
+        void     cpuid(int32_t out[4],int32_t eax,int32_t ecx) {   __cpuidex(out,eax,ecx);      }
+        uint64_t xgetbv(unsigned int x)                          {   return _xgetbv(x);             }
         typedef BOOL(WINAPI* LPFN_ISWOW64PROCESS) (HANDLE,PBOOL);
-        BOOL IsWow64()  
-        {
-            BOOL bIsWow64=FALSE;
+        BOOL IsWow64()           {
+            BOOL                bIsWow64=FALSE;
             LPFN_ISWOW64PROCESS fnIsWow64Process=(LPFN_ISWOW64PROCESS)GetProcAddress(
                 GetModuleHandle(TEXT("kernel32")),"IsWow64Process");
-            if (NULL !=fnIsWow64Process)
-            {
-                if (!fnIsWow64Process(GetCurrentProcess(),&bIsWow64))
-                {
+            if (NULL !=fnIsWow64Process)       {
+                if (!fnIsWow64Process(GetCurrentProcess(),&bIsWow64))     {
                     r_printf("Error Detecting Operating System.\n");
                     r_printf("Defaulting to 32-bit OS.\n\n");
                     bIsWow64=FALSE;
@@ -87,7 +80,7 @@
         }
         #warning "No cpuid intrinsic defined for compiler: a placeholder created!"
     #endif
-#elif defined(ARM64_OS)
+#elif defined(ARM64_OS)||defined (POWERPC_OS)
         #define _XCR_XFEATURE_ENABLED_MASK  0
         void cpuid(int32_t out[4],int32_t eax,int32_t ecx) {
             out[0]=out[1]=out[2]=out[3]=0;
@@ -110,8 +103,7 @@ uint8_t detect_OS_AVX(void){
     cpuid(cpuInfo,1,0);
     Bool osUsesXSAVE_XRSTORE=(cpuInfo[2] & (1 << 27)) !=0;
     Bool cpuAVXSuport=(cpuInfo[2] & (1 << 28)) !=0;
-    if (osUsesXSAVE_XRSTORE && cpuAVXSuport)
-    {
+    if (osUsesXSAVE_XRSTORE && cpuAVXSuport)   {
         uint64_t xcrFeatureMask=xgetbv(_XCR_XFEATURE_ENABLED_MASK);
         avxSupported=(xcrFeatureMask & 0x6)==0x6;
     }

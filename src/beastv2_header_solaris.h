@@ -59,11 +59,11 @@ typedef struct BEAST2_PRIOR {
 	U08	  outlierBasisFuncType;
 	U08	  modelPriorType;
 	U08   precPriorType;
-	U08   seasonMinOrder,seasonMaxOrder;
-	U08   trendMinOrder,trendMaxOrder;
-	I16   trendMinSepDist,seasonMinSepDist;
-	U16   trendMinKnotNum,seasonMinKnotNum;
-	U16   trendMaxKnotNum,seasonMaxKnotNum;
+	I16   seasonMinOrder,seasonMaxOrder;
+	I16   trendMinOrder,trendMaxOrder;
+	I32   trendMinSepDist,seasonMinSepDist;
+	I16   trendMinKnotNum,seasonMinKnotNum;
+	I16   trendMaxKnotNum,seasonMaxKnotNum;
 	I16   outlierMaxKnotNum;
 	U16   K_MAX;
 	F32   sigFactor;

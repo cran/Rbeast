@@ -797,4 +797,246 @@ void update_XtY_from_Xnewterm(F32PTR Y,F32PTR Xnewterm,F32PTR XtY,F32PTR XtYnew,
 		}
 	}
 }
+void get_parts_for_newinfo(NEWCOLINFOv2* new) {
+	int Knewterm=0;
+	int Kbase_dst=1;
+	int jParts=0;
+	for (int i=0; i <  new->nbands; i++) {
+		new->parts[jParts].X=new->X;
+		new->parts[jParts].ks_dst=Kbase_dst;
+		if (i==0) {
+			new->parts[jParts].ks_src=1;
+		} else {
+			new->parts[jParts].ks_src=new->ks_x[i-1]+new->kterms_x[i-1];
+		}
+		new->parts[jParts].kterms=new->ks_x[i]- new->parts[jParts].ks_src;
+		Kbase_dst+=new->parts[jParts].kterms;
+		jParts++;
+		new->parts[jParts].X=new->Xnewterm;
+		new->parts[jParts].ks_dst=Kbase_dst;
+		new->parts[jParts].ks_src=new->ks_xnewterm[i];
+		new->parts[jParts].kterms=new->kterms_xnewterm[i];
+		Kbase_dst+=new->parts[jParts].kterms;
+		Knewterm+=new->kterms_xnewterm[i];
+		jParts++;
+	}
+	new->parts[jParts].X=new->X;
+	new->parts[jParts].ks_dst=Kbase_dst;	
+	new->parts[jParts].ks_src=new->ks_x[new->nbands - 1]+new->kterms_x[new->nbands - 1];
+	new->parts[jParts].kterms=(new->K - new->parts[jParts].ks_src)+1L;
+	new->Knew=Kbase_dst+(new->parts[jParts].kterms - 1L);
+	new->Knewterm=Knewterm;
+	new->Kchol=new->ks_x[0];
+	new->isEqualSwap=0;
+	if (new->K==new->Knew) {
+		new->isEqualSwap=1;
+		for (int i=0; i < new->nbands; i++) {
+			if (new->kterms_x[i] !=new->kterms_xnewterm[i]) {
+				new->isEqualSwap=0;
+				break;
+			}
+		}
+	}	
+}
+void update_XtX_from_Xnewterm_v2(F32PTR XtX,F32PTR XtXnew,NEWCOLINFOv2* new ) {
+	I32 N=new->N;
+	I32 Nlda=new->Nlda;
+	I32 KOLD=new->K;
+	I32 KNEW=new->Knew;
+	if (new->isEqualSwap) {
+		SCPY(KOLD * KOLD,XtX,XtXnew);
+	}
+	I32 colbase=1;	
+	for (int i=0; i < (new->nbands * 2+1); i++) {		
+		I32 Kcol=new->parts[i].kterms;
+		if (Kcol==0) {
+			continue;
+		}
+		I32     rowbase=1;
+		F32PTR  Xcol0=new->parts[i].X;
+		F32PTR  Xcol=Xcol0+(new->parts[i].ks_src - 1) * Nlda;		
+		for (int j=0; j <=i; j++) {
+			I32  Krow=new->parts[j].kterms;
+			if (Krow==0) {
+				continue;
+			}
+			F32PTR  Xrow0=new->parts[j].X;
+			F32PTR  Xrow=Xrow0+(new->parts[j].ks_src - 1) * Nlda;
+			if (Xcol0 !=new->X||Xrow0 !=new->X) {
+				r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans, 
+					Krow,Kcol,N,1.0f,
+					Xrow,Nlda,Xcol,Nlda,0.f,
+					XtXnew+(colbase - 1L) * KNEW+rowbase - 1,KNEW);
+			}
+			else if (new->isEqualSwap==0) {
+				I32 row_old=new->parts[j].ks_src;
+				I32 col_old=new->parts[i].ks_src;
+				F32PTR ColStart_old=XtX+(col_old - 1) * KOLD+row_old -1L;
+				F32PTR ColStart_new=XtXnew+(colbase - 1) * KNEW+rowbase- 1L;
+				if (i==j) {
+					for (int k=1; k <=Kcol;++k) {
+						SCPY(k,ColStart_old+(k - 1) * KOLD,ColStart_new+(k - 1) * KNEW);
+					}
+				} else {
+					for (int k=1; k <=Kcol;++k) {						
+						SCPY(Krow,ColStart_old+(k - 1) * KOLD,ColStart_new+(k - 1) * KNEW);
+					}
+				}
+	 	   } 
+		   rowbase+=Krow;
+		} 
+		colbase+=Kcol;
+	}
+}
+void update_XtY_from_Xnewterm_v2(F32PTR XtY,F32PTR XtYnew,F32PTR Y,NEWCOLINFOv2* new,I32 q) {
+	I32 N=new->N;
+	I32 Nlda=new->Nlda;
+	I32 KOLD=new->K;
+	I32 KNEW=new->Knew;
+	if (new->isEqualSwap) {
+		SCPY(KOLD*q,XtY,XtYnew);
+	}
+	if (q==1) {
+		I32     rowbase=1;
+		for (int i=0; i < (new->nbands * 2+1); i++) {
+			I32 Krow=new->parts[i].kterms;
+			I32 row_old=new->parts[i].ks_src;
+			if (Krow==0) {
+				continue;
+			}
+			F32PTR  Xrow0=new->parts[i].X;
+			F32PTR  Xrow=Xrow0+(row_old - 1) * Nlda;
+			if (Xrow0 !=new->X) {
+				r_cblas_sgemv(CblasColMajor,CblasTrans,
+					N,Krow,1.f,
+					Xrow,Nlda,
+					Y,1L,0.f,
+					XtYnew+rowbase - 1,1L);
+			}
+			else if (new->isEqualSwap==0) {
+				SCPY(Krow,XtY+row_old - 1L,XtYnew+rowbase - 1);
+			} 
+			rowbase+=Krow;
+		}
+	}
+	else {	
+		I32     rowbase=1;
+		for (int i=0; i < (new->nbands * 2+1); i++) {
+			I32 Krow=new->parts[i].kterms;
+			I32 row_old=new->parts[i].ks_src;
+			if (Krow==0) {
+				continue;
+			}
+			F32PTR  Xrow0=new->parts[i].X;
+			F32PTR  Xrow=Xrow0+(row_old - 1) * Nlda;
+			if (Xrow0 !=new->X) {
+				r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,
+					Krow,q,N,1.f,
+					Xrow,Nlda,
+					Y,N,0.f,
+					XtYnew+rowbase - 1,KNEW);
+			}
+			else if (new->isEqualSwap==0) {
+				for (I32 c=0; c < q;++c) {
+					SCPY(Krow,XtY+c*KOLD+row_old - 1L,XtYnew+c * KNEW+rowbase - 1);
+				}
+			} 
+			rowbase+=Krow;
+		}
+	} 
+}
+void shift_last_elems(void * X,I32 Kstart,I32 Kend,I32 Knewstart,I32 elemSize) {
+	if (Knewstart==Kstart) {
+		return;
+	}
+	I08PTR x=X;
+	int j=Knewstart - Kstart;
+	if (j < 0||Knewstart > Kend) {
+		memcpy(x+(Knewstart - 1) * elemSize,x+(Kstart - 1) *elemSize,(Kend - Kstart+1) * elemSize);
+	}
+	else {
+		I32 segStartIdx=Kend+1;
+		while (_True_) {
+			segStartIdx=segStartIdx - j;
+			if (segStartIdx > Kstart) {
+				memcpy(x+((segStartIdx+j) - 1) * elemSize,x+(segStartIdx - 1) * elemSize,j * elemSize) ;
+			} else {
+				j=(segStartIdx+j) - Kstart;
+				memcpy(x+(Knewstart - 1) * elemSize,x+(Kstart - 1) * elemSize,j * elemSize);
+				break;
+			}
+		}
+	}
+}
+void swap_elem_bands(NEWCOLINFOv2* new,void *x,void *xnew,I32 elemSize) {
+	U08PTR X=x;
+	U08PTR Xnew=xnew;
+	if (new->isEqualSwap==0) {
+		int    Kend=new->K;
+		int    Kadjust=0;
+		for (int i=3; i <=(new->nbands * 2+1); i+=2) {
+			if (new->parts[i - 1].kterms==0) {
+				continue;
+			}
+			int Kstart=new->parts[i - 1].ks_src+Kadjust;
+			int Knewstart=new->parts[i - 1].ks_dst;
+			shift_last_elems(X,Kstart,Kend,Knewstart,elemSize);
+			Kadjust+=(Knewstart - Kstart);
+			Kend+=Kadjust;
+		}
+	}
+	for (int i=2; i <=(new->nbands * 2+1); i+=2) {
+		if (new->parts[i - 1].kterms==0) {
+			continue;
+		}
+		int Knewterm=new->parts[i - 1].kterms;
+		memcpy(X+(new->parts[i - 1].ks_dst - 1) * elemSize,Xnew+(new->parts[i - 1].ks_src - 1) * elemSize,Knewterm * elemSize);		
+	}
+}
+void shift_lastcols_within_matrix(F32PTR X,I32 N,I32 Kstart,I32 Kend,I32 Knewstart) {
+	if (Knewstart==Kstart) {
+		return;
+	}
+	int j=Knewstart - Kstart;
+	if (j < 0||Knewstart > Kend) {
+		r_cblas_scopy((Kend - Kstart+1) * N,X+(Kstart - 1) * N,1,X+(Knewstart - 1) * N,1);
+	} else {
+		I32 segStartIdx=Kend+1;
+		while (_True_) {
+			segStartIdx=segStartIdx - j;
+			if (segStartIdx > Kstart) {
+				SCPY(j * N,X+(segStartIdx - 1) * N,X+((segStartIdx+j) - 1) * N);				
+			} else {
+				j=(segStartIdx+j) - Kstart;
+				SCPY(j * N,X+(Kstart - 1) * N,X+(Knewstart - 1) * N);
+				break;
+			}
+		}
+	}
+}
+void swap_cols_bands_within_matrx(NEWCOLINFOv2* new) {
+	F32PTR X=new->X;
+	if (new->isEqualSwap==0) {
+		int    Kend=new->K;
+		int    Kadjust=0;		
+		for (int i=3; i <=(new->nbands * 2+1); i+=2) {
+			if (new->parts[i - 1].kterms==0) {
+				continue;
+			}
+			int Kstart=new->parts[i - 1].ks_src+Kadjust;
+			int Knewstart=new->parts[i - 1].ks_dst;
+			shift_lastcols_within_matrix(X,new->Nlda,Kstart,Kend,Knewstart);
+			Kadjust+=(Knewstart - Kstart);
+			Kend+=Kadjust;		
+		}
+	}
+	int N=new->Nlda;
+	for (int i=2; i <=(new->nbands * 2+1); i+=2) {
+		if (new->parts[i - 1].kterms==0) {
+			continue;
+		}
+		int Knewterm=new->parts[i - 1].kterms;
+		SCPY(Knewterm*N,new->Xnewterm+(new->parts[i-1].ks_src- 1) * N,X+(new->parts[i - 1].ks_dst - 1) * N);
+	}
+}
 #include "abc_000_warning.h"

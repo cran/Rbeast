@@ -47,7 +47,6 @@ static INLINE void UpdateBasisKbase(BEAST2_BASIS_PTR b,I32 NUMBASIS,int startBas
         }          
     }
 }
- void MoveCOLsWithinMatrix(F32PTR X,I32 N,I32 Kstart,I32 Kend,I32 Knewstart);
  static void MatxVec_FULL(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR Y,F32PTR XtY,I32 N)
 {
 	 I32 Kterms=0;

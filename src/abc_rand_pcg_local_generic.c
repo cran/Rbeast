@@ -20,6 +20,8 @@ void gen_pcg_set_seed(local_pcg32_random_t* rng,U64 initstate,U64 initseq)
 	gen_pcg_random(rng,&rnd,1);
 	rng->STATE+=initstate;
 	gen_pcg_random(rng,&rnd,1);
+	extern void init_gauss_rnd();
+	init_gauss_rnd(); 
 }
 void gen_pcg_random(local_pcg32_random_t* rng,U32PTR rnd,I32 N) 
 {
