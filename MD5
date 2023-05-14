@@ -1,6 +1,6 @@
-cd2a9bd436fdcf2e8d2751cc7c7b8749 *DESCRIPTION
+d00d86c1ec9e697aa638345be205f77c *DESCRIPTION
 c5365bb1895c5b716d4d510481d46c95 *NAMESPACE
-88ca51ecb03ad3eb96b926cc505cdeea *NEWS.md
+49044f08eb3245a01fea4992e553c7dc *NEWS.md
 66dc6327558a4403bfbcf1b4473b946f *R/beast.R
 2ae89570795c246a5ef2cf8e4c32ca6e *R/beast.irreg.R
 cd46b588b69d017441557e0801895f5c *R/beast.old.R
@@ -49,7 +49,7 @@ fe291b6101015f66d27e8923581758bf *man/print.beast.Rd
 3d09b3e13babf2721933f4a09ebe1e7d *man/tetris.Rd
 c5d498fe22c230fce4339c665217c41b *man/tsextract.Rd
 3739dd6b84b7bf79e3a288dd56ff1045 *src/Makevars
-b425a424f95a3d3c4a6f54c516ff0b73 *src/Makevars.win
+6e99704f4b20cefc0a3a29d32a16da15 *src/Makevars.win
 6d0167bfdadf1e25acff849a9739f669 *src/_beastv2_gui_plot.c
 5a82d6bd4ed175887fad5bf6f8ddef40 *src/_beastv2_gui_winmain.c
 4b1993a6bc5d7dad7aa99f4817a6ac27 *src/abc_000_macro.h
@@ -59,9 +59,9 @@ eb70507b22baebda1f1a0d6109ed5c4b *src/abc_000_warning.h
 b9b2a073fe6c7ad2c38a7de95df9d5e5 *src/abc_blas_lapack_mkl.h
 5207e4ca4eafffef27978fe310371cb6 *src/abc_blas_lapack_myl.h
 58b3eed6ce6f464fa74528fe70829a0d *src/abc_blas_lapack_myl_old.h
-c1d9ba425366d7a62531b43d6bed5505 *src/abc_common.c
+a41e7243201b061eefc1c65b51699385 *src/abc_common.c
 4cf5b5d1c7e049141a61458db3dc69d0 *src/abc_common.h
-213ff7ae219093cd1783060ce763b86f *src/abc_cpu.c
+d58c59b8fb1660ecb0f56352c724d6cf *src/abc_cpu.c
 afabc058315e7a0f51966abcdf654ca4 *src/abc_cpu.h
 05a72fcd52944d4ebc1336636e8273b5 *src/abc_datatype.h
 b1f7ea82012ad044f9460840dd6360e0 *src/abc_date.c
@@ -94,13 +94,13 @@ ce4b02943bce59a0a7e13b1743b6d32f *src/abc_mem_ext.h
 c5e6ba90e9a7eb6b60a338eebe771cb5 *src/abc_pthread.h
 1ae374966bd3ddd414561eb35480176d *src/abc_rand.h
 e60bb128cc317159e96f362a15d792ec *src/abc_rand_mkl.h
-914a5ce8fab287ff8cd6ff22472c166a *src/abc_rand_pcg_global.c
+e9cc970d16984b5f24c5d004ecda032c *src/abc_rand_pcg_global.c
 98f98d29a3a92aa2a2231fcc5c5e1321 *src/abc_rand_pcg_global.h
 d54f90e395d22a04d10d67bb8aea6caa *src/abc_rand_pcg_local.c
 71f454f1780f51f0d0a04366876d71b6 *src/abc_rand_pcg_local.h
-4f0e5ea2fe8c256cf3b79c58b0b4eb01 *src/abc_rand_pcg_local_avx2.c
-17c71b7d689657090d0102719cd83804 *src/abc_rand_pcg_local_avx512.c
-4e587328a3874dfa39d5fb38e86e06a6 *src/abc_rand_pcg_local_generic.c
+e9520450609f295c68d6660aad68c960 *src/abc_rand_pcg_local_avx2.c
+877c375920ff527d58130a88b24fd33b *src/abc_rand_pcg_local_avx512.c
+21cf64a0df4fdd20850a18db516095fb *src/abc_rand_pcg_local_generic.c
 6c62c6ffb81fc6271fdecef6ac90ccbf *src/abc_sort.c
 11ebd8351200a0347b69b7bff681f257 *src/abc_sort.h
 2c5b91e703396c140588184eda0f98b1 *src/abc_svd.c
@@ -116,7 +116,7 @@ cd7714c683a316c2d2e4ed265d832282 *src/abc_ts_func.c
 2cb6ec8afe5a3a898f23ff520edc4fbe *src/abc_vec.h
 180dd9c2885051ff972967a7a4e64668 *src/abc_vec_avx2.c
 88e121b5834e635173f134c69019e1a2 *src/abc_vec_avx512.c
-b5ad13611442a55f6b6bddd73d88ef56 *src/abc_vec_generic.c
+73ac80a3fea227f2b38779710f1f72bd *src/abc_vec_generic.c
 e564e471dd78ace6b13ec527dfc9eddb *src/abc_win32_demo.c
 943739cae002afc540673bb4655b6c37 *src/abc_win32_demo.h
 fa752da081deacd7335ff7967c2b5c93 *src/beastv2_COREV4.c
@@ -136,7 +136,7 @@ a0628d66a9d5801273745fd4d828a5ac *src/beastv2_func.h
 a0a6a0c4d7c66907d234cd15e41b3b64 *src/beastv2_header.h
 00a741637fe2a685f174b0d706e3651e *src/beastv2_header_solaris.h
 024ae790b0051836e8567d375e3c9add *src/beastv2_io.h
-2219bc9ea690605d593b22f0b5581b08 *src/beastv2_io_in_args.c
+04224c0ea35d19082e540faf4ef0648b *src/beastv2_io_in_args.c
 f8b870213034da3e90638ab548acc719 *src/beastv2_io_in_readts.c
 8ee5f57b52e47dd85c46a60b9f24bc87 *src/beastv2_io_out_allocmem_q.c
 38d9cc9b17f9a7a150fced2bc976c2f6 *src/beastv2_io_out_printargs.c

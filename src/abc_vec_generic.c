@@ -982,7 +982,7 @@ void gen_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 kno
 	}
 }
 #include "abc_vec.h"
-void SetupVectorFunction_Generic() {
+void SetupVectorFunction_Generic(void) {
     i32_add_val_inplace=&gen_i32_add_val_inplace;;
     i32_sum=&gen_i32_sum;
     f32_fill_val=&gen_f32_fill_val;

@@ -13,7 +13,7 @@
         void     cpuid(int32_t out[4],int32_t eax,int32_t ecx) {   __cpuidex(out,eax,ecx);      }
         uint64_t xgetbv(unsigned int x)                          {   return _xgetbv(x);             }
         typedef BOOL(WINAPI* LPFN_ISWOW64PROCESS) (HANDLE,PBOOL);
-        BOOL IsWow64()           {
+        BOOL IsWow64(void)           {
             BOOL                bIsWow64=FALSE;
             LPFN_ISWOW64PROCESS fnIsWow64Process=(LPFN_ISWOW64PROCESS)GetProcAddress(
                 GetModuleHandle(TEXT("kernel32")),"IsWow64Process");
@@ -260,7 +260,7 @@ void print_cpuinfo(struct cpu_x86 *cpu) {
     cpu_print("    Safe to use AVX512:  ",cpu->HW_AVX512_F && cpu->OS_AVX512);
     r_printf("\n");
 }
-void detect_print_cpu() {
+void detect_print_cpu(void) {
     struct cpu_x86 cpuinfo;
      detect_host(&cpuinfo);
      print_cpuinfo(&cpuinfo);

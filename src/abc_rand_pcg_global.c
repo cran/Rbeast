@@ -19,7 +19,7 @@ static pcg32_random_t global_state={
 	.inc=PCG_DEFAULT_GLOBAL_INCREMENT_64 };
 void pcg_set_seed(U64 initstate,U64 initseq)
 {	
-	extern void init_gauss_rnd();
+	extern void init_gauss_rnd(void);
 	init_gauss_rnd();
 	if (initstate==0 ) {
 		return;
@@ -101,7 +101,8 @@ GAUSS_CONSTANT GAUSS
 #define INV_2p24  ((F64)1./(1LL<<24))
 #define INV_2p25  ((F64)1./(1LL<<25))
 #define INV_2p32  ((F64)1./(1LL<<32))
-void init_gauss_rnd() {
+extern void init_gauss_rnd(void);
+void init_gauss_rnd(void) {
 	static I08 isInitialized=0;
 	if (isInitialized) {
 		return;

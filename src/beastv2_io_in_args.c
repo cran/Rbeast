@@ -557,12 +557,12 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) 
 		free(tmp);
 		if (period > 0) {
 			q_warning("WARNING: metadata$season='%s' suggests that the time series has a periodic/seasonal component. \"metadata$period\" "
-				"is needed but is missing. A BEST GUESS of numbers of datapoints per period is %d,giving period=num_sample_per_period*deltaTime "
+				"is needed but missing. A BEST GUESS of numbers of datapoints per period is %d,giving period=num_sample_per_period*deltaTime "
 				"=%d*%g=%g. Please make sure this estimate makes sense; otherwise,the BEAST decomposition result will be incorrect.\n",
 				io->meta.seasonForm=='S' ? "harmonic" : "dummy",(int)period,(int)period,io->meta.deltaTime,period * io->meta.deltaTime);
 		} else {
 			r_error("ERROR: metadata$season='%s' suggests that the time series has a periodic/seasonal component.  \"metadata$period\" "
-				"is needed but is missing. BEAST tried to estimate it via an auotcorrelation method but failed to "
+				"is needed but missing. BEAST tried to estimate it via an auotcorrelation method but failed to "
 				"get a reliable estimate. Please specify the period value EXPLICILTY. Or if your input has no periodic/seasonal component at all,"
 				" set metadata$season='none' or period=0,which will fit a trend-only model.\n",io->meta.seasonForm=='S' ? "harmonic" : "dummy");
 			return 0;

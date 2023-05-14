@@ -41,7 +41,7 @@
 	rng->state[3]=state=state * PCG_DEFAULT_MULTIPLIER_64+rng->increment;
 	__m256i state256=_mm256_set_epi64x(rng->state[3],rng->state[2],rng->state[1],rng->state[0]);;
 	pcg_get_lcg_multiplier_shift_multistep(4L,PCG_DEFAULT_MULTIPLIER_64,rng->increment,&rng->MULTIPLIER_4steps,&rng->INCREMENT_4steps);
-	extern void init_gauss_rnd();
+	extern void init_gauss_rnd(void);
 	init_gauss_rnd(); 
 }
  static INLINE  __m256i  __attribute__((always_inline)) GetMoveMask(int n)    {

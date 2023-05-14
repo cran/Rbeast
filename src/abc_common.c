@@ -162,7 +162,7 @@ F32 DeterminePeriod(F32PTR Y,I32 N)
 	}
 	U08PTR isPeak=isNA;
 	I32PTR INDEX=(I32PTR)(TMP+M); 
-	memset(isNA,0,M);
+	memset(isNA,0,(size_t) M);
 	I32  numPeaks=0;
 	for ( I32 i=2; i <=(M - 1); i++)	{
 		if (ans[(i)-1] > ans[(i - 1) - 1] && ans[(i)-1] > ans[(i+1) - 1]) {
@@ -661,7 +661,7 @@ void SetupRoutines_UserChoice(int avxOption) {
 	SetupPCG_GENERIC();
 #endif
 }
-  const char *getBuild() {
+  const char *getBuild( void ) {
         #if defined(__x86_64__)||defined(_M_X64)
         return "x86_64";
         #elif defined(i386)||defined(__i386__)||defined(__i386)||defined(_M_IX86)

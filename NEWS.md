@@ -1,6 +1,6 @@
-# CHANGES IN Rbeast 0.9.8
+# CHANGES IN Rbeast 0.9.8/9
 
-* Fix the warning message regarding "long long unsigned int[0]' [-Warray-bounds]"
+* Fix the warning message regarding "long long unsigned int[0]' [-Warray-bounds]" and the Wstrict-prototypes warning.
 
 
 # CHANGES IN Rbeast 0.9.7
