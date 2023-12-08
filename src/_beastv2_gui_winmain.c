@@ -161,15 +161,15 @@ void  DllExport BEAST2_WinMain(VOID_PTR  option)
 								WS_EX_CLIENTEDGE,
 								"MyWndClassBeast2",
 								"Bayesian time series decomposition and changepoint detection",
-								(WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX)|WS_THICKFRAME,
+								(WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX),  
 								CW_USEDEFAULT,CW_USEDEFAULT,520,740,
 								NULL,NULL,hInstance,NULL
 							);
 	if (!hwnd) {
 		MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
 		return;
-	} {
-		r_printf("\nWindows created succesfully!\n");
+	}
+	else {
 	}
 	ShowWindow(hwnd,SW_SHOWDEFAULT);
 	UpdateWindow(hwnd);
@@ -227,10 +227,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam) 
 			char* caption[]={ "Run\0\0\0","Pause\0\0\0","Setting\0\0\0","Exit\0\0\0" };			
 			for (int i=0; i < 4; i++)
 			{
-				hButton[i]=CreateWindowEx(WS_EX_CLIENTEDGE,"BUTTON",caption[i],
-									WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON|BS_PUSHLIKE,
-									10+100 * i,20,30 * 9/4,30,
-								    hwnd,(HMENU)i,GetModuleHandle(NULL),NULL);
+				hButton[i]=CreateWindowEx(WS_EX_CLIENTEDGE,"BUTTON",caption[i],WS_CHILD|WS_VISIBLE,
+									        10+100 * i,20,30 * 9/4,30,hwnd,(HMENU)i,GetModuleHandle(NULL),NULL);
 				if (hButton[i]==NULL)
 					MessageBox(hwnd,"Could not create edit box.\0\0\0","Error",MB_OK|MB_ICONERROR);
 				SendMessage(hButton[i],WM_SETFONT,(WPARAM)hfontDefault,MAKELPARAM(FALSE,0));				
@@ -548,12 +546,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam) 
 								  SetTextColor(hdc,RGB(0,255,0));
 								  return (LRESULT)GetStockObject(GRAY_BRUSH);
 							  }
-							  else if ((HWND)lParam==hStatic[0]||(HWND)lParam==hStatic[1])
-							  {
+							   else if ((HWND)lParam==hStatic[0]||(HWND)lParam==hStatic[1]) 		  {
 								  HDC hdc=(HDC)wParam;
 								  SetBkMode((HDC)wParam,TRANSPARENT);
 								  SetBkColor(hdc,RGB(100,0,0));
 								  SetTextColor(hdc,RGB(255,255,0));
+								  return GetStockObject(GRAY_BRUSH);
 							  }
 	}
 		break;

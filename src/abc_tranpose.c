@@ -124,22 +124,22 @@ void i32_transpose_inplace_prev(I32PTR Mat,I32 NROW,I32 NCOL) {
 		}
 	}
 }
-void i32_transpose_inplace_prev_two_ends(I32PTR Mat,I32 NROW,I32 NCOL) {
+void i32_transpose_inplace_prev_two_ends(I32PTR Mat,U64 NROW,U64 NCOL) {
 	if (NROW==1||NCOL==1) { return; }
 	I32 NfixedPoints=greatest_common_divsor(NROW - 1,NCOL - 1)+1L;
 	I32 Nprocessed=NfixedPoints;
 	I08 WORKED[Nwork+1]={ 0,};
-	I32 K=NROW * NCOL - 1;
-	for (I32 start=1; start <=K - 1; start++) {
+	U64 K=NROW * NCOL - 1;        
+	for (U64 start=1; start <=K - 1; start++) {
 		if (start <=Nwork && WORKED[start]) 	continue; 		
 		if (Nprocessed > K)                     break;
-		int  curr=start;
-		int  prev=PREV(start);
+		U64  curr=start;
+		U64  prev=PREV(start);
 		if (prev <=start) continue; 
 		if (start <=Nwork) {
-			int  startCompanion=K-start;
-			int  prevCompanion=K - prev;
-			int  currCompanion=startCompanion;
+			U64  startCompanion=K-start;
+			U64  prevCompanion=K - prev;
+			U64  currCompanion=startCompanion;
 			WORKED[(currCompanion <=Nwork) * currCompanion]=1;
 			int  tmpStartValue=Mat[start];
 			int  tmpStartValueCompanion=Mat[startCompanion];
@@ -163,7 +163,7 @@ void i32_transpose_inplace_prev_two_ends(I32PTR Mat,I32 NROW,I32 NCOL) {
 			Nprocessed++;            
 			Mat[currCompanion]=tmpStartValueCompanion;
 		}	else {
-			I32 next=start; 
+			U64 next=start; 
 			do {
 				next=NEXT(next);
 			} while (next > start);
@@ -182,7 +182,7 @@ void i32_transpose_inplace_prev_two_ends(I32PTR Mat,I32 NROW,I32 NCOL) {
 		}
 	}
 }
-void i32_permute3d_inplace_abc123_acb132(I32PTR Mat,I32 NROW,I32 NCOL,int NZ) {
+void i32_permute3d_inplace_abc123_acb132(I32PTR Mat,U64  NROW,U64 NCOL,int NZ) {
 	if (NROW==1) {
 		i32_transpose_inplace_prev_two_ends(Mat,NCOL,NZ);
 		return;
@@ -200,17 +200,17 @@ void i32_permute3d_inplace_abc123_acb132(I32PTR Mat,I32 NROW,I32 NCOL,int NZ) {
 	I32 NfixedPoints=greatest_common_divsor(NROW - 1,NCOL - 1)+1L;
 	I32 Nprocessed=NfixedPoints;
 	I08 WORKED[Nwork+1]={ 0,};
-	I32 K=NROW * NCOL - 1;
-	for (I32 start=1; start <=K - 1; start++) {
+	U64 K=NROW * NCOL - 1;
+	for (U64 start=1; start <=K - 1; start++) {
 		if (start <=Nwork && WORKED[start]) 	continue; 		
 		if (Nprocessed > K)                     break;
-		int  curr=start;
-		int  prev=PREV(start);
+		U64  curr=start;
+		U64  prev=PREV(start);
 		if (prev <=start) continue; 
 		if (start <=Nwork) {
-			int  startCompanion=K - start;
-			int  prevCompanion=K - prev;
-			int  currCompanion=startCompanion;
+			U64  startCompanion=K - start;
+			U64  prevCompanion=K - prev;
+			U64  currCompanion=startCompanion;
 			WORKED[(currCompanion <=Nwork) * currCompanion]=1;
 			memcpy(tmpStartValue,Mat+start* ElemSize,ElemSize * sizeof(I32));
 			memcpy(tmpStartValueCompanion,Mat+startCompanion * ElemSize,ElemSize * sizeof(I32));
@@ -235,7 +235,7 @@ void i32_permute3d_inplace_abc123_acb132(I32PTR Mat,I32 NROW,I32 NCOL,int NZ) {
 			memcpy(Mat+currCompanion * ElemSize,tmpStartValueCompanion,ElemSize * sizeof(I32));
 		}
 		else {
-			I32 next=start; 
+			U64 next=start; 
 			do {
 				next=NEXT(next);
 			} while (next > start);

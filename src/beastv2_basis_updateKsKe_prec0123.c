@@ -41,10 +41,10 @@ static void SS_CalcBasisKsKeK_prec012(BEAST2_BASIS_PTR  basis)
 	I16PTR     KE=basis->ke;
 	int NUM_OF_SEG=basis->nKnot+1L; 
 	int kCounter=1L;                  
-	for (rI32 i=1; i <=NUM_OF_SEG; i++) {
+	for (I32 i=1; i <=NUM_OF_SEG; i++) {
 		*KS++=kCounter;
 		I32 order=ORDER[i - 1];
-		for (rI32 j=1; j <=order; j++) {
+		for (I32 j=1; j <=order; j++) {
 			kCounter++;
 			kCounter++;
 		}

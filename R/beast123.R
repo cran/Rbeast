@@ -1,9 +1,10 @@
-beast123 <- function(Y, metadata=list(), prior=list(),
-                     mcmc=list(), extra=list(),	season=c('harmonic','dummy','none'), ... )
+beast123 <- function(Y, metadata=list(), prior=list(), mcmc=list(), extra=list(),
+                     season = c('harmonic','svd','dummy','none'),
+					 method = c('bayes','bic', 'aic','aicc','hic'), ... )
 {
- # tmplist=list(...)
-
-  #if (!hasArg("Y") || is.list(Y) || length(Y)==1)  {
+  # tmplist = list(...)
+  # if (!hasArg("Y") || is.list(Y) || length(Y)==1)  {
+  
   if (!hasArg("Y"))  {
     warning("Something is wrong with the input 'Y'. Make sure the Y par is a vector, a matrix, or an 3D array.")
     invisible(return(NULL))
@@ -47,13 +48,19 @@ beast123 <- function(Y, metadata=list(), prior=list(),
   if (is.null(metadata$season))
     metadata$season=season;
   
-  funstr='beastv4'  
+ method = match.arg(method) 
+ funstr =  paste0("beast_",method)
+ 
   if ( hasArg("cputype") )  {
     cputype = list(...)[['cputype']]  
     cputype = switch(cputype, sse=1, avx2=2, avx512=3);	
-	ANS    = .Call( BEASTV4_rexFunction, list(funstr,Y,metadata,prior,mcmc,extra,cputype),   212345)   		   
+	ANS     = .Call( BEASTV4_rexFunction, list(funstr,Y,metadata,prior,mcmc,extra,cputype),   212345)   		   
  } else {
-	ANS    = .Call( BEASTV4_rexFunction, list(funstr,Y,metadata,prior,mcmc,extra),           212345)   		   
+    if (hasArg("local")){ # run the local developer's version of Rbeast
+		#ANS  = .xxxCall( "rexFunction1", list(funstr,Y,metadata,prior,mcmc,extra),   212345, PACKAGE="Rbeast.mexw64")  
+	} else{
+	    ANS  = .Call( BEASTV4_rexFunction, list(funstr,Y,metadata,prior,mcmc,extra),   212345)   		   
+	}		   
  }
  
  invisible(return(ANS))

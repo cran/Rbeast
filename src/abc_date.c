@@ -2,31 +2,44 @@
 #include<inttypes.h>
 #include <stdlib.h> 
 #include <string.h> 
+#include <math.h>   
 #include "abc_000_warning.h"
 #include "abc_date.h"
 #include "abc_common.h"   
-#include "abc_ide_util.h" 
-#include "abc_vec.h"      
+#include "abc_ide_util.h"  
+#include "abc_vec.h"       
 #include "abc_sort.h"     
-static const int DAYS[2][13]={
-	{ 0,0,31,59,90,120,151,181,212,243,273,304,334 },
-	{ 0,0,31,60,91,121,152,182,213,244,274,305,335 }
-};
-static int DAYS_Per_MONTH[13]={ 0,31,28,31,30,31,30,31,31,30,31,30,31 };
-static int IsLeapYear(int year) { return (year%4==0 && year%100 !=0)||(year%400==0);}
-static int GetNumDays(int year) { return IsLeapYear(year) ? 366 : 365;                           }
-static int Date2Doy(int year,int mon,int day)      { return DAYS[IsLeapYear(year)][mon]+day; }
-static int Doy2Date(int doy,int y,int* d,int* m) {
-		DAYS_Per_MONTH[2]=IsLeapYear(y) ? 29 : 28;	
-		int mon;
-		for (mon=1; mon <=12; mon++) 	{
-			if ( doy <=DAYS_Per_MONTH[mon] )
-				break;
-			doy -=DAYS_Per_MONTH[mon];
-		}
-		*d=doy;
-		*m=mon;
-		return 0;
+static const int DAYS_CUMSUM[2][13]={ 
+	                                    { 0,0,31,59,90,120,151,181,212,243,273,304,334 },
+										{ 0,0,31,60,91,121,152,182,213,244,274,305,335 }  
+                                      };
+static const int  DAYS_Per_MONTH[13]={   0,31,28,31,30,31,30,31,31,30,31,30,31 };
+static const int  DAYS_Per_MONTH_LEAP[13]={   0,31,29,31,30,31,30,31,31,30,31,30,31 };
+static int IsLeapYear(int year)                      { return (year%4==0 && year%100 !=0)||(year%400==0);}
+static int GetNumDays(int year)                      { return IsLeapYear(year) ? 366 : 365;          }
+static int YMD_to_intDOY(int year,int mon,int day) { return DAYS_CUMSUM[IsLeapYear(year)][mon]+day; }
+static int YMD_from_intDOY_ag1(int doy,int y,int* M,int *D) {
+	int isleap=IsLeapYear(y) ;
+	int doy_from_march1st=doy - (59+isleap) - 1;                  
+	doy_from_march1st=PostiveMod(doy_from_march1st,365+isleap ); 
+	unsigned mp=(5 * doy_from_march1st+2)/153;                  
+	unsigned d=doy_from_march1st - (153 * mp+2)/5+1;           
+	unsigned m=mp+(mp < 10 ? 3 : -9);                  
+	*D=d;
+	*M=m;
+	return 0;
+}
+static int YMD_from_intDOY_ag2(int doy,int y,int* M,int* D) {
+	int *days_per_month=IsLeapYear(y) ? DAYS_Per_MONTH_LEAP : DAYS_Per_MONTH;
+	int mon;
+	for (mon=1; mon <=12; mon++) {
+		if (doy <=days_per_month[mon])
+			break;
+		doy -=days_per_month[mon];
+	}
+	*M=mon;
+	*D=doy;
+	return 0;
 }
 static int IsDateValid(int year,int mon,int day ) {
 	if (year <  -9999||year > 9999)
@@ -40,23 +53,45 @@ static int IsDateValid(int year,int mon,int day ) {
 	}
 	return day<=DAYS;
 }
-float YDOYtoF32time(int year,int doy) {
-	return (float)year+((float)doy - 0.5f)/(float) GetNumDays(year);
+#define OneDay  1.0
+#define HalfDay 0.5
+double FracYear_from_intYDOY(int year,int doy) {
+	return (double)year+((doy - OneDay)+HalfDay)/(double)GetNumDays(year);
 }
-float YMDtoF32time(int year,int mon,int day) { 
-	return YDOYtoF32time(year,Date2Doy(year,mon,day)); 
+int FracYear_to_intYDOY(double fyear,int* yr) {
+	int    year=floor(fyear);
+	double fraction=fyear - year;	
+	int    doy=(int)floor(fraction * GetNumDays(year))+OneDay; 
+	if (yr) yr[0]=year;
+	return doy;
 }
-#include "math.h"
-int F32time2YDOY(F32 fyear,int* doy) {
-	int yr=fyear;
-	*doy=(int) round( (fyear - yr) * GetNumDays(yr)+0.5f);
-	return yr;
+double FracYear_from_YDOY(int year,double doy) {
+	return (double)year+doy/(double)GetNumDays(year);
 }
-int F32time2YMD(F32 fyear,int*mon,int *day) {
-	int doy;
-	int yr=F32time2YDOY(fyear,&doy);	 
-	Doy2Date(doy,yr,day,mon);
-	return yr;
+double FracYear_to_YDOY(double fyear,int* yr) {
+	int    year=floor(fyear);
+	double fraction=fyear - year;	
+	double doy=fraction * GetNumDays(year); 
+	if (yr) yr[0]=year;
+	return doy;
+}
+double FracYear_from_YMD(int  year,int mon,int day) {
+	return FracYear_from_intYDOY(year,YMD_to_intDOY(year,mon,day));
+}
+void  FracYear_to_YMD(double fyear,int *yr,int*mon,int *day) {
+	int doy=FracYear_to_intYDOY(fyear,yr);	 
+	YMD_from_intDOY_ag1(doy,yr[0],mon,day);
+}
+double FracDay_from_HMS(int h,int m,double sec) {
+ 	   return (h+m/60.+sec/3600.)/24.;
+}
+void  FracDay_to_HMS(double fday,int*h,int* m,double *sec) {
+	double hr=fday * 24.;
+	double mn=(hr - (int)hr) * 60.;
+	double secs=(mn - (int)mn) * 60;
+	*h=(int) hr;
+	*m=(int) mn;
+	*sec=secs;
 }
 int64_t CountLeapYears(int64_t year) {
 	static int64_t fakeLeaps=(1753/4) - (1753/100)+(1753/400);
@@ -65,24 +100,63 @@ int64_t CountLeapYears(int64_t year) {
 	int64_t extraLeaps=year/400;
 	return leaps - badLeaps+extraLeaps - fakeLeaps;
 }
-int64_t datenum(int year,int mon,int day) {
+int64_t DateNum(int year,int mon,int day) {
 	int64_t numYears=year - 1753;
 	int64_t leapYears=CountLeapYears(year);
-	int64_t daysInYear=DAYS[IsLeapYear(year)][mon];
+	int64_t daysInYear=DAYS_CUMSUM[IsLeapYear(year)][mon];
 	return  numYears * 365LL+leapYears+daysInYear+(day - 1);
 }
-int days_from_civil(int y,unsigned m,unsigned d) {	
+int JulianDayNum_from_civil_ag1(int y,int m,int d) {
 	y -=m <=2;
 	const int      era=(y >=0 ? y : y - 399)/400;
 	const unsigned yoe=(y - era * 400);      
 	const unsigned doy=(153 * (m+(m > 2 ? -3 : 9))+2)/5+d - 1;  
 	const unsigned doe=yoe * 365+yoe/4 - yoe/100+doy;         
-	return era * 146097+doe - 719468;
+	return       era * 146097+doe - 719468+2440588; 
 }
-int civil_from_days(int days,int * yr,int*mn,int* day)  { 
-	days+=719468;
-	const int era=(days >=0 ? days : days - 146096)/146097;
-	const unsigned doe=(days - era * 146097);          
+int JulianDayNum_from_civil_ag2(int y,int m,int d) {
+	y  -=m <=2;
+	m=m <=2 ? (m-2+12) : m - 2;
+	m=m - 1;
+	int JDN=365 * y+FLOORdiv(y,4) - FLOORdiv(y,100)+FLOORdiv(y,400)+(153 * m+2)/5+d+1721119;
+	return JDN;
+}
+int JulianDayNum_from_civil_ag3(int y,int m,int d) {
+	y -=m <=2;
+	m=m <=2 ? m+12 : m  ;	 
+	int JDN=365 * y+FLOORdiv(y,4) - FLOORdiv(y,100)+FLOORdiv(y,400)+(153 * m -457)/5+d+1721119;
+	return JDN;
+}
+int JulianDayNum_from_civil_ag4(int y,int m,int d) {
+	int A=((int)m - 14)/12;  
+	int B=1461 * (y+4800+A);
+	int C=367 * (m - 2 - 12 * A);
+	int E=(y+4900+A)/100;
+	int JDN=B/4+C/12 - (3 * E)/4+d - 32075;
+	return JDN;
+}
+int JulianDayNum_from_julian_ag1(int y,int m,int d) {
+	y -=m <=2;
+	const int      era=(y >=0 ? y : y - 3)/4;
+	const unsigned yoe=(y - era * 4);      
+	const unsigned doy=(153 * (m+(m > 2 ? -3 : 9))+2)/5+d - 1;  
+	const unsigned doe=yoe * 365+doy;         
+	return era * 1461+doe - 719470+2440588; 
+}
+int JulianDayNum_from_julian_ag2(int y,int m,int d) {
+	y -=m <=2;
+	m=m <=2 ? m+12 : m;
+	int JDN=365 * y+FLOORdiv(y,4)+(153 * m - 457)/5+d+1721117;
+	return JDN;
+}
+int JulianDayNum_from_julian_ag3(int y,int m,int d) {
+	int JDN=367 * y - (7 * (y+5001+((int)m - 9)/7))/4+(275 * m)/9+d+1729777;
+	return JDN;
+}
+int JulianDayNum_to_Civil_ag1(int JDN,int * yr,int*mn,int* day)  {
+	JDN+=719468 - 2440588; 
+	const int era=(JDN >=0 ? JDN : JDN - 146096)/146097;
+	const unsigned doe=(JDN - era * 146097);          
 	const unsigned yoe=(doe - doe/1460+doe/36524 - doe/146096)/365;  
 	const int      y=(yoe)+era * 400;
 	const unsigned doy=doe - (365 * yoe+yoe/4 - yoe/100);                
@@ -94,52 +168,179 @@ int civil_from_days(int days,int * yr,int*mn,int* day)  {
 	*day=d;
 	return 0;
 }
-int F32time2DateNum(F32 fyear) {
+int JulianDayNum_to_Civil_ag2(int JDN,int * yr,int*mn,int* day)  {
+	JDN=JDN - 1721120;
+	int Q1=FLOORdiv(JDN,146097);
+	int R1=JDN - 146097 * Q1;
+	int tmp=FLOORdiv(R1,36524);
+	int Q2=min(tmp,3);
+	int R2=R1 - 36524 * Q2;
+	int Q3=FLOORdiv(R2,1461);
+	int R3=R2 - 1461 * Q3;
+	tmp=FLOORdiv(R3,365);
+	int Q4=min(tmp,3);
+	int R4=R3 - 365 * Q4;
+	*yr=400 * Q1+100 * Q2+4 * Q3+Q4;
+	int m=FLOORdiv(5 * R4+2,153);
+	*day=R4 - FLOORdiv(153 * m+2,5)+1;
+	m=m+3;
+	*yr=m <=12? *yr: (*yr)+1;
+	*mn=m <=12 ? m : m - 12;
+	return 0;
+}
+int JulianDayNum_to_Civil_ag3(int JDN,int* yr,int* mn,int* day) {
+	int L=JDN+68569;
+	int N=FLOORdiv(4*L,146097);
+	L=L - (146097 * N+3)/4;
+	int I=(4000 * (L+1))/1461001;
+	L=L - (1461 * I)/4+31;
+	int J=(80 * L)/2447;
+	int D=L - (2447 * J)/80;
+	L=J/11;
+	int M=J+2 - 12 * L;
+	int Y=100 * (N - 49)+I+L;
+	*yr=Y;
+	*mn=M;
+	*day=D;
+	return 0;
+}
+int JulianDayNum_to_julian_ag1(int JDN,int* yr,int* mn,int* day) {
+	int z=JDN - 2440588;
+	z+=719470;
+	int era=(z >=0 ? z : z - 1460)/1461;
+	unsigned doe=(z - era * 1461);  
+	unsigned yoe=(doe - doe/1460)/365;                 
+	int y=(int)(yoe)+era * 4;
+	unsigned doy=doe - 365 * yoe;                        
+	unsigned mp=(5 * doy+2)/153;                         
+	unsigned d=doy - (153 * mp+2)/5+1;                   
+	unsigned m=mp+(mp < 10 ? 3 : -9);                  
+	y=y+(m <=2);
+	*yr=y;
+	*mn=m;
+	*day=d;
+	return 0;
+}
+int JulianDayNum_to_julian_ag2(int JDN,int* yr,int* mn,int* day) {
+	int J=JDN+1402;
+	int K=(J - 1)/1461;
+	int L=J - 1461 * K;
+	int N=(L - 1)/365 - L/1461;
+	int  I=L - 365 * N+30;
+	J=FLOORdiv(80 * I,2447);
+	int D=I - (2447 * J)/80;
+	I=FLOORdiv(J,11);
+	int M=J+2 - 12 * I;
+	int Y=4 * K+N+I - 4716;
+	*yr=Y;
+	*mn=M;
+	*day=D;
+	return 0;
+}
+double  FracYear_to_DateNum(double fyear) {
+	int    year_int=floor(fyear);
+	double year_frac=fyear - year_int;
+	int    days_in_year=GetNumDays(year_int);
+	double doy=year_frac * days_in_year;
+	int    doy_int=floor(doy)+OneDay;
+	double doy_frac=doy - floor(doy);
 	int mon,day;
-	int yr=F32time2YMD(fyear,&mon,&day);
-	return days_from_civil(yr,mon,day);
+	YMD_from_intDOY_ag1(doy_int,year_int,&mon,&day);
+	double out=JulianDayNum_from_civil_ag1(year_int,mon,day);
+	return out+doy_frac - NULL_DATE_ORIGIN;
 }
-float fractional_civil_from_days(int days)
-{
-	days+=719468;
-	const int era=(days >=0 ? days : days - 146096)/146097;
-	const unsigned doe=(days - era * 146097);          
-	const unsigned yoe=(doe - doe/1460+doe/36524 - doe/146096)/365;  
-	const int      y=(yoe)+era * 400;
-	const unsigned doy=doe - (365 * yoe+yoe/4 - yoe/100);                
-	const unsigned mp=(5 * doy+2)/153;                                   
-	const unsigned d=doy - (153 * mp+2)/5+1;                             
-	const unsigned m=mp < 10 ? mp+3 : mp - 9;                            
-	int yr=y+(m <=2);
-	int mn=m;
-	 int day=d;
-	 return YMDtoF32time(yr,mn,day);
+double FracYear_from_DateNum(double datenum) {
+	int    datenum_int=floor(datenum);
+	double datenum_frac=datenum- datenum_int;
+	int    yr_int,mon,day;
+	JulianDayNum_to_Civil_ag1(datenum+NULL_DATE_ORIGIN,&yr_int,&mon,&day);
+	int  doy_int=YMD_to_intDOY(yr_int,mon,day);
+	double out=(double)yr_int+((doy_int - OneDay)+datenum_frac)/(double)GetNumDays(yr_int);
+	return out;
 }
-void date_jump(int y,int m,int d,int jumpDays,int* y1,int* m1,int* d1) {
-	int days=days_from_civil(y,m,d);
-	civil_from_days(days+jumpDays,y1,m1,d1);
+double  FracYear_to_JDate(double fyear) {
+	return FracYear_to_DateNum(fyear) - 0.5;
 }
-static int __FindPatternStart( char *str,char * token) {
+double FracYearfrom_JDate(double jdn) {
+	return FracYear_to_DateNum(jdn+0.5);
+}
+int WeekDay(int y,int m,int d) {
+	int jdn=JulianDayNum_from_civil_ag1(y,m,d);
+	int dow=jdn%7;
+	dow=dow < 0 ? dow+7 : dow; 
+	return dow;
+}
+double FracYear_from_YMDHMS(YmdHms * date) {
+	int days_in_year=GetNumDays(date->y);
+	int doy1_int=YMD_to_intDOY(date->y,date->m,date->d);
+	 double fracday=FracDay_from_HMS(date->hr,date->min,date->sec);
+	 return (double)date->y+(doy1_int-OneDay+fracday)/(double)days_in_year;
+}
+void  FracYear_to_YMDHMS(double fyear,YmdHms* date) {
+	int    yr_int=floor(fyear);
+	double yr_fract=fyear - yr_int;
+	int    days_in_yr=GetNumDays(yr_int);
+	double doy=yr_fract * days_in_yr;
+	int    doy1_int=floor(doy)+OneDay;
+	double doy_frac=doy -floor(doy);
+	int mon,day;  
+	YMD_from_intDOY_ag1(doy1_int,yr_int,&mon,&day);
+	int   hr,minute;
+	double sec;
+	FracDay_to_HMS(doy_frac,&hr,&minute,&sec);
+	date->y=yr_int;
+	date->m=mon;
+	date->d=day;
+	date->hr=hr;
+	date->min=minute;
+	date->sec=sec;
+}
+void print_date(YmdHms* date) {
+	r_printf("%4d-%2d-%2d|%2d:%2d:%g",date->y,date->m,date->d,(int)date->hr,(int)date->min,date->sec);
+}
+void Julian_to_Civil(int y,int m,int d,YmdHms* date) {
+	int datenum=JulianDayNum_from_julian_ag1(y,m,d);
+	JulianDayNum_to_Civil_ag1(datenum,&date->y,&date->m,&date->d);	
+}
+void Civil_to_Julian(int y,int m,int d,YmdHms* date) {
+	int datenum=JulianDayNum_from_civil_ag1(y,m,d);
+	JulianDayNum_to_julian_ag1(datenum,&date->y,&date->m,&date->d);
+}
+void CivilDatee_Jump(int y,int m,int d,int jumpDays,int* y1,int* m1,int* d1) {
+	int days=JulianDayNum_from_civil_ag1(y,m,d);
+	JulianDayNum_to_Civil_ag1(days+jumpDays,y1,m1,d1);
+}
+void  JulianDate_to_civil(double datenum,YmdHms* date) {
+	int    datenum_int=round(datenum);
+	double datenum_frac=datenum - datenum_int+0.5;
+	JulianDayNum_to_Civil_ag1(datenum_int,&date->y,&date->m,&date->d);
+	FracDay_to_HMS(datenum_frac,&date->hr,&date->min,&date->sec);
+}
+double JulianDate_from_civil(YmdHms* date) {
+	int datenum=JulianDayNum_from_civil_ag1(date->y,date->m,date->d);
+	return  datenum+FracDay_from_HMS(date->hr,date->min,date->sec) - 0.5;
+}
+static int __FindTokenStart__( char *str,char * token) {
 	char * pchar=strstr(str,token);
 	if (pchar)	{
 		return (int)(pchar - str);
 	}
 	return -10000;
 }
-int    GetStrPattern_fmt1(char* fmtstr,DateFmtPattern1* pattern) {
+int   GetStrPattern_fmt1(char* fmtstr,DateFmtPattern1* pattern) {
 	ToUpper(fmtstr);
-	int yearIdx=__FindPatternStart(fmtstr,"YYYY");
+	int yearIdx=__FindTokenStart__(fmtstr,"YYYY");
 	if (yearIdx <0) return 0;
-	int monIdx=__FindPatternStart(fmtstr,"MM");
+	int monIdx=__FindTokenStart__(fmtstr,"MM");
 	if (monIdx < 0) return 0;
-	int dayIdx=__FindPatternStart(fmtstr,"DD");
+	int dayIdx=__FindTokenStart__(fmtstr,"DD");
 	if (dayIdx < 0) return 0;
 	pattern->yearIdx=yearIdx;
 	pattern->monIdx=monIdx;
 	pattern->dayIdx=dayIdx;
 	return 1;
 }
-float  Str2F32time_fmt1(char* datestr,DateFmtPattern1* pattern) {
+double  Str2F32time_fmt1(char* datestr,DateFmtPattern1* pattern) {
 	char s[5];
 	memcpy(s,datestr+pattern->yearIdx,4);	s[4]=0;	int year=atoi(s);
 	if (year==0) { return -1e10; }
@@ -147,25 +348,25 @@ float  Str2F32time_fmt1(char* datestr,DateFmtPattern1* pattern) {
 	if (mon < 1||mon > 12) { return -1e10; }
 	memcpy(s,datestr+pattern->dayIdx,2);  	s[2]=0;	int day=atoi(s);
 	if (day < 1||day >31) { return -1e10; }
-	return YMDtoF32time(year,mon,day);
+	return FracYear_from_YMD(year,mon,day);
 }
 int    GetStrPattern_fmt2(char* fmtstr,DateFmtPattern2* pattern) {
 	ToUpper(fmtstr);
-	int yearIdx=__FindPatternStart(fmtstr,"YYYY");
+	int yearIdx=__FindTokenStart__(fmtstr,"YYYY");
 	if (yearIdx <0) return 0;
-	int doyIdx=__FindPatternStart(fmtstr,"DOY");
+	int doyIdx=__FindTokenStart__(fmtstr,"DOY");
 	if (doyIdx < 0) return 0;
 	pattern->yearIdx=yearIdx;
 	pattern->doyIdx=doyIdx;
 	return 1;
 }
-float  Str2F32time_fmt2(char* datestr,DateFmtPattern2* pattern) {
+double  Str2F32time_fmt2(char* datestr,DateFmtPattern2* pattern) {
 	char s[5];
 	memcpy(s,datestr+pattern->yearIdx,4);	s[4]=0;	int year=atoi(s);
 	if (year==0) { return -1e10; }
 	memcpy(s,datestr+pattern->doyIdx,3); 	s[3]=0;	int doy=atoi(s);	
 	if (doy < 0||doy > 366) { return -1e10; }	 
-	return YDOYtoF32time(year,doy);
+	return FracYear_from_intYDOY(year,doy);
 }
 static char* _FindCharOccurrence(char* s,char c,int* numTimes) {
 	*numTimes=0;	 	
@@ -199,7 +400,7 @@ int    GetStrPattern_fmt3(char* fmtstr,DateFmtPattern3* pattern) {
 	memcpy(pattern->sep2,pts[1]+1,len);  	pattern->sep2[len]=0;
 	return 1;
 }
-float  Str2F32time_fmt3(char* datestr,DateFmtPattern3* pattern) {
+double  Str2F32time_fmt3(char* datestr,DateFmtPattern3* pattern) {
 	int   N=(int) strlen(datestr);
 	char  old;
 	char* p0=datestr;
@@ -221,17 +422,20 @@ float  Str2F32time_fmt3(char* datestr,DateFmtPattern3* pattern) {
 	int year=p[0]=='Y' ? n1 : (p[1]=='Y' ? n2 : n3);
 	int mon=p[0]=='M' ? n1 : (p[1]=='M' ? n2 : n3);
 	int day=p[0]=='D' ? n1 : (p[1]=='D' ? n2 : n3);
-	return YMDtoF32time(year,mon,day);
+	return FracYear_from_YMD(year,mon,day);
 }
-INLINE static int is_dot(char c)          { return c=='.'; }
-INLINE static int is_slash(char c)        { return c=='/'; }
-INLINE static int is_digit(char c)        {  return c >='0' && c <='9';}
-INLINE static int is_letter(char c)       {  return (c >='a' && c <='z' )||(c >='A' && c <='Z');}
-INLINE static int is_alphanumeric(char c) {  return (c >='0' && c <='9')||(c >='a' && c <='z')||(c >='A' && c <='Z'); }
-int get_word_size(char* s)         { int i=0;	while (is_letter(s[i++])){};  	 return --i; }
-int get_alphanumeric_size(char* s) { int i=0;	while (is_alphanumeric(s[i++])) {}; return --i;}
+INLINE static int  is_dot(char c)          { return c=='.'; }
+INLINE static int  is_slash(char c)        { return c=='/'; }
+INLINE static int  is_star(char c)         { return c=='*'; }
+INLINE static int  is_digit(char c)        { return c >='0' && c <='9';}
+INLINE static int  is_letter(char c)       { return (c >='a' && c <='z' )||(c >='A' && c <='Z');}
+INLINE static int  is_alphanumeric(char c) { return (c >='0' && c <='9')||(c >='a' && c <='z')||(c >='A' && c <='Z'); }
+INLINE static char char_toupper(char s)    { return s >='a' && s <='z' ? s - 32 : s; }
+int get_word_size(char* s)         { int i=0;	while (is_letter(s[i++])){};  	     return --i; }
+int get_alphanumeric_size(char* s) { int i=0;	while (is_alphanumeric(s[i++])) {};  return --i;}
 int get_intger_size(char* s)       { int i=0; while (is_digit(s[i++])) {};	 	 return --i; }
-int get_slash_size(char* s)       { int i=0; while (is_slash(s[i++])) {};	 	 return --i; }
+int get_slash_size(char* s)        { int i=0; while (is_slash(s[i++])) {};	 	 return --i; }
+int get_star_size(char* s)         { int i=0; while (is_star(s[i++])) {};	 	     return --i; }
 int get_number_size(char* s,int * ndots) {
 	int i=*ndots=0;
 	while (is_digit(s[i])||is_dot(s[i])) {
@@ -240,13 +444,22 @@ int get_number_size(char* s,int * ndots) {
 	};
 	return i;
 }
-char* goto_validchar(char* s) { while (!is_alphanumeric(*s) && *s !=0) { s++; }	return s; }
-char* goto_validchar_dot_slash(char* s) {while (!is_alphanumeric(*s) && !is_dot(*s) && !is_slash(*s)  && *s !=0) { s++; }	return s;}
+char* goto_validchar(char* s)           { while (!is_alphanumeric(*s) && *s !=0) { s++; }	return s; }
+char* goto_validchar_dot_slash_star(char* s) {
+	while (!is_alphanumeric(*s) && !is_dot(*s) && !is_slash(*s) && !is_star(*s) && *s !=0) {
+		s++; 
+	}	return s;
+}
+#define TOKEN_NUMBER   'N'
+#define TOKEN_NUMBERwithTEXT   'A'
+#define TOKEN_SLASH    '/'
+#define TOKEN_STAR    '*'
+#define TOKEN_WORD     'L'
 static int split_numstr(char* s,int nPartMax,int* startidx,int* nchar,char* type) {
 	char* s0=s;
 	int   nPart=0;
 	while (*s !=0 && nPart < nPartMax) {
-		s=goto_validchar_dot_slash(s);
+		s=goto_validchar_dot_slash_star(s);
 		if (is_digit(*s)||is_dot(*s) ) {
 			int ndots;
 			int nlen=get_number_size(s,&ndots);
@@ -255,7 +468,7 @@ static int split_numstr(char* s,int nPartMax,int* startidx,int* nchar,char* type
 			}
 			nchar[nPart]=nlen;
 			startidx[nPart]=s - s0;
-			type[nPart]='N';
+			type[nPart]=TOKEN_NUMBER;  
 			nPart++;
 			s=s+nlen;
 		}
@@ -263,7 +476,7 @@ static int split_numstr(char* s,int nPartMax,int* startidx,int* nchar,char* type
 			int nlen=get_word_size(s);
 			nchar[nPart]=nlen;
 			startidx[nPart]=s - s0;
-			type[nPart]='W';
+			type[nPart]=TOKEN_WORD;       
 			nPart++;
 			s=s+nlen;
 		}
@@ -271,55 +484,102 @@ static int split_numstr(char* s,int nPartMax,int* startidx,int* nchar,char* type
 			int nlen=get_slash_size(s);
 			nchar[nPart]=nlen;
 			startidx[nPart]=s - s0;
-			type[nPart]='S';
+			type[nPart]=TOKEN_SLASH;    
+			nPart++;
+			s=s+nlen;
+		}
+		else if (is_star(*s)) {
+			int nlen=get_star_size(s);
+			nchar[nPart]=nlen;
+			startidx[nPart]=s - s0;
+			type[nPart]=TOKEN_STAR;    
 			nPart++;
 			s=s+nlen;
 		}
 	}
 	return nPart;
 }
-INLINE static char char_toupper(char s) { return s >='a' && s <='z' ? s-32 : s; }
-double extract_fyear(char* s) {
-	int  nPartMax=4;
-	int  startIdx[4],nchar[4];
-	char type[4]={ 0,};
-	int  nPart=split_numstr(s,nPartMax,startIdx,nchar,type);
+double extract_timeinterval_from_str(char* s,float *value,char *unit) {
+	int  nPartMax=10;
+	int  startIdx[10],nChar[10];
+	char type[10]={ 0,};
+	int  nPart=split_numstr(s,nPartMax,startIdx,nChar,type);
 	double nan=(1.0/0.) * 0.;
-	if (nPart <=0||type[0] !='N'||type[nPart-1] !='W') {
+	if (nPart==0||type[0] !=TOKEN_NUMBER||type[nPart-1] !=TOKEN_WORD) {
+		if (value) *value=nan;
 		return nan;
 	}
-	double x[4];
-	int   nNumber=0;
-	for (int i=0; i < nPartMax; i++){
-		if (type[i] !='N') continue;
-		char* ss=s+startIdx[i];
-		int   len=nchar[i];
-		char  old=ss[len]; ss[len]=0; x[nNumber++]=atof(ss); ss[len]=old;
+	double x=nan;
+	int    operation=0;
+	for (int i=0; i < nPart - 1; i++) {
+		if (type[i]=='N') {
+			char* ss=s+startIdx[i];
+			int   len=nChar[i];
+			char  old=ss[len];
+			ss[len]=0;
+			double curValue=atof(ss); ss[len]=old;
+			if (operation==0) {
+				x=curValue;
+			}
+			else if (operation==TOKEN_STAR) {
+				x=x * curValue;
+				operation=0;
+			}
+			else if (operation==TOKEN_SLASH) {
+				x=x/curValue;
+				operation=0;
+			}
+		}
+		else if (type[i]==TOKEN_STAR) {
+			operation=TOKEN_STAR;
+		}
+		else if (type[i]==TOKEN_SLASH) {
+			operation=TOKEN_SLASH;
+		}		 
+	}
+	if (x !=x) {
+		return nan;
 	}
 	char* ss=s+startIdx[nPart-1];
-	char  letter=char_toupper(ss[0]);
-	double y=nan;
-	if (nPart==2 ) {       
-		y=x[0];
-	}
-	else if (nPart==4 && type[1]=='S' && type[2]=='N'){
-		 y=x[0]/x[1];	
-	}
-#define _IsAlmostInteger(x)  ( fabs(x-round(x)) <1e-5 )
+	char  letter1=char_toupper(ss[0]);
+	char  letter2=char_toupper(ss[1]);
+	double y=x;
 	double z=nan;
-	if (letter=='D') {
+	if (letter1=='D') {
 		double nyr1=y/366;
 		double nyr2=y/365;
 		if      (_IsAlmostInteger(nyr1) ) 	z=nyr1;
 		else if (_IsAlmostInteger(nyr2)) 	z=nyr2;
-		else  	z=y/365 ;
+		else  	                            z=y/365 ;
+	} else if (letter1=='M' && letter2=='O') {
+		z=y/12;	  	
+	} else if (letter1=='M' && letter2=='N') {
+	    z=y/12;
 	}
-	else if (letter=='M') {
-		z=y/12;	  
+	else if (letter1=='M' && letter2=='I') {
+		z=y/(60*24*365);
+		letter1='I'; 
 	}
-	else if (letter=='Y') {
+	else if (letter1=='M'  ) {
+		z=y/12; 
+	}
+	else if (letter1=='H') {
+		z=y/(24*365);
+	}
+	else if (letter1=='S') {
+		z=y/(3600*24*365);
+	}
+	else if (letter1=='Y') {
 		z=y  ;
+	} 
+	else if (letter1=='W') {
+		z=y*7/365.f;
+	} else{
+		letter1='U';
+		z=nan;
 	}
+	if (value) *value=y;
+	if (unit ) *unit=letter1;
 	return z;
 }
 int split_datestr(char* s,int nPartMax,int* startidx,int* nchar,char* type) {
@@ -331,22 +591,20 @@ int split_datestr(char* s,int nPartMax,int* startidx,int* nchar,char* type) {
 			int nlen=get_intger_size(s);
 			nchar[nPart]=nlen;
 			startidx[nPart]=s - s0;
-			char typePart='N';
+			type[nPart]=TOKEN_NUMBER;
 			if (startidx[nPart] > 0 && is_letter(s0[startidx[nPart]-1])) {
-				typePart='A';
+				type[nPart]=TOKEN_NUMBERwithTEXT;
 			}
 			if (is_letter(s[nlen])) {
-				typePart='A';
-			}
-			type[nPart]=typePart;
+				type[nPart]=TOKEN_NUMBERwithTEXT;
+			}		 
 			nPart++;
 			s=s+nlen;
-		}
-		else if (is_letter(*s)) {
+		} else if (is_letter(*s)) {
 			int nlen=get_word_size(s);
 			nchar[nPart]=nlen;
 			startidx[nPart]=s - s0;
-			type[nPart]='L';
+			type[nPart]=TOKEN_WORD;
 			nPart++;
 			s=s+nlen;
 		}
@@ -363,7 +621,7 @@ static int cmp_months(char* s) {
 	}
 	return -1;
 }
-float * strings_to_fyears(char *s,int * strstart,int n) {
+int  FracYear_from_Strings(F64PTR out,char *s,int * strstart,int n) {
     #define NPARTMAX 16
 	int* startidx=malloc(sizeof(int) * ( n * NPARTMAX * 2  ));
 	int* partlength=startidx+n * NPARTMAX;
@@ -383,14 +641,13 @@ float * strings_to_fyears(char *s,int * strstart,int n) {
 	int idxNumber[NPARTMAX],idxWord[NPARTMAX],idxANumber[NPARTMAX],idxNumANumber[NPARTMAX],idxNumber8[NPARTMAX],idxNumber7[NPARTMAX];
 	int partLenMin[NPARTMAX],partLenMax[NPARTMAX];
 	for (int i=0; i < nPart; i++) {
-		char pattern=parttype[i];
-		if (pattern=='N') {
+		if (parttype[i]==TOKEN_NUMBER) {
 			idxNumber[nNumber++]=i;
-			idxNumANumber[nNumberANumber++]=i;
-		}	else if (pattern=='A') {
+			idxNumANumber[nNumberANumber++]=i;			
+		}else if (parttype[i]==TOKEN_NUMBERwithTEXT) {
 			idxANumber[nANumber++]=i;
-			idxNumANumber[nNumberANumber++]=i;
-		}else if (pattern=='L') {
+			idxNumANumber[nNumberANumber++]=i;		
+		}else if (parttype[i]==TOKEN_WORD) {
 			idxWord[nWord++]=i;
 		}
 		int* partLengthRow=partlength+i;
@@ -401,10 +658,10 @@ float * strings_to_fyears(char *s,int * strstart,int n) {
 			partLenMax[i]=max(partLenMax[i],*partLengthRow);	
 			partLengthRow+=NPARTMAX;
 		}
-		if (partLenMin[i]==8 && partLenMax[i]==8 && pattern !='L') {
+		if (partLenMin[i]==8 && partLenMax[i]==8 && parttype[i] !=TOKEN_WORD) {
 			idxNumber8[nNumber8++]=i;	 
 		}
-		if (partLenMin[i]==7 && partLenMax[i]==7 && pattern !='L') {
+		if (partLenMin[i]==7 && partLenMax[i]==7 && parttype[i] !=TOKEN_WORD) {
 			idxNumber7[nNumber7++]=i;
 		}
 	}
@@ -429,29 +686,23 @@ float * strings_to_fyears(char *s,int * strstart,int n) {
 				if (maxv < value) maxv=value;
 				tmp[i]=value;
 			}
-			if (partLenMin[idx]==4 && partLenMax[idx]==4) {
-				if (yearFound==0) {
+			if ( !yearFound && partLenMin[idx]==4 && partLenMax[idx]==4) {				
 					yearFound=1;
 					memcpy(year,tmp,sizeof(int) * n);
-					continue;
-				}
+					continue;				
 			}
-			if ( (maxv==12||maxv==11) && partLenMax[idx] < 4) {
-				if (monthFound==0) {
+			if (!monthFound && (maxv==12||maxv==11) && partLenMax[idx] < 4) {				
 					monthFound=1;
 					memcpy(month,tmp,sizeof(int) * n);
-					continue;
-				}
+					continue;				
 			}
-			if ( (maxv >=28 && maxv <=31 ) && partLenMax[idx] < 4) {
-				if (dayFound==0) {
+			if (!dayFound && (maxv >=28 && maxv <=31 ) && partLenMax[idx] < 4) {
 					dayFound=1;
 					memcpy(day,tmp,sizeof(int) * n);
-					continue;
-				}
+					continue;				
 			}
 			if (minv < 1||maxv > 12) {
-				if (minv < 1||maxv > 31) {
+				if (minv < 1||maxv > 31 ) {
 					if (yearFound==0) {
 						yearFound=1;
 						memcpy(year,tmp,sizeof(int) * n);
@@ -468,7 +719,13 @@ float * strings_to_fyears(char *s,int * strstart,int n) {
 					memcpy(month,tmp,sizeof(int) * n);
 				}
 			}
-		}
+			if (yearFound && monthFound && maxv <=31 && minv >=1) {
+				if (dayFound==0) {
+					dayFound=1;
+					memcpy(day,tmp,sizeof(int) * n);
+				}
+			}
+		} 
 		if (yearFound==1 && monthFound==1 && dayFound==1) {
 			DONE=1;
 		}
@@ -693,18 +950,18 @@ float * strings_to_fyears(char *s,int * strstart,int n) {
 			break;		 
 		}
 	}
-	F32PTR out=NULL;
+	int Nout=0;
 	if (DONE) {
-		out=malloc(sizeof(F32) * n);
+		Nout=n;
 		if (DONE==1) {
 			r_printf("INFO: '%s' interpreted as %04d-%02d-%02d (Y-M-D)\n",s,year[0],month[0],day[0]);
 			for (int i=0; i < n; i++) {
-				out[i]=YMDtoF32time(year[i],month[i],day[i]);
+				out[i]=FracYear_from_YMD(year[i],month[i],day[i]);
 			}
 		} else if (DONE==2)	 {
 			r_printf("INFO: '%s' interpreted as %04d-%03d (Year-DOY)\n",s,year[0],day[0]);
 			for (int i=0; i < n; i++) {
-				out[i]=YDOYtoF32time(year[i],day[i]);
+				out[i]=FracYear_from_intYDOY(year[i],day[i]);
 			}
 		}
 		else if (DONE==3) {
@@ -716,6 +973,6 @@ float * strings_to_fyears(char *s,int * strstart,int n) {
 	}
 	free(startidx);
 	free(year);
-	return out;
+	return Nout;
 }
 #include "abc_000_warning.h"

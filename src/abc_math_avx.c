@@ -1,9 +1,9 @@
 #include "abc_000_warning.h"
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     #pragma clang optimize on
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))),apply_to=function)
 #endif
-#ifdef  GCC_COMPILER
+#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
     #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
@@ -683,7 +683,7 @@ void  pow256_ps_ptr(F32PTR px,float n,F32PTR out) {
 } 
 #endif
 #endif 
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

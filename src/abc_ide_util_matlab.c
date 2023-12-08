@@ -6,6 +6,9 @@
 #include "abc_common.h"
 #include "abc_date.h"
 #if M_INTERFACE==1  
+int  JDN_to_DateNum(int jdn) {
+	return jdn - 1721059;
+}
 I32 GetConsoleWidth() {
 	mxArray *pOut[1],*pIn[2];
 	pIn[0]=mxCreateDoubleScalar(0);
@@ -64,6 +67,9 @@ void GetFieldNameByIdx(VOID_PTR strucVar,I32 ind0,char *str,int buflen) {
 }
 I32 GetCharArray(void* ptr,char* dst,int n) {
 	dst[0]=0;
+	if (ptr==NULL) {
+		return 0;
+	}
 	int len=0;
 	if (mxIsChar(ptr)){		
 		char* tmp=mxArrayToString(ptr);
@@ -232,7 +238,7 @@ void   GetDimensions(const void * ptr,int dims[],int ndims) {
 	}	
 }
 void  * SetDimensions(const void* ptr,int dims[],int ndims) {
-	if (!ptr) return;
+	if (!ptr) return NULL;
 	mwSize mwdims[20];
 	for (int i=0; i < ndims; i++) mwdims[i]=dims[i];
 	mwSize ndimension=ndims;
@@ -277,8 +283,9 @@ void * CreateStructVar(FIELD_ITEM *fieldList,int nfields)
 	for (int i=0; i < nfields;++i) {
 		nfields_actual++;
 		if (fieldList[i].name[0]==0) {
+			nfields_actual--;
 			break;
-		}	
+		}
 	}
 	nfields=nfields_actual;
 	mxArray * _restrict out;
@@ -326,8 +333,13 @@ void RemoveAttribute(VOID_PTR listVar,const char* field) {
 }
 Bool utIsInterruptPending();
 void utSetInterruptPending(Bool);
+#ifndef O_INTERFACE
 I32  CheckInterrupt()         { return utIsInterruptPending(); }
 void ConsumeInterruptSignal() { utSetInterruptPending(_False_); }
+#else
+I32  CheckInterrupt() { return 0; }
+void ConsumeInterruptSignal() { ; }
+#endif
 #else
 const static char achar='a';
 #endif

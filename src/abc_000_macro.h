@@ -1,6 +1,6 @@
 #pragma once
 #define R_INTERFACE   0
-#define M_INTERFACE   1
+#define M_INTERFACE   0
 #define P_INTERFACE    0
 #define MYMAT_LIBRARY   1
 #define MKL_LIBRARY     0
@@ -124,6 +124,21 @@
 		#define INLINE     inline
 		#define _restrict __restrict__		
         #define UNUSED_DECORATOR  __attribute__((unused))
+#endif
+#if   defined(LINUX_OS) && ( defined(GCC_COMPILER)||defined(CLANG_COMPILER) )
+	#ifdef _GNU_SOURCE 
+		#include <features.h>
+		#ifndef __USE_GNU
+			#define __MUSL__ 
+		#endif
+	#else
+		#define _GNU_SOURCE
+		#include <features.h>
+		#ifndef __USE_GNU
+		#define __MUSL__ 
+		#endif
+		#undef _GNU_SOURCE 
+	#endif
 #endif
 #ifdef MSVC_COMPILER
     # define ALIGN32_BEG __declspec(align(32))
@@ -279,8 +294,6 @@
 #define _in_
 #define _inout_
 #define _out_
-#define max(a,b)			(((a) > (b)) ? (a) : (b))
-#define min(a,b)			(((a) < (b)) ? (a) : (b))
 #define mv(n,src,dest)	r_cblas_scopy( n,src,1L,dest,1L) 
 #define cp(n,src,dest)    memcpy(dest,src,sizeof(F32)*(size_t)(n))
 #define SCPY(n,src,dest)  memcpy(dest,src,sizeof(F32)*(size_t)(n))

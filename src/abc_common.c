@@ -89,7 +89,7 @@ I32 strcicmp(char const * _restrict a,char const * _restrict b) {
 }
 I32 strcicmp_nfirst(char const* _restrict a,char const* _restrict b,int nfirst) {
 	if (nfirst==0) {
-		nfirst=strlen(a)+1;
+		nfirst=(int) strlen(a)+1;
 	}
 	int i=0;
 	for (;; a++,b++) {
@@ -276,7 +276,7 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		}		
 	}
 	if (numCpt==0) { return numCpt; }
-	QuickSortD(cpfromProb_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32_QuickSortD(cpfromProb_Val,cpfromProb_Pos,0,numCpt - 1);
 	numCpt=min(numCpt,maxCptNumber);
 	r_cblas_scopy(numCpt,(F32PTR)cpfromProb_Pos,1,(F32PTR) cpt,1);
 	I32PTR INDEX=(I32PTR) mem;
@@ -288,7 +288,7 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 	}
 	INDEX=INDEX - numCpt;
 	CPT_float=CPT_float - numCpt;	
-	QuickSortA(CPT_float,INDEX,0,numCpt - 1);
+	f32_QuickSortA(CPT_float,INDEX,0,numCpt - 1);
 	for (I32 i=0; i < numCpt; i++)
 	{
 		cptCI[i]=-9999.f;
@@ -397,7 +397,7 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		}
 	}
 	if (numCpt==0) { return numCpt; }
-	QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
 	numCpt=min(numCpt,maxCptNumber);
 	f32_copy( (F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);	
 	I32PTR INDEX_timeToProbAmp=(I32 *)mem ;
@@ -406,7 +406,7 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		cpt_f32[i]=(F32)cpt[i];
 		INDEX_timeToProbAmp[i]=i;
 	}
-	QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
 	f32_fill_val(-9999.f,cptCI,2*numCpt);
 	F32PTR tmpSeg=(F32*) mem+3 * N;
 	I32PTR nullSeg=(I32*) mem+4 * N;  
@@ -418,14 +418,14 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		startIdx=(startIdx+endIdx)/2;
 		len=endIdx-startIdx+1;		
 		f32_copy(prob+startIdx,tmpSeg,len);		
-		QuickSortA(tmpSeg,nullSeg,0,len - 1); 
+		f32_QuickSortA(tmpSeg,nullSeg,0,len - 1); 
 		cptCI[i]=confidenceInterval(tmpSeg,len,'L');
 		startIdx=(I32)cpt_f32[i];
 		endIdx=i==(numCpt - 1) ? (N - 1) : (I32)cpt_f32[i+1];
 		endIdx=(startIdx+endIdx)/2;
 	    len=endIdx - startIdx+1;
 		f32_copy(prob+startIdx,tmpSeg,len);		
-		QuickSortD(tmpSeg,nullSeg,0,len - 1); 
+		f32_QuickSortD(tmpSeg,nullSeg,0,len - 1); 
 		cptCI[numCpt+i]=confidenceInterval(tmpSeg,len,'R');
  	}
 	F32PTR cptCI_backup=mem+3*N;
@@ -467,7 +467,7 @@ static I32 FindChangepoint_minseg_is_1(F32PTR prob,F32PTR mem,F32 threshold,I32P
 		cpfromProb_Val[i]=prob[cpt];
 	}
 	if (numCpt==0) { return numCpt; }
-	QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
 	numCpt=min(numCpt,maxCptNumber);
 	f32_copy((F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);
 	I32PTR INDEX_timeToProbAmp=(I32*)mem;
@@ -476,7 +476,7 @@ static I32 FindChangepoint_minseg_is_1(F32PTR prob,F32PTR mem,F32 threshold,I32P
 		cpt_f32[i]=(F32)cpt[i];
 		INDEX_timeToProbAmp[i]=i;
 	}
-	QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
 	F32PTR cpt_summedProb=mem;
 	for (I32 i=0; i < numCpt; i++) {
 		I32 idx=INDEX_timeToProbAmp[i];
@@ -507,8 +507,8 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 	I32  numCpt=0;
 	for (I32 i=LOWERIDX; i < UPPERIDX; i++) 	{
 		if (sump[i] < threshold) continue;
-		Bool isLargeThanNearestNeighor=(sump[i] >=sump[i - 1]) && (sump[i] >=sump[i+1]);
-		Bool isLargeThanNearestTwoNeighors=(sump[i] * 4.0) > (sump[i+1]+sump[i+2]+sump[i - 1]+sump[i - 2]);
+		Bool isLargeThanNearestNeighor=(sump[i] > sump[i - 1] && sump[i] >=sump[i+1])||(sump[i] >=sump[i - 1] && sump[i] >  sump[i+1]);
+		Bool isLargeThanNearestTwoNeighors=(sump[i] * 4.0) >=(sump[i+1]+sump[i+2]+sump[i - 1]+sump[i - 2]);
 		if (isLargeThanNearestNeighor==0||(minSegLen>4 && isLargeThanNearestTwoNeighors==0)  ) continue;
 		I32 dist_to_prevCpt=i - cpfromSumP_Pos[numCpt - 1]; 
 		if ((numCpt==0)||dist_to_prevCpt > minSepDist||dist_to_prevCpt < -minSepDist) {
@@ -517,33 +517,96 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 			numCpt++;
 			continue;
 		} else {
-			if (sump[i] >=cpfromSumP_Val[numCpt - 1]) {
+			if (sump[i] > cpfromSumP_Val[numCpt - 1]) { 
 				cpfromSumP_Pos[numCpt - 1]=i;
 				cpfromSumP_Val[numCpt - 1]=sump[i];
 				continue;
 			}
 		}
 	}
-	for (I32 i=0; i < numCpt; i++) {
-		I32     cpt=cpfromSumP_Pos[i];		
-		I32     LOWERIDX=cpt-w0;
-		I32		UPPERIDX=cpt+w1;
-		I32		maxIdx=cpt;              
-		F32		maxVal=prob[cpt];
-		for (I32 j=LOWERIDX;  j <=UPPERIDX; j++) {
-			F32 curProb=prob[j];
-			if (  (curProb > prob[j - 1] && curProb >=prob[j+1])||(curProb >=prob[j - 1] && curProb > prob[j+1])  ) {
-				if (curProb > maxVal) {
-					maxIdx=j;
-					maxVal=curProb;
+	if (minSepDist <=4) {
+		for (I32 i=0; i < numCpt; i++) {
+			I32     cpt=cpfromSumP_Pos[i];
+			I32     LOWERIDX=cpt - w0;
+			I32		UPPERIDX=cpt+w1;
+			I32		maxIdx=cpt;
+			F32		maxVal=prob[cpt];
+			for (I32 j=LOWERIDX; j <=UPPERIDX; j++) {
+				F32 curProb=prob[j];
+				if ((curProb > prob[j - 1] && curProb >=prob[j+1])||(curProb >=prob[j - 1] && curProb > prob[j+1])) {
+					if (curProb > maxVal) {
+						maxIdx=j;
+						maxVal=curProb;
+					}
 				}
 			}
+			cpfromProb_Pos[i]=maxIdx;
+			cpfromProb_Val[i]=maxVal;
 		}
-		cpfromProb_Pos[i]=maxIdx;
-		cpfromProb_Val[i]=maxVal;
+	} else {
+		for (I32 i=0; i < numCpt; i++) {
+			I32     cpt=cpfromSumP_Pos[i];
+			I32     LOWERIDX=cpt - w0;
+			I32		UPPERIDX=cpt+w1;
+			I32 topTenPeaksLoc[10];
+			F32 topTenPeaksPrb[10];
+			I32 numTopTenCpt=0;
+			for (I32 j=LOWERIDX; j <=UPPERIDX; j++) {
+				F32 curProb=prob[j];
+				if ((curProb > prob[j - 1] && curProb >=prob[j+1])||(curProb >=prob[j - 1] && curProb > prob[j+1])) {
+					if (numTopTenCpt < 10) {
+						topTenPeaksLoc[numTopTenCpt]=j;
+						topTenPeaksPrb[numTopTenCpt]=curProb;
+						numTopTenCpt++;
+					}	else {
+						F32 minProbInList=100.f;
+						int minProbListIndex=0;
+						for (int k=0; k < 10; k++) {
+							if (minProbInList > topTenPeaksPrb[k]) {
+								minProbListIndex=k;
+								minProbInList=topTenPeaksPrb[k];
+							}
+						}
+						if (curProb > minProbInList) {
+							topTenPeaksLoc[minProbListIndex]=j;
+							topTenPeaksPrb[minProbListIndex]=curProb;
+						}
+					}					
+				} 
+			} 
+			if (numTopTenCpt==0) {
+				cpfromProb_Pos[i]=cpt;
+				cpfromProb_Val[i]=prob[cpt];
+			}
+			else if (numTopTenCpt==1) {
+				cpfromProb_Pos[i]=topTenPeaksLoc[0];
+				cpfromProb_Val[i]=topTenPeaksPrb[0];
+			}
+			else {
+				f32_QuickSortD(topTenPeaksPrb,topTenPeaksLoc,0,numTopTenCpt - 1);
+				if (topTenPeaksPrb[0] > 1.5 * topTenPeaksPrb[1]) {
+					cpfromProb_Pos[i]=topTenPeaksLoc[0];
+					cpfromProb_Val[i]=topTenPeaksPrb[0];
+				}
+				else {
+					int bestK=0;
+					F32 bestProb_3Neighors=-9999;
+					for (int k=0; k < numTopTenCpt; k++) {
+						int cpLoc=topTenPeaksLoc[k];
+						F32 cpProb_3Neighors=prob[cpLoc]+prob[cpLoc+1]+prob[cpLoc - 1];
+						if (cpProb_3Neighors > bestProb_3Neighors) {
+							bestProb_3Neighors=cpProb_3Neighors;
+							bestK=k;
+						}
+					}
+					cpfromProb_Pos[i]=topTenPeaksLoc[bestK];
+					cpfromProb_Val[i]=topTenPeaksPrb[bestK];
+				}
+			} 
+		}
 	}
 	if (numCpt==0) { return numCpt; }
-	QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
 	numCpt=min(numCpt,maxCptNumber);
 	f32_copy((F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);
 	I32PTR INDEX_timeToProbAmp=(I32*)mem;
@@ -552,7 +615,7 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 		cpt_f32[i]=(F32)cpt[i];
 		INDEX_timeToProbAmp[i]=i;
 	}
-	QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
 	f32_fill_val(-9999.f,cptCI,2 * numCpt);
 	F32PTR tmpSeg=(F32*)mem+3 * N;
 	I32PTR nullSeg=(I32*)mem+4 * N;
@@ -563,14 +626,14 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 		startIdx=(startIdx+endIdx)/2;
 		len=endIdx - startIdx+1;
 		f32_copy(prob+startIdx,tmpSeg,len);
-		QuickSortA(tmpSeg,nullSeg,0,len - 1); 
+		f32_QuickSortA(tmpSeg,nullSeg,0,len - 1); 
 		cptCI[i]=confidenceInterval(tmpSeg,len,'L');		
 		startIdx=(I32)cpt_f32[i];
 		endIdx=i==(numCpt - 1) ? (N - 1) : (I32)cpt_f32[i+1];
 		endIdx=(startIdx+endIdx)/2;
 		len=endIdx - startIdx+1;
 		f32_copy(prob+startIdx,tmpSeg,len);
-		QuickSortD(tmpSeg,nullSeg,0,len - 1); 
+		f32_QuickSortD(tmpSeg,nullSeg,0,len - 1); 
 		cptCI[numCpt+i]=confidenceInterval(tmpSeg,len,'R');
 	}
 	F32PTR cptCI_backup=mem+3 * N;
@@ -581,6 +644,168 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 		cptCI[idx]=cpt_f32[i] - cptCI_backup[i];
 		cptCI[numCpt+idx]=cpt_f32[i]+cptCI_backup[numCpt+i];
 		cpt_summedProb[i]=cpfromSumP_Val[i] > 1 ? 1.f : cpfromSumP_Val[i];
+	}
+	return numCpt;
+}
+I32 FindChangepoint_LeftRightMargins(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI,I32 N,I32 minSepDist,I32 maxCptNumber,I32 leftMargin,I32 rightMargin)
+{
+	if (maxCptNumber==0) { return maxCptNumber; }
+	I32 minSegLen=minSepDist+1;
+	if (minSepDist==0) { return FindChangepoint_minseg_is_1(prob,mem,threshold,cpt,cptCI,N,minSepDist,maxCptNumber);}
+	F32PTR sump=mem;
+	I32PTR cpfromSumP_Pos=(I32PTR)mem+N;
+	F32PTR cpfromSumP_Val=(F32PTR)mem+N * 2;
+	I32PTR cpfromProb_Pos=(I32PTR)mem+N * 3;
+	F32PTR cpfromProb_Val=(F32PTR)mem+N * 4;
+	I32 w0=minSegLen/2;         
+	I32 w1=(minSegLen - w0) - 1;  
+	f32_sumfilter(prob,sump,N,minSegLen);  
+	sump[0]=0; 
+   #define IsLocalPeak(j,p)      (  ( p[j]>p[j-1] && p[j]>=p[j+1] )||( p[j]>=p[j-1]&&p[j] > p[j+1]   ) )
+   #define IsPeak_4Neigbor(j,p)  (  p[j]>=p[j-1] && p[j]>=p[j+1] && p[j]>=p[j-2] && p[j] >=p[j+2]   )
+	I32  LOWERIDX=0+leftMargin+1; 
+	I32  UPPERIDX=(N-1) - rightMargin;    
+	I32  numCpt=0;
+	for (I32 i=LOWERIDX; i <=UPPERIDX; i++) {
+		if (sump[i] < threshold) continue;
+		Bool hasRightNeighor=(i < N-1);
+		Bool hasTwoNeighors=i > 1 && (i < N- 2);
+		Bool isLargeThanNearestNeighor=IsLocalPeak(i,sump);
+		Bool isLargeThanNearestTwoNeighors=IsPeak_4Neigbor(i,sump);
+		Bool isLargeThanLeftNeighor=(sump[i] > sump[i - 1]);  
+		if ( ( hasRightNeighor  && isLargeThanNearestNeighor==0 )||
+			 ( minSegLen > 4    && hasTwoNeighors && isLargeThanNearestTwoNeighors==0)||
+			 ( !hasRightNeighor && isLargeThanLeftNeighor==0) )
+			continue;
+		I32 dist_to_prevCpt=i - cpfromSumP_Pos[numCpt - 1]; 
+		if ( (numCpt==0)||dist_to_prevCpt > minSepDist||dist_to_prevCpt < -minSepDist) {
+			cpfromSumP_Pos[numCpt]=i;
+			cpfromSumP_Val[numCpt]=sump[i];
+			numCpt++;			
+		} else {
+			if (sump[i] > cpfromSumP_Val[numCpt - 1]) { 
+				cpfromSumP_Pos[numCpt - 1]=i;
+				cpfromSumP_Val[numCpt - 1]=sump[i];				
+			}
+		}
+	}
+	if (minSepDist <=4) {
+		for (I32 i=0; i < numCpt; i++) {
+			I32     cpt=cpfromSumP_Pos[i];
+			I32     LOWERIDX=max(cpt - w0,1  );  
+			I32		UPPERIDX=min(cpt+w1,N-1);  
+			I32		maxIdx=cpt;
+			F32		maxVal=prob[cpt];
+			for (I32 j=LOWERIDX; j <=UPPERIDX; j++) {		 
+				if (prob[j] > maxVal) {
+						maxIdx=j;
+						maxVal=prob[j];
+				}
+			}
+			cpfromProb_Pos[i]=maxIdx;
+			cpfromProb_Val[i]=maxVal;
+		}
+	}
+	else {
+		for (I32 i=0; i < numCpt; i++) {
+			I32     cpt=cpfromSumP_Pos[i];
+			I32     LOWERIDX=max(cpt - w0,1);     
+			I32		UPPERIDX=min(cpt+w1,N - 1); 
+			I32 topTenPeaksLoc[15];
+			F32 topTenPeaksPrb[15];
+			I32 numTopTenCpt=0;
+			for (I32 j=LOWERIDX; j <=UPPERIDX; j++) {
+				F32 curProb=prob[j];
+				Bool hasRightNeighbor=(j < N - 1);
+				if (  (hasRightNeighbor&&IsLocalPeak(j,prob) )||( !hasRightNeighbor && curProb>prob[j-1])    )
+				{
+					if (numTopTenCpt < 15) {
+						topTenPeaksLoc[numTopTenCpt]=j;
+						topTenPeaksPrb[numTopTenCpt]=curProb;
+						numTopTenCpt++;
+					} else {
+						F32 minProbInList=100.f;
+						int minProbListIndex=0;
+						for (int k=0; k < 15; k++) {
+							if (minProbInList > topTenPeaksPrb[k]) {
+								minProbListIndex=k;
+								minProbInList=topTenPeaksPrb[k];
+							}
+						}
+						if (curProb > minProbInList) {
+							topTenPeaksLoc[minProbListIndex]=j;
+							topTenPeaksPrb[minProbListIndex]=curProb;
+						}
+					}
+				} 
+			} 
+			if (numTopTenCpt==0) {
+				cpfromProb_Pos[i]=cpt;
+				cpfromProb_Val[i]=prob[cpt];
+			} else if (numTopTenCpt==1) {
+				cpfromProb_Pos[i]=topTenPeaksLoc[0];
+				cpfromProb_Val[i]=topTenPeaksPrb[0];
+			} else {
+				f32_QuickSortD(topTenPeaksPrb,topTenPeaksLoc,0,numTopTenCpt - 1);
+				if (topTenPeaksPrb[0] > 1.5 * topTenPeaksPrb[1]) {
+					cpfromProb_Pos[i]=topTenPeaksLoc[0];
+					cpfromProb_Val[i]=topTenPeaksPrb[0];
+				} else {
+					int bestK=0;
+					F32 bestProb_3Neighors=-9999;
+					for (int k=0; k < numTopTenCpt; k++) {
+						int cpLoc=topTenPeaksLoc[k];
+						F32 cpProb_3Neighors=cpLoc==N-1? (prob[cpLoc]+prob[cpLoc - 1]): (prob[cpLoc]+prob[cpLoc+1]+prob[cpLoc - 1]);
+						if (cpProb_3Neighors > bestProb_3Neighors) {
+							bestProb_3Neighors=cpProb_3Neighors;
+							bestK=k;
+						}
+					}
+					cpfromProb_Pos[i]=topTenPeaksLoc[bestK];
+					cpfromProb_Val[i]=topTenPeaksPrb[bestK];
+				}
+			} 
+		}
+	}
+	if (numCpt==0) { return numCpt; }
+	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	numCpt=min(numCpt,maxCptNumber);
+	f32_copy((F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);
+	I32PTR INDEX_timeToProbAmp=(I32*)mem;
+	F32PTR cpt_f32=(F32*)mem+N;
+	for (I32 i=0; i < numCpt; i++) {
+		cpt_f32[i]=(F32)cpt[i];
+		INDEX_timeToProbAmp[i]=i;
+	}
+	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32_fill_val(-9999.f,cptCI,2 * numCpt);
+	F32PTR tmpSeg=(F32*)mem+3 * N;
+	I32PTR nullSeg=(I32*)mem+4 * N;
+	for (I32 i=0; i < numCpt; i++) {
+		I32 startIdx,endIdx,len;
+		endIdx=(I32)cpt_f32[i];
+		startIdx=i==0 ? 0 : (I32)cpt_f32[i - 1];
+		startIdx=(startIdx+endIdx)/2;
+		len=endIdx - startIdx+1;
+		f32_copy(prob+startIdx,tmpSeg,len);
+		f32_QuickSortA(tmpSeg,nullSeg,0,len - 1); 
+		cptCI[i]=confidenceInterval(tmpSeg,len,'L');
+		startIdx=(I32)cpt_f32[i];
+		endIdx=i==(numCpt - 1) ? (N - 1) : (I32)cpt_f32[i+1];
+		endIdx=(startIdx+endIdx)/2;
+		len=endIdx - startIdx+1;
+		f32_copy(prob+startIdx,tmpSeg,len);
+		f32_QuickSortD(tmpSeg,nullSeg,0,len - 1); 
+		cptCI[numCpt+i]=confidenceInterval(tmpSeg,len,'R');
+	}
+	F32PTR cptCI_backup=mem+3 * N;
+	f32_copy(cptCI,cptCI_backup,2 * numCpt);
+	F32PTR cpt_summedProb=mem;
+	for (I32 i=0; i < numCpt; i++) {
+		I32 idx=INDEX_timeToProbAmp[i];
+		cptCI[idx]=cpt_f32[i] - cptCI_backup[i];
+		cptCI[numCpt+idx]=cpt_f32[i]+cptCI_backup[numCpt+i];
+		cpt_summedProb[i]=min(1.0,cpfromSumP_Val[i]);
 	}
 	return numCpt;
 }
@@ -606,7 +831,7 @@ void EnableFloatExcetion(void) {
 #endif
 #include "abc_cpu.h"
 #include "abc_ide_util.h"
-void SetupRoutines_ByCPU(Bool quite) {
+void SetupRoutines_AutoByCPU(Bool quite) {
 	static int IS_CPU_INSTRUCTON_CHECKED=0;
 	if (IS_CPU_INSTRUCTON_CHECKED) {
 		return;
@@ -641,7 +866,7 @@ void SetupRoutines_ByCPU(Bool quite) {
 }
 void SetupRoutines_UserChoice(int avxOption) {
 #if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
-	if (avxOption==1) {
+	if (avxOption==0) {
 		SetupVectorFunction_Generic();
 		SetupPCG_GENERIC();
 	}
@@ -649,12 +874,12 @@ void SetupRoutines_UserChoice(int avxOption) {
 		SetupVectorFunction_AVX2();
 		SetupPCG_AVX2();
 	}
-	else if (avxOption==3) {
+	else if (avxOption==512) {
 		SetupVectorFunction_AVX512();
 		SetupPCG_AVX512();
 	}
 	else {
-		SetupRoutines_ByCPU(1L); 
+		SetupRoutines_AutoByCPU(1L); 
 	} 
 #else
 	SetupVectorFunction_Generic();

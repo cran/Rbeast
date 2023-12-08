@@ -5,14 +5,16 @@ typedef union local_pcg32_random_struct {
 	U64 ALIGN32_BEG
 		state[4]
 		ALIGN32_END;  
-	U64	increment;	
+	U64	increment;	  
 	U64 MULTIPLIER_4steps;
 	U64 INCREMENT_4steps;
+	U32 INTERNAL_RNDBUF[4];  
+	int BUF_PTR;
 	};
 	struct {
 		U64 ALIGN32_BEG
 			state512[8]
-			ALIGN32_END;  
+			ALIGN32_END;    
 		U64	increment512;	
 		U64 MULTIPLIER_8steps;
 		U64 INCREMENT_8steps;
@@ -24,6 +26,7 @@ typedef union local_pcg32_random_struct {
 } local_pcg32_random_t;
 extern void (*local_pcg_set_seed)(local_pcg32_random_t* rng,U64 initstate,U64 initseq);
 extern void (*local_pcg_random)(local_pcg32_random_t* rng,U32PTR rnd,I32 N);
+extern void (*local_pcg_print_state)(local_pcg32_random_t* rng);
 extern F32  local_pcg_trgauss_oneside_scalar(local_pcg32_random_t* rng,F32 a,int whichside);
 extern  void local_pcg_randint(local_pcg32_random_t* rng,int bnd,I32PTR RND,int N);
 extern void local_pcg_gauss(local_pcg32_random_t* rng,F32PTR RND,int N);

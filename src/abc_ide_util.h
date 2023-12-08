@@ -1,6 +1,7 @@
 #pragma once
 #include "abc_001_config.h"
 #include "abc_datatype.h"
+#include "abc_ts_func.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,12 +16,20 @@ extern "C" {
 		int       extra; 
 	} FIELD_ITEM;
 	VOID_PTR GetFieldByIdx(VOID_PTR strucVar,I32 ind);
-	void  GetFieldNameByIdx(VOID_PTR strucVar,I32 ind0,char* str,int buflen);
-	void* CreateNumVar(DATA_TYPE dtype,int* dims,int ndims,VOIDPTR* data_ptr);
+	void    GetFieldNameByIdx(VOID_PTR strucVar,I32 ind0,char* str,int buflen);
+	void*   CreateNumVar(DATA_TYPE dtype,int* dims,int ndims,VOIDPTR* data_ptr);
+	void  * CreateNumVector(DATA_TYPE dtype,int length,VOIDPTR* data_ptr);
+	void  * CreateNumMatrix(DATA_TYPE dtype,int Nrow,int Ncol,VOIDPTR* data_ptr);
+	void* CreateF32NumVector(int length,VOIDPTR* data_ptr);
+	void* CreateF32NumMatrix(int Nrow,int Ncol,VOIDPTR* data_ptr);
+	void* CreateF64NumVector(int length,VOIDPTR* data_ptr);
+	void* CreateF64NumMatrix(int Nrow,int Ncol,VOIDPTR* data_ptr);
+	void* CreateI32NumVector(int length,VOIDPTR* data_ptr);
+	void* CreateI32NumMatrix(int Nrow,int Ncol,VOIDPTR* data_ptr);
 	void   ReplaceStructField(VOIDPTR s,char* fname,VOIDPTR newvalue);
-	void* CreateStructVar(FIELD_ITEM* fieldList,int nfields);
+	void*  CreateStructVar(FIELD_ITEM* fieldList,int nfields);
 	void   DestoryStructVar(VOID_PTR strutVar);
-	void RemoveSingltonDims(FIELD_ITEM* flist,I32 nlist);
+	void   RemoveSingltonDims(FIELD_ITEM* flist,I32 nlist);
 	void   RemoveField(FIELD_ITEM* fieldList,int nfields,char* fieldName);
 	void AddStringAttribute(VOID_PTR listVar,const char* field,const char* value);
 	void AddIntegerAttribute(VOID_PTR listVar,const char* field,I32 value);
@@ -60,13 +69,29 @@ extern "C" {
 	int HaveEqualDimesions(const void* p1,const void* p2);
 	int CopyNumericObjToF32Arr(F32PTR outmem,VOID_PTR infield,int N);
 	int CopyNumericObjToI32Arr(I32PTR outmem,VOID_PTR infield,int N);
+	int CopyNumericObjToF64Arr(F64PTR outmem,VOID_PTR infield,int N);
 	extern I32  CheckInterrupt(void);
 	extern void ConsumeInterruptSignal(void);
 	static INLINE int IsRinterface(void) { return R_INTERFACE; }
 	static INLINE int IsMinterface(void) { return M_INTERFACE; }
 	static INLINE int IsPinterface(void) { return P_INTERFACE; }
-	int  GetNumElemTimeObject(VOID_PTR timeObj);
-	F32PTR  CvtTimeObjToF32Arr(VOID_PTR timeObj,int* Nactual);
+	int     GetNumElemTimeObject(VOID_PTR timeObj);
+	typedef struct {
+		F64 fyear;
+		F64 value;
+		I08 unit;
+	} TimeScalarInfo;
+	F64 Parse_TimeIntervalObject(VOIDPTR* obj,TimeScalarInfo* tint);
+	F64 Parse_SingelDateObject(VOIDPTR* obj,TimeScalarInfo* tint);
+	extern char* dateNumOriginStr;
+	int  JDN_to_DateNum(int jdn);
+	void TimeVec_init(TimeVecInfo* tv);
+	void TimeVec_kill(TimeVecInfo* tv);
+	void TimeVec_kill_fyearArray(TimeVecInfo* tv);
+	int  TimeVec_from_TimeObject(VOID_PTR timeObj,TimeVecInfo* tv);
+	void TimeVec_from_StartDeltaTime(TimeVecInfo* tv,F32 start,F32 dt,int N,int isDate);
+	void TimeVec_SortCheckRegularOrder(TimeVecInfo* tv);
+	void TimeVec_UpdateUserStartDt(TimeVecInfo* tv);
 	void* CvtToPyArray_NewRef(VOIDPTR Y);
 #include "abc_mem.h"
 	void CharObj2CharArr(VOID_PTR o,DynMemBuf* str,DynAlignedBuf* charstart,DynAlignedBuf* nchars);
@@ -92,13 +117,12 @@ extern "C" {
 #define  r_free(x)       Free(x) 
 #define  IDE_NULL        R_NilValue
 #elif P_INTERFACE==1
-#define  r_printf(...)   printf(__VA_ARGS__)
 #define  r_printf(...)   PySys_WriteStdout(__VA_ARGS__)
 #define  r_error(...)    printf(__VA_ARGS__)
 #define  r_warning(...)  printf(__VA_ARGS__)
 #define  r_malloc(x)     PyMem_RawMalloc(x,char)  
 #define  r_free(x)       PyMem_RawFree(x) 
-#define  IDE_NULL       Py_None
+#define  IDE_NULL        Py_None
 #endif
 	extern char GLOBAL_QUIET_MODE;
 #define q_warning(...)  { if (!GLOBAL_QUIET_MODE) {r_warning(__VA_ARGS__);}}
@@ -110,8 +134,8 @@ extern "C" {
 #define PROTECT(XXXX)   XXXX
 #define UNPROTECT(XXXX) XXXX
 #elif P_INTERFACE==1 
-#define PROTECT(XXXX)   XXXX
-#define UNPROTECT(XXXX) XXXX
+	#define PROTECT(XXXX)   XXXX
+	#define UNPROTECT(XXXX) XXXX
 	extern PyTypeObject BarObject_Type;  
 	extern PyObject* currentModule;
 	extern PyObject* classOutout;

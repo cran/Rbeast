@@ -70,7 +70,7 @@ void BEAST2_GeneratePlotData(void)
 		for (I32 i=0; i < N; i++)  data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * (gData.s[i]+gData.t[i]);
 		data=gData.plotData[0][1];
 		a=H+H/(Ymax - Ymin) * Ymin; 	b=H/(Ymax - Ymin); 	x=0;
-		for (int i=0; i < N; i++)	data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * (gData.curs[i]+gData.ct[i]);
+		for (int i=0; i < N; i++)	data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * (gData.curs[i]+gData.curt[i]);
 	}
 	else { 
 		data=gData.plotData[0][0];
@@ -78,7 +78,7 @@ void BEAST2_GeneratePlotData(void)
 		for (I32 i=0; i < N; i++)  data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * (gData.t[i]);
 		data=gData.plotData[0][1];
 		a=H+H/(Ymax - Ymin) * Ymin; 	b=H/(Ymax - Ymin); 	x=0;
-		for (int i=0; i < N; i++)	data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * (gData.ct[i]);
+		for (int i=0; i < N; i++)	data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * (gData.curt[i] );
 	}
 	if (gData.S !=NULL) {
 		W=gData.w[1];
@@ -127,7 +127,7 @@ void BEAST2_GeneratePlotData(void)
 	for (I32 i=0; i < N; i++)  data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * gData.t[i];
 	data=gData.plotData[3][1];
 	a=H+H/(Ymax - Ymin) * Ymin; 	b=H/(Ymax - Ymin) ; 	x=0;
-	for (I32 i=0; i < N; i++)  data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * gData.ct[i];
+	for (I32 i=0; i < N; i++)  data[2 * i]=x,x+=dX,data[2 * i+1]=a - b * gData.curt[i];
 	data=gData.plotData[3][2];
 	ptsPerPoly=gData.plotData[3][3];
 	for (int i=0; i < gData.tKnotNum; i++) {

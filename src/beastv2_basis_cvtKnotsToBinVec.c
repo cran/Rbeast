@@ -11,8 +11,10 @@ static int DSVT(U08PTR good,I32 N,TKNOT_PTR KNOT,I64 nKnot,KNOT2BINVEC * info)
 	for (int i=1; i <=nKnot; i++) {
 		r_ippsSet_8u(0L,good+(KNOT[i-1] - minSepDist) - 1,2 * minSepDist+1);
 	}
-	r_ippsSet_8u(0,good,minSepDist+1);
-	r_ippsSet_8u(0,good+(N-minSepDist+1L) - 1,minSepDist);
+	I32 leftMargin=info->leftMargin;
+	I32 rightMargin=info->rightMargin;
+	r_ippsSet_8u(0,good,leftMargin+1);
+	r_ippsSet_8u(0,good+(N- rightMargin+1L) - 1,rightMargin);
 	I32  Npad16=((N+15)/16) *16;
 	I32  goodNum=i08_sum_binvec(good,Npad16);
 	return goodNum;
@@ -37,6 +39,8 @@ void CvtKnotsToBinVec(BEAST2_BASIS_PTR b,I32 NUMBASIS,I32 N,BEAST2_YINFO_PTR yIn
 	KNOT2BINVEC info={.yInfo=yInfo};
 	for (int i=0; i < NUMBASIS; i++) {
 		info.minSepDist=b[i].prior.minSepDist;			
+		info.leftMargin=b[i].prior.leftMargin;  
+		info.rightMargin=b[i].prior.rightMargin; 
 		switch (b[i].type) {
 			case DUMMYID:  
 			case SEASONID: 

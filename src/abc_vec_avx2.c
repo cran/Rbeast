@@ -5,6 +5,7 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 #include "abc_vec.h"
+#define STATIC static
 #if defined (WIN64_OS)||defined(WIN32_OS)
     #include <malloc.h> 
 #else
@@ -13,11 +14,11 @@
 #ifdef MSVC_COMPILER
     #define __attribute__(x)
 #endif
-#ifdef CLANG_COMPILER
+#if  defined(CLANG_COMPILER) && !defined(ARM64_OS) 
     #pragma clang optimize on
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))),apply_to=function)
 #endif
-#ifdef  GCC_COMPILER
+#if  defined(GCC_COMPILER) && !defined(ARM64_OS) 
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
      #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
@@ -99,7 +100,7 @@ static INLINE I32  __attribute__((always_inline)) i32_hsum(__m256i r)   {
     __m128i sum32=_mm_add_epi32(sum64,hi32);
     return _mm_cvtsi128_si32(sum32);       
 }
- void avx2_i32_add_val_inplace (const int c,const I32PTR x,const int N) {
+STATIC void avx2_i32_add_val_inplace (const int c,const I32PTR x,const int N) {
     __m256i  C=set1_i32(c);
     int i=0;
     for (; i < N - (NF4-1); i+=NF4) 
@@ -114,7 +115,7 @@ static INLINE I32  __attribute__((always_inline)) i32_hsum(__m256i r)   {
         maskstorei(x+i,GetMoveMask(n),addi32(loadi(x+i),C)  );
     _mm256_zeroupper();    
 }
-I32  avx2_i32_sum(const I32PTR x,const int N) {
+STATIC I32  avx2_i32_sum(const I32PTR x,const int N) {
     __m256i  S=set0i();
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
@@ -131,7 +132,7 @@ I32  avx2_i32_sum(const I32PTR x,const int N) {
      _mm256_zeroupper();
      return sum;
 }
-F32  avx2_f32_sum(const F32PTR x,const int N) {
+STATIC F32  avx2_f32_sum(const F32PTR x,const int N) {
     __m256  S=set0();
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
@@ -146,7 +147,7 @@ F32  avx2_f32_sum(const F32PTR x,const int N) {
      _mm256_zeroupper();
      return sum;
 }
-void avx2_f32_fill_val(const F32 c,F32PTR x,int N) {    
+STATIC void avx2_f32_fill_val(const F32 c,F32PTR x,int N) {
     __m256  C=set1(c);
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
@@ -162,7 +163,7 @@ void avx2_f32_fill_val(const F32 c,F32PTR x,int N) {
         maskstore(x+i,GetMoveMask(n),C);    
     _mm256_zeroupper();
 }
-void avx2_f32_add_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
+STATIC void avx2_f32_add_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
    int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {       
         store(dst+i,add(load(src2+i),load(src1+i)));
@@ -177,7 +178,7 @@ void avx2_f32_add_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
         maskstore(dst+i,GetMoveMask(n),add(load(src2+i),load(src1+i))  );
     _mm256_zeroupper();
 }
-void avx2_f32_sub_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
+STATIC void avx2_f32_sub_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
    int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {       
         store(dst+i,sub(load(src2+i),load(src1+i)));
@@ -192,7 +193,7 @@ void avx2_f32_sub_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
         maskstore(dst+i,GetMoveMask(n),sub(load(src2+i),load(src1+i))  );
     _mm256_zeroupper();
 }
-void avx2_f32_add_vec_inplace(const F32PTR src,const F32PTR dst,const int N) {
+STATIC void avx2_f32_add_vec_inplace(const F32PTR src,const F32PTR dst,const int N) {
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
         store(dst+i,add(load(dst+i),load(src+i)));
@@ -208,7 +209,7 @@ void avx2_f32_add_vec_inplace(const F32PTR src,const F32PTR dst,const int N) {
         maskstore(dst+i,GetMoveMask(n),add(load(dst+i),load(src+i))  );
     _mm256_zeroupper();
 }
-void avx2_f32_sub_vec_inplace(const F32PTR src,F32PTR dst,int N) {
+STATIC void avx2_f32_sub_vec_inplace(const F32PTR src,F32PTR dst,int N) {
    int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {       
         store(dst+i,sub(load(dst+i),load(src+i)));
@@ -224,7 +225,7 @@ void avx2_f32_sub_vec_inplace(const F32PTR src,F32PTR dst,int N) {
         maskstore(dst+i,GetMoveMask(n),sub(load(dst+i),load(src+i))  );
     _mm256_zeroupper();
 }
-void avx2_f32_add_val_inplace(const F32 c,const F32PTR x,const int N) {
+STATIC void avx2_f32_add_val_inplace(const F32 c,const F32PTR x,const int N) {
     __m256  C=set1(c);
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) 
@@ -239,7 +240,7 @@ void avx2_f32_add_val_inplace(const F32 c,const F32PTR x,const int N) {
         maskstore(x+i,GetMoveMask(n),add(load(x+i),C)  );
     _mm256_zeroupper();
 }
-void avx2_f32_subrev_val_inplace(const F32 c,const F32PTR x,const int N) {
+STATIC void avx2_f32_subrev_val_inplace(const F32 c,const F32PTR x,const int N) {
     __m256  C=set1(c);
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) 
@@ -254,7 +255,7 @@ void avx2_f32_subrev_val_inplace(const F32 c,const F32PTR x,const int N) {
         maskstore(x+i,GetMoveMask(n),sub(C,load(x+i))  );
     _mm256_zeroupper();
 }
-void avx2_f32_mul_val_inplace(const F32 c,const F32PTR x,const int N) {
+STATIC void avx2_f32_mul_val_inplace(const F32 c,const F32PTR x,const int N) {
     __m256  C=set1(c);
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4)
@@ -269,7 +270,7 @@ void avx2_f32_mul_val_inplace(const F32 c,const F32PTR x,const int N) {
         maskstore(x+i,GetMoveMask(n),mul(load(x+i),C));
     _mm256_zeroupper();
 }
-void avx2_f32_mul_vec_inplace(const F32PTR src,F32PTR dst,int N) {
+STATIC void avx2_f32_mul_vec_inplace(const F32PTR src,F32PTR dst,int N) {
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
         store(dst+i,mul(load(dst+i),load(src+i)));
@@ -285,7 +286,7 @@ void avx2_f32_mul_vec_inplace(const F32PTR src,F32PTR dst,int N) {
         maskstore(dst+i,GetMoveMask(n),mul(load(dst+i),load(src+i))  );
     _mm256_zeroupper();
 }
-void avx2_f32_mul_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
+STATIC void avx2_f32_mul_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
    int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {       
         store(dst+i,mul(load(src2+i),load(src1+i)));
@@ -301,7 +302,7 @@ void avx2_f32_mul_vec(const F32PTR src1,const F32PTR src2,F32PTR dst,int N) {
         maskstore(dst+i,GetMoveMask(n),mul(load(src2+i),load(src1+i))  );
     _mm256_zeroupper();
 }
-void avx2_f32_add_v_v2_vec_inplace(const F32PTR src,const F32PTR  v,const F32PTR  v2,int N) {
+STATIC void avx2_f32_add_v_v2_vec_inplace(const F32PTR src,const F32PTR  v,const F32PTR  v2,int N) {
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
         store(v+i,add(load(v+i),load(src+i)));
@@ -326,7 +327,7 @@ void avx2_f32_add_v_v2_vec_inplace(const F32PTR src,const F32PTR  v,const F32PTR
     }
     _mm256_zeroupper();
 }
-F32 avx2_f32_dot(F32PTR  x,F32PTR y,int N) {
+STATIC F32 avx2_f32_dot(F32PTR  x,F32PTR y,int N) {
     __m256 r=set0();    
     int i=0;    
     for (; i < N - (NF4 - 1); i+=NF4) {
@@ -350,7 +351,7 @@ F32 avx2_f32_dot(F32PTR  x,F32PTR y,int N) {
      _mm256_zeroupper();    
     return sum;
 }
-F32 avx2_f32_dot2x1(F32PTR  x,F32PTR y,F32PTR v,int N,F32PTR res) {
+STATIC F32 avx2_f32_dot2x1(F32PTR  x,F32PTR y,F32PTR v,int N,F32PTR res) {
     __m256 RX=set0();
     __m256 RY=set0();
     int i=0;    
@@ -379,7 +380,7 @@ F32 avx2_f32_dot2x1(F32PTR  x,F32PTR y,F32PTR v,int N,F32PTR res) {
     res[0]=sumX;
     return sumY;
 }
-void avx2_f32_dot2x2(F32PTR  x,F32PTR y,F32PTR v,F32PTR w,int N,F32PTR res1,F32PTR res2) {
+STATIC void avx2_f32_dot2x2(F32PTR  x,F32PTR y,F32PTR v,F32PTR w,int N,F32PTR res1,F32PTR res2) {
     __m256 RX1=set0();
     __m256 RX2=set0();
     __m256 RY1=set0();
@@ -426,7 +427,7 @@ void avx2_f32_dot2x2(F32PTR  x,F32PTR y,F32PTR v,F32PTR w,int N,F32PTR res1,F32P
     res2[1]=sumY2;
     return;
 }
-F32 avx2_fma_f32_dot(F32PTR  x,F32PTR y,int N) {
+STATIC F32 avx2_fma_f32_dot(F32PTR  x,F32PTR y,int N) {
     __m256 r0=set0();
     __m256 r1=set0();
     __m256 r2=set0();
@@ -452,7 +453,7 @@ F32 avx2_fma_f32_dot(F32PTR  x,F32PTR y,int N) {
      _mm256_zeroupper();
     return sum;
 }
-void avx2_f32_sqrt_vec_inplace(const F32PTR x,const int N)
+STATIC void avx2_f32_sqrt_vec_inplace(const F32PTR x,const int N)
 {
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
@@ -471,7 +472,7 @@ void avx2_f32_sqrt_vec_inplace(const F32PTR x,const int N)
     }    
     _mm256_zeroupper();
 }
-void avx2_f32_sqrt_vec(const F32PTR x,const F32PTR y,const int N)
+STATIC void avx2_f32_sqrt_vec(const F32PTR x,const F32PTR y,const int N)
 {
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
@@ -491,7 +492,7 @@ void avx2_f32_sqrt_vec(const F32PTR x,const F32PTR y,const int N)
     _mm256_zeroupper();
 }
 #ifdef MSVC_COMPILER
-void avx2_f32_sin_vec_inplace_MSVC(const F32PTR x,const int N)
+STATIC void avx2_f32_sin_vec_inplace_MSVC(const F32PTR x,const int N)
 {
     int i=0;
     for (; i < N - (NF - 1); i+=NF) {
@@ -503,7 +504,7 @@ void avx2_f32_sin_vec_inplace_MSVC(const F32PTR x,const int N)
     }    
     _mm256_zeroupper();
 }
-void avx2_f32_cos_vec_inplace_MSVC(const F32PTR x,const int N)
+STATIC void avx2_f32_cos_vec_inplace_MSVC(const F32PTR x,const int N)
 {
     int i=0;
     for (; i < N - (NF - 1); i+=NF) {
@@ -515,7 +516,7 @@ void avx2_f32_cos_vec_inplace_MSVC(const F32PTR x,const int N)
     }    
     _mm256_zeroupper();
 }
-void avx2_f32_sincos_vec_inplace_MSVC(const F32PTR in_outsin,F32PTR outcos,const int N)
+STATIC void avx2_f32_sincos_vec_inplace_MSVC(const F32PTR in_outsin,F32PTR outcos,const int N)
 {
     int i=0;
     for (; i < N - (NF - 1); i+=NF) {
@@ -532,7 +533,7 @@ void avx2_f32_sincos_vec_inplace_MSVC(const F32PTR in_outsin,F32PTR outcos,const
     }
     _mm256_zeroupper();
 }
-void avx2_f32_pow_vec_inplace_MSVC(F32PTR x,F32 pow,int N)
+STATIC void avx2_f32_pow_vec_inplace_MSVC(F32PTR x,F32 pow,int N)
 {
     __m256 C=set1(pow);
     int i=0;
@@ -545,7 +546,7 @@ void avx2_f32_pow_vec_inplace_MSVC(F32PTR x,F32 pow,int N)
     }    
     _mm256_zeroupper();
 }
-void avx2_f32_log_vec_inplace_MSVC(const F32PTR x,const int N)
+STATIC void avx2_f32_log_vec_inplace_MSVC(const F32PTR x,const int N)
 {
     int i=0;
     for (; i < N - (NF - 1); i+=NF) {
@@ -557,7 +558,7 @@ void avx2_f32_log_vec_inplace_MSVC(const F32PTR x,const int N)
     }
     _mm256_zeroupper();
 }
-void avx2_f32_exp_vec_inplace_MSVC(const F32PTR x,const int N)
+STATIC void avx2_f32_exp_vec_inplace_MSVC(const F32PTR x,const int N)
 {
     int i=0;
     for (; i < N - (NF - 1); i+=NF) {
@@ -570,7 +571,7 @@ void avx2_f32_exp_vec_inplace_MSVC(const F32PTR x,const int N)
     _mm256_zeroupper();
 }
 #endif
-void avx2_f32_sin_vec_inplace(const F32PTR x,const int N)
+STATIC void avx2_f32_sin_vec_inplace(const F32PTR x,const int N)
 {
     int i=0;
     for (; i < N - (NF - 1); i+=NF)    
@@ -580,7 +581,7 @@ void avx2_f32_sin_vec_inplace(const F32PTR x,const int N)
         maskstore(x+i,GetMoveMask(n),sin256_ps(x+i) );    
     _mm256_zeroupper();    
 }
-void avx2_f32_cos_vec_inplace(const F32PTR x,const int N)
+STATIC void avx2_f32_cos_vec_inplace(const F32PTR x,const int N)
 {
      int i=0;
     for (; i < N - (NF - 1); i+=NF)    
@@ -590,7 +591,7 @@ void avx2_f32_cos_vec_inplace(const F32PTR x,const int N)
         maskstore(x+i,GetMoveMask(n),cos256_ps(x+i) );    
     _mm256_zeroupper();    
 }
-void avx2_f32_sincos_vec_inplace(const F32PTR in_outsin,F32PTR outcos,const int N) 
+STATIC void avx2_f32_sincos_vec_inplace(const F32PTR in_outsin,F32PTR outcos,const int N)
 {
     int i=0;
     for (; i < N - (NF - 1); i+=NF) 
@@ -626,8 +627,7 @@ static INLINE __m256 pow256_int(__m256 x,int n)
     }
     return res;
 }
-void avx2_f32_pow_vec_inplace(F32PTR x,F32 pow,int N)
-{
+STATIC void avx2_f32_pow_vec_inplace(F32PTR x,F32 pow,int N) {
          int   nInteger=pow;
         float  nRemainder=pow - nInteger;
         if (nRemainder !=0) {
@@ -650,7 +650,7 @@ void avx2_f32_pow_vec_inplace(F32PTR x,F32 pow,int N)
         }
         _mm256_zeroupper();
 }
-void avx2_f32_log_vec_inplace(const F32PTR x,const int N)
+STATIC void avx2_f32_log_vec_inplace(const F32PTR x,const int N)
 {
      int i=0;
     for (; i < N - (NF - 1); i+=NF)    
@@ -660,7 +660,7 @@ void avx2_f32_log_vec_inplace(const F32PTR x,const int N)
         maskstore(x+i,GetMoveMask(n),log256_ps(x+i) );    
     _mm256_zeroupper();    
 }
-void avx2_f32_exp_vec_inplace(const F32PTR x,const int N)
+STATIC void avx2_f32_exp_vec_inplace(const F32PTR x,const int N)
 {
      int i=0;
     for (; i < N - (NF - 1); i+=NF)    
@@ -670,7 +670,7 @@ void avx2_f32_exp_vec_inplace(const F32PTR x,const int N)
         maskstore(x+i,GetMoveMask(n),exp256_ps(x+i) );
     _mm256_zeroupper();    
 }
-void  avx2_f32_avgstd(const F32PTR x,int N,F32PTR avg,F32PTR std) {
+STATIC void  avx2_f32_avgstd(const F32PTR x,int N,F32PTR avg,F32PTR std) {
     __m256  S=set0();
     __m256  SS=set0();
     int i=0;
@@ -701,7 +701,7 @@ void  avx2_f32_avgstd(const F32PTR x,int N,F32PTR avg,F32PTR std) {
      std[0]=sqrtf((sumxx - AVG * sumx)/(N - 1));
      avg[0]=AVG;
 }
-void avx2_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample,F32 scale,F32 offset,int N) {
+STATIC void avx2_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample,F32 scale,F32 offset,int N) {
     __m256 invsample_scale=set1(1./(F64)Nsample * scale);
     __m256 invsample_scale2=set1(1./(F64)Nsample * scale*scale);
     __m256 offset_vec=set1(offset);
@@ -730,7 +730,7 @@ void avx2_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample,F32 scal
 #ifdef WIN64_OS 
     #define WIN32_LEAN_AND_MEAN
     #include "windows.h"
-I32 avx2_f32_maxidx1(const F32PTR x,const int N,F32PTR val) {
+STATIC I32 avx2_f32_maxidx1(const F32PTR x,const int N,F32PTR val) {
     if (N < 8) {        
         int maxIdx=0;
         F32 maxVal=x[0];        
@@ -785,7 +785,7 @@ I32 avx2_f32_maxidx1(const F32PTR x,const int N,F32PTR val) {
     return ID.idx[index>>2] ;
 }
 #endif
-I32 avx2_f32_maxidx(const F32PTR x,const int N,F32PTR val) {
+STATIC I32 avx2_f32_maxidx(const F32PTR x,const int N,F32PTR val) {
     __m128i _maskIdx=_mm_cvtsi64_si128(0x0706050403020100);
     __m256i idx=_mm256_cvtepu8_epi32(_maskIdx);
     __m256i EIGHT=set1_i32(8);
@@ -830,7 +830,7 @@ I32 avx2_f32_maxidx(const F32PTR x,const int N,F32PTR val) {
      val[0]=VAL[IDX];
     return ID.idx[IDX];
 }
-I32 avx2_f32_minidx(const F32PTR x,const int N,F32PTR val) {
+STATIC I32 avx2_f32_minidx(const F32PTR x,const int N,F32PTR val) {
     __m128i _maskIdx=_mm_cvtsi64_si128(0x0706050403020100);
     __m256i idx=_mm256_cvtepu8_epi32(_maskIdx);
     __m256i EIGHT=set1_i32(8);
@@ -875,7 +875,7 @@ I32 avx2_f32_minidx(const F32PTR x,const int N,F32PTR val) {
      val[0]=VAL[IDX];
     return ID.idx[IDX];
 }
-void avx2_f32_diff_back(const F32PTR  x,F32PTR result,const int N) {
+STATIC void avx2_f32_diff_back(const F32PTR  x,F32PTR result,const int N) {
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4) {
         store(result+i,sub(load(x+i),load(x+i-1)));
@@ -892,7 +892,7 @@ void avx2_f32_diff_back(const F32PTR  x,F32PTR result,const int N) {
     _mm256_zeroupper();
     result[0]=result[1];
 }
-void avx2_f32_seq(F32PTR p,F32 x0,F32 dX,int N) {
+STATIC void avx2_f32_seq(F32PTR p,F32 x0,F32 dX,int N) {
     __m256 X;
     {    
         __m128i tmp=_mm_cvtsi64_si128(0x0706050403020100);
@@ -913,7 +913,7 @@ void avx2_f32_seq(F32PTR p,F32 x0,F32 dX,int N) {
     }     
     _mm256_zeroupper();    
 }
-void avx2_i32_seq(I32PTR p,I32 x0,I32 dX,int N) {
+STATIC void avx2_i32_seq(I32PTR p,I32 x0,I32 dX,int N) {
     __m256i X;
     {
         __m128i tmp=_mm_cvtsi64_si128(0x0706050403020100);
@@ -933,7 +933,7 @@ void avx2_i32_seq(I32PTR p,I32 x0,I32 dX,int N) {
     }
     _mm256_zeroupper();
 }
-void avx2_f32_to_f64_inplace(F32PTR data32,int N) {
+STATIC void avx2_f32_to_f64_inplace(F32PTR data32,int N) {
     F64PTR data64=data32;
     int i=N - 8;
     for (; i >=0; i -=8) {
@@ -953,7 +953,7 @@ void avx2_f32_to_f64_inplace(F32PTR data32,int N) {
     for (; i >=0; --i)   data64[i]=data32[i];    
     _mm256_zeroupper();    
 }
-void avx2_f64_to_f32_inplace(F64PTR data64,int N) {
+STATIC void avx2_f64_to_f32_inplace(F64PTR data64,int N) {
     F32PTR data32=data64;
     int i=0;
     for (; i < N-7; i+=8) {    
@@ -969,7 +969,7 @@ void avx2_f64_to_f32_inplace(F64PTR data64,int N) {
     _mm256_zeroupper();
     for (; i <N;++i)      data32[i]=data64[i];         
 }
-void avx2_i32_to_f32_scaleby_inplace(I32PTR x,int N,F32 scale) {
+STATIC void avx2_i32_to_f32_scaleby_inplace(I32PTR x,int N,F32 scale) {
     __m256  C=set1(scale);
     int i=0;
     for (; i < N - (NF4 - 1); i+=NF4)
@@ -984,7 +984,7 @@ void avx2_i32_to_f32_scaleby_inplace(I32PTR x,int N,F32 scale) {
         maskstore(x+i,GetMoveMask(n),mul(_mm256_cvtepi32_ps(loadi(x+i)),C));
     _mm256_zeroupper();
 }
-void avx2_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
+STATIC void avx2_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
     __m256   C0=set0();
     __m256i  C1=set1_i32(1);
     int i=0;
@@ -1006,7 +1006,7 @@ void avx2_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
     }
     _mm256_zeroupper();
 }
-void avx2_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N) {
+STATIC void avx2_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N) {
     __m256   C0=set0();
     __m256   Ceplison1=set1(1e-10);
     __m256   Ceplison2=set1(-1e-10);
@@ -1037,7 +1037,7 @@ void avx2_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N)
     }
     _mm256_zeroupper();
 }
-I32  avx2_i08_sum_binvec(U08PTR binvec,I32 N) {
+STATIC I32  avx2_i08_sum_binvec(U08PTR binvec,I32 N) {
 	I32   SUM=0;
 	I32	  i=0;
     __m256i r=set0i();
@@ -1089,7 +1089,7 @@ I32  avx2_i08_sum_binvec(U08PTR binvec,I32 N) {
     }
 	return SUM;
 }
-void avx2_f32_gemm_XtY2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void avx2_f32_gemm_XtY2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 { 
 	for (int col=0; col < N;++col) {
 		int row=0;
@@ -1101,7 +1101,7 @@ void avx2_f32_gemm_XtY2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F3
 		C+=ldc;
 	}
 }
-void avx2_f32_gemm_XtY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void avx2_f32_gemm_XtY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 {
 	int COL;
  	for (COL=0; COL < N-(2-1); COL+=2) {
@@ -1152,7 +1152,7 @@ static INLINE __m256i GetRowOffset( I32 lda ) {
     __m256i offset1=_mm256_mullo_epi32(offset,vecLDA);
     return offset1;
 }
-void avx2_f32_gemm_XY1x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void avx2_f32_gemm_XY1x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 {
     F32     XROW_FIXEXD[4096];
     F32PTR  Xrow=(K<=4096)? XROW_FIXEXD: alloca(K*sizeof(F32));
@@ -1169,7 +1169,7 @@ void avx2_f32_gemm_XY1x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32
             *(Crow+ldc*col)=avx2_f32_dot(B+col * ldb,Xrow,K);
     }  
 }
-void avx2_f32_gemm_XY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void avx2_f32_gemm_XY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 { 
     F32     XROW_FIXEXD[4096];
     F32PTR  Xrow=(2*K <=4096) ? XROW_FIXEXD : alloca(2*K * sizeof(F32));
@@ -1197,7 +1197,7 @@ void avx2_f32_gemm_XY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32
             *(Crow+ldc * col )=avx2_f32_dot(Xrow1,B+col*ldb,K);            
 	}
 }
-void avx2_f32_gemm_XtYt2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void avx2_f32_gemm_XtYt2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 { 
     F32     YROW_FIXEXD[4096];
     F32PTR  Yrow=(2*K <=4096) ? YROW_FIXEXD : alloca(2*K * sizeof(F32));
@@ -1271,7 +1271,7 @@ static INLINE F32 __avx2_f32_dot_stride(F32PTR  x,F32PTR y,int N,__m256i mask,__
      _mm256_zeroupper();    
     return sum;
 }
-void avx2_f32_gemm_XYt2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void avx2_f32_gemm_XYt2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 {
     F32     XROW_FIXEXD[4096];
     F32PTR  Xrow=(2 * K <=4096) ? XROW_FIXEXD : alloca( 2*K * sizeof(F32) );
@@ -1298,7 +1298,7 @@ void avx2_f32_gemm_XYt2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F3
             *(Crow+ldc * col)=__avx2_f32_dot_stride(Xrow1,B+col,K,mask,BOffset,ldb);
     }
 }
-void avx2_f32_gemv_Xy1x1_slow(int N,int K,F32PTR X,int lda,F32PTR y,F32PTR C)
+STATIC void avx2_f32_gemv_Xy1x1_slow(int N,int K,F32PTR X,int lda,F32PTR y,F32PTR C)
 {     
     I32     nRemainder=K%8;
     __m256i mask=GetMoveMask(nRemainder);
@@ -1370,7 +1370,7 @@ static INLINE void __avx2_f32_ax1ax2py_inplace(const F32PTR a,const F32PTR x1,co
     }  
     _mm256_zeroupper();
 }
-void avx2_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
+STATIC void avx2_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
 {
     memset(C,0,sizeof(F32) * N);
     int row=0;
@@ -1394,12 +1394,12 @@ void avx2_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
 }
 static INLINE I32 _avx2_f32_findindex_LT(F32PTR  x,I32PTR indices,F32 value,int N) {
     __m256  VALUE=set1(value);
-    int  cnt=0;
+    int cnt=0;
     int i=0;
     for (; i < N - (NF - 1); i+=NF) {
         __m256 cmpmask=_mm256_cmp_ps(load(x+i),VALUE,_CMP_LT_OQ);
         int    mask=_mm256_movemask_ps(cmpmask);
-        int  segIdx=i;
+        int    segIdx=i;
         while (mask) {
             int keep=mask & 0x1L;
             indices[cnt]=segIdx++;
@@ -1411,7 +1411,7 @@ static INLINE I32 _avx2_f32_findindex_LT(F32PTR  x,I32PTR indices,F32 value,int 
     if (n > 0) {
         __m256i movemask=GetMoveMask(n);
         __m256  cmpmask=_mm256_cmp_ps(maskload(x+i,movemask),VALUE,_CMP_LT_OQ);
-        int    mask=_mm256_movemask_ps(_mm256_and_ps(cmpmask,_mm256_castsi256_ps(movemask)));
+        int     mask=_mm256_movemask_ps(_mm256_and_ps(cmpmask,_mm256_castsi256_ps(movemask)));
         int  segIdx=i;
         while (mask) {
             int keep=mask & 0x1L;
@@ -1549,7 +1549,7 @@ static INLINE I32 _avx2_f32_findindex_EQ(F32PTR  x,I32PTR indices,F32 value,int 
     _mm256_zeroupper();
     return cnt;
 }
-I32 avx2_f32_findindex(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag) {
+STATIC I32 avx2_f32_findindex(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag) {
     switch (flag) {
     case CMP_LT:
         return _avx2_f32_findindex_LT(x,indices,value,N);
@@ -1564,7 +1564,7 @@ I32 avx2_f32_findindex(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag) {
     }
     return 0;
 }
-void  avx2_f32_scatter_val_byindex(F32PTR  x,I32PTR indices,F32 value,int N) {
+STATIC void  avx2_f32_scatter_val_byindex(F32PTR  x,I32PTR indices,F32 value,int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -1604,7 +1604,7 @@ static void avx2_f32_scatter_val_byindex_slow_not_used(F32PTR  x,I32PTR indices,
     _mm256_zeroupper();
     for (; i < N;++i)    x[indices[i]]=value;
 }
-void avx2_f32_scatter_vec_byindex(F32PTR  x,I32PTR indices,F32PTR values,int N) {
+STATIC void avx2_f32_scatter_vec_byindex(F32PTR  x,I32PTR indices,F32PTR values,int N) {
      int i=0;
      #define f2i _mm_castps_si128
      #define i2f _mm_castsi128_ps
@@ -1632,7 +1632,7 @@ void avx2_f32_scatter_vec_byindex(F32PTR  x,I32PTR indices,F32PTR values,int N) 
     _mm256_zeroupper();
     for (; i < N;++i)    x[indices[i]]=values[i];
 } 
-void avx2_f32_gatherVec_scatterVal_byindex(F32PTR  x,I32PTR indices,F32PTR values,F32 newValue,int N) {
+STATIC void avx2_f32_gatherVec_scatterVal_byindex(F32PTR  x,I32PTR indices,F32PTR values,F32 newValue,int N) {
      int i=0;   
     for (; i < N - (NF - 1); i+=NF) {
         __m256i index=loadi(indices+i);   
@@ -1664,7 +1664,7 @@ void avx2_f32_gatherVec_scatterVal_byindex(F32PTR  x,I32PTR indices,F32PTR value
         x[indices[i]]=newValue;
     }
 } 
-void avx2_f32_gather2Vec_scatterVal_byindex(F32PTR  x,F32PTR  y,I32PTR indices,F32PTR values,F32 newValue,int N) {
+STATIC void avx2_f32_gather2Vec_scatterVal_byindex(F32PTR  x,F32PTR  y,I32PTR indices,F32PTR values,F32 newValue,int N) {
      int i=0;   
     for (; i < N - (NF - 1); i+=NF) {
         __m256i index=loadi(indices+i);   
@@ -1702,7 +1702,7 @@ void avx2_f32_gather2Vec_scatterVal_byindex(F32PTR  x,F32PTR  y,I32PTR indices,F
         y[indices[i]]=newValue;
     }
 } 
-void avx2_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const int N) {
+STATIC void avx2_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const int N) {
     __m256  G=set1(gain);
     __m256  O=set1(offset);
     int i=0;
@@ -1718,7 +1718,7 @@ void avx2_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const
         maskstore(x+i,GetMoveMask(n),add(mul(load(x+i),G),O) );
     _mm256_zeroupper();
 }
-void avx2_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N){    
+STATIC void avx2_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N){
     __m256  O=set0();
     __m256  C=set1(knot);
     int i=0;
@@ -1737,7 +1737,7 @@ void avx2_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N
     }
     _mm256_zeroupper();    
 }
-void avx2_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N){    
+STATIC void avx2_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N){
     __m256  O=set0();
     __m256  C=set1(knot);
     int i=0;
@@ -1756,7 +1756,7 @@ void avx2_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N
     }
     _mm256_zeroupper();    
 }
-void avx2_f32_step_pos(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N){
+STATIC void avx2_f32_step_pos(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N){
     __m256  O=set0();
     __m256  I=set1(1.0);
     __m256  C=set1(knot);
@@ -1776,7 +1776,7 @@ void avx2_f32_step_pos(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 kn
     }
     _mm256_zeroupper();    
 }
-void avx2_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N){
+STATIC  void avx2_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N){
     __m256  O=set0();
     __m256  I=set1(1.0);
     __m256  C=set1(knot);
@@ -1796,7 +1796,7 @@ void avx2_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 kn
     }
     _mm256_zeroupper();     
 }
-void SetupVectorFunction_AVX2() {
+ void SetupVectorFunction_AVX2() {
     FillMaskTempalte();
     i32_add_val_inplace=&avx2_i32_add_val_inplace;;
     i32_sum=&avx2_i32_sum;
@@ -1857,7 +1857,7 @@ void SetupVectorFunction_AVX2() {
 #else
 static char a='a';
 #endif
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

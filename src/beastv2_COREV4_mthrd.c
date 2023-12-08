@@ -34,7 +34,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 	const BEAST2_OPTIONS_PTR	opt=GLOBAL_OPTIONS;
 	const BEAST2_EXTRA          extra=opt->extra;
 	typedef int QINT;
-	const   QINT  q=1L;
+	const QINT  q=opt->io.q;
 	CI_PARAM     ciParam={0,};
 	CI_RESULT    ci[MAX_NUM_BASIS];
 	if (extra.computeCredible) {
@@ -76,8 +76,8 @@ int beast2_main_corev4_mthrd(void* dummy)
 				ci[i].result=resultChain.tCI,               
 			    ci[i].newDataRow=Xnewterm+XnewtermOffset;    
 			else if (MODEL.b[i].type==OUTLIERID)
-				ci[i].result=resultChain.oCI,      
-			    ci[i].newDataRow=Xnewterm+XnewtermOffset; 
+				ci[i].result=resultChain.oCI,               
+			    ci[i].newDataRow=Xnewterm+XnewtermOffset;     
 			XnewtermOffset+=Npad * q;   
 		}
 	} 
@@ -106,6 +106,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 	const U32  MCMC_CHAINNUM=opt->mcmc.chainNumber;
 	const U16  SEASON_BTYPE=opt->prior.seasonBasisFuncType;
 	const U16  GROUP_MatxMat=(MODEL.sid <0||opt->prior.seasonBasisFuncType !=3 )
+						       && (MODEL.vid < 0||opt->prior.trendBasisFuncType !=3)
 							   && (MODEL.tid<0||opt->prior.trendBasisFuncType!=2)
 		                       && ( MODEL.oid<0||opt->prior.outlierBasisFuncType!=2);
 	for (U32 pixelIndex=1; pixelIndex <=NUM_PIXELS; pixelIndex++)
@@ -327,7 +328,13 @@ int beast2_main_corev4_mthrd(void* dummy)
 						shift_lastcols_within_matrix(Xt_mars,Npad,NewCol.k2_old+1,KOLD,NewCol.k2_new+1);
 					if (Knewterm !=0)
 						SCPY(Knewterm*Npad,Xnewterm,Xt_mars+(NewCol.k1-1) * Npad);
-					basis->UpdateGoodVec(basis,&NEW,Npad16);
+					if (basis->type==OUTLIERID) {
+						basis->UpdateGoodVec_KnotList(basis,&NEW,Npad16);
+					} else {
+						basis->KNOT[-1]=basis->KNOT[INDEX_FakeStart];	basis->KNOT[basis->nKnot]=basis->KNOT[INDEX_FakeEnd];
+						basis->UpdateGoodVec_KnotList(basis,&NEW,Npad16);
+						basis->KNOT[-1]=1; 	                      	basis->KNOT[basis->nKnot]=N+1L;
+					}					
 					basis->CalcBasisKsKeK_TermType(basis);
 					UpdateBasisKbase(MODEL.b,MODEL.NUMBASIS,basis-MODEL.b);
 					{
@@ -593,7 +600,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			{
 				int   sum;
 				#define GetSum(arr) (r_ippsSum_32s_Sfs(arr,N,&sum,0),sum) 
-				I32   sMAXNUMKNOT=MODEL.sid >=0? MODEL.b[MODEL.sid].prior.maxKnotNum:-9999999;
+				I32   sMAXNUMKNOT=MODEL.sid >=0||MODEL.vid >=0 ? MODEL.b[0].prior.maxKnotNum:-9999999; 
 				I32   tMAXNUMKNOT=MODEL.tid>=0?  MODEL.b[MODEL.tid].prior.maxKnotNum:-9999999;
 				I32   oMAXNUMKNOT=MODEL.oid>=0?  MODEL.b[MODEL.oid].prior.maxKnotNum:- 9999999;
 				F32   inv_sample=1.f/sample;			
@@ -603,7 +610,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 						resultChain.sig2[col*q+i]=resultChain.sig2[col*q+i] * inv_sample * yInfo.sd[col] * yInfo.sd[i];
 					}
 				}
-				if (MODEL.sid >=0) {
+				if (MODEL.sid >=0||MODEL.vid >=0) {
 						*resultChain.sncp=GetSum(resultChain.scpOccPr)* inv_sample; 
 						i32_to_f32_scaleby_inplace(resultChain.sncpPr,(sMAXNUMKNOT+1),inv_sample);
 						i32_to_f32_scaleby_inplace(resultChain.scpOccPr,N,inv_sample);	
@@ -705,7 +712,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			}
 			if (!skipCurrentPixel) 
 			{
-				I32   sMAXNUMKNOT=MODEL.sid >=0? MODEL.b[MODEL.sid].prior.maxKnotNum:-9999999;
+				I32   sMAXNUMKNOT=MODEL.sid >=0||MODEL.vid >=0 ? MODEL.b[0].prior.maxKnotNum : -9999999;
 				I32   tMAXNUMKNOT=MODEL.tid>=0?  MODEL.b[MODEL.tid].prior.maxKnotNum:-9999999;
 				I32   oMAXNUMKNOT=MODEL.oid>=0?  MODEL.b[MODEL.oid].prior.maxKnotNum:- 9999999;
 				#define _1(x)      *(result.x)+=*(resultChain.x)
@@ -720,7 +727,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 				#define _okn_1(x)  r_ippsAdd_32f_I((F32PTR)resultChain.x,(F32PTR)result.x,oMAXNUMKNOT+1)
 				_1(marg_lik);
 				_q2(sig2);  
-				if (MODEL.sid >=0) {					
+				if (MODEL.sid >=0||MODEL.vid >0) {
 					_1(sncp); _skn_1(sncpPr);	     _N(scpOccPr); _Nq(sY); _Nq(sSD);
 					if (extra.computeSeasonOrder)    _N(sorder);
 					if (extra.computeSeasonAmp)      _N(samp),_N(sampSD);
@@ -776,7 +783,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		if (MCMC_CHAINNUM >=2 && !skipCurrentPixel)
 		{
 			I32  N=opt->io.N;			
-			I32   sMAXNUMKNOT=MODEL.sid >=0 ? MODEL.b[MODEL.sid].prior.maxKnotNum : -9999999;
+			I32   sMAXNUMKNOT=MODEL.sid >=0||MODEL.vid >=0 ? MODEL.b[0].prior.maxKnotNum : -9999999;
 			I32   tMAXNUMKNOT=MODEL.tid >=0 ? MODEL.b[MODEL.tid].prior.maxKnotNum : -9999999;
 			I32   oMAXNUMKNOT=MODEL.oid >=0 ? MODEL.b[MODEL.oid].prior.maxKnotNum : -9999999;
 			const F32 invChainNumber=1.f/(F32)MCMC_CHAINNUM;
@@ -793,7 +800,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			F32 maxncpProb;	 
 			_1(marg_lik);			
 			_q2(sig2);
-			if (MODEL.sid >=0) {
+			if (MODEL.sid >=0||MODEL.vid>0) {
 				_1(sncp); _skn_1(sncpPr);	     _N(scpOccPr); _Nq(sY); _Nq(sSD); 
 				if (extra.computeSeasonOrder)    _N(sorder);
 				if (extra.computeSeasonAmp)     {_N(samp),_N(sampSD);}
@@ -851,7 +858,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		}
 		if (!skipCurrentPixel) {		
 			I32  N=opt->io.N;  
-			if (MODEL.sid >=0) 							tsRemoveNaNs(result.sSD,N);
+			if (MODEL.sid >=0||MODEL.vid>0) 				tsRemoveNaNs(result.sSD,N);
 			if (MODEL.tid >=0)								tsRemoveNaNs(result.tSD,N);
 			if (MODEL.tid >=0 && extra.computeTrendSlope)  tsRemoveNaNs(result.tslpSD,N);		 
 			if (MODEL.oid >=0) 							tsRemoveNaNs(result.oSD,N);
@@ -860,7 +867,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 		{
 			I32     N=opt->io.N;
 			F32     nan=getNaN();     
-			F32  	threshold=0.001f;
+			F32  	threshold=0.01f;
 			F32PTR	mem=Xnewterm;  
 			I32PTR  cptList=(I32PTR)mem+5LL * N;
 			F32PTR  cptCIList=(F32PTR)mem+6LL * N;
@@ -869,15 +876,21 @@ int beast2_main_corev4_mthrd(void* dummy)
 			F32   maxncpProb;
 			const F32 T0=(F32)opt->io.meta.startTime;
 			const F32 dT=(F32)opt->io.meta.deltaTime;
-			I32   sMAXNUMKNOT=MODEL.sid >=0 ? MODEL.b[MODEL.sid].prior.maxKnotNum : -9999999;
+			I32   sMAXNUMKNOT=MODEL.sid >=0||MODEL.vid >=0 ? MODEL.b[0].prior.maxKnotNum : -9999999;
 			I32   tMAXNUMKNOT=MODEL.tid >=0 ? MODEL.b[MODEL.tid].prior.maxKnotNum : -9999999;
 			I32   oMAXNUMKNOT=MODEL.oid >=0 ? MODEL.b[MODEL.oid].prior.maxKnotNum : -9999999;
-			I32   sMINSEPDIST=MODEL.sid >=0 ? MODEL.b[MODEL.sid].prior.minSepDist : -9999999;
-			I32   tMINSEPDIST=MODEL.tid >=0 ? MODEL.b[MODEL.tid].prior.minSepDist : -9999999;
-			I32   oMINSEPDIST=MODEL.oid >=0 ? 0 : -9999999;
-			if (extra.computeSeasonChngpt && MODEL.sid >=0)  	{
+			I32   sMINSEPDIST=MODEL.sid >=0||MODEL.vid >=0 ? MODEL.b[0].prior.minSepDist : -9999999;
+			I32   tMINSEPDIST=MODEL.tid >=0                   ? MODEL.b[MODEL.tid].prior.minSepDist : -9999999;
+			I32   oMINSEPDIST=MODEL.oid >=0                   ? 0 : -9999999;  
+			I32   sLeftMargin=MODEL.sid >=0||MODEL.vid >=0 ? MODEL.b[0].prior.leftMargin : -9999999;
+			I32   tLeftMargin=MODEL.tid >=0                   ? MODEL.b[MODEL.tid].prior.leftMargin : -9999999;
+			I32   oLeftMargin=MODEL.oid >=0                   ? 0 : -9999999;  
+			I32   sRightMargin=MODEL.sid >=0||MODEL.vid >=0 ? MODEL.b[0].prior.rightMargin : -9999999;
+			I32   tRightMargin=MODEL.tid >=0                   ? MODEL.b[MODEL.tid].prior.rightMargin : -9999999;
+			I32   oRightMargin=MODEL.oid >=0                   ? 0 : -9999999;  
+			if (extra.computeSeasonChngpt && (MODEL.sid >=0||MODEL.vid>0 ))  	{
 				cptNumber=sMAXNUMKNOT;
-				trueCptNumber=FindChangepoint((F32PTR)result.scpOccPr,mem,threshold,cptList,cptCIList,N,sMINSEPDIST,cptNumber);
+				trueCptNumber=FindChangepoint_LeftRightMargins((F32PTR)result.scpOccPr,mem,threshold,cptList,cptCIList,N,sMINSEPDIST,cptNumber,sLeftMargin,sRightMargin);
 				for (int i=0; i < trueCptNumber; i++) {
 					*(result.scp+i)=(F32)(*(cptList+i)) * dT+T0;
 					*(result.scpPr+i)=(F32)mem[i];
@@ -902,7 +915,7 @@ int beast2_main_corev4_mthrd(void* dummy)
 			}
 			if (extra.computeTrendChngpt) {
 				cptNumber=tMAXNUMKNOT;
-				trueCptNumber=FindChangepoint((F32PTR)result.tcpOccPr,mem,threshold,cptList,cptCIList,N,tMINSEPDIST,cptNumber);
+				trueCptNumber=FindChangepoint_LeftRightMargins((F32PTR)result.tcpOccPr,mem,threshold,cptList,cptCIList,N,tMINSEPDIST,cptNumber,tLeftMargin,tRightMargin);
 				for (int i=0; i < trueCptNumber; i++) {
 					*(result.tcp+i)=(F32)(*(cptList+i)) * dT+T0,
 					*(result.tcpPr+i)=(F32)mem[i];
@@ -925,9 +938,9 @@ int beast2_main_corev4_mthrd(void* dummy)
 					*(result.tcpCI+i)=nan,
 					*(result.tcpCI+tMAXNUMKNOT+i)=nan;
 			}
-			#define GET_CHANGPOINTS(NcpProb,KNOTNUM,MINSEP,MAX_KNOTNUM,Y,CpOccPr,CP,CPPROB,CP_CHANGE,CP_CI)    \
+			#define GET_CHANGPOINTS(NcpProb,KNOTNUM,MINSEP,LeftMargin,RightMargin,MAX_KNOTNUM,Y,CpOccPr,CP,CPPROB,CP_CHANGE,CP_CI)    \
 			cptNumber=MAX_KNOTNUM;  \
-			trueCptNumber=FindChangepoint((F32PTR)CpOccPr,mem,threshold,cptList,cptCIList,N,MINSEP,cptNumber);\
+			trueCptNumber=FindChangepoint_LeftRightMargins((F32PTR)CpOccPr,mem,threshold,cptList,cptCIList,N,MINSEP,cptNumber,LeftMargin,RightMargin);\
 			for (int i=0; i < trueCptNumber; i++) {\
 				*(CP+i)=(F32) cptList[i]* dT+T0,\
 				*(CPPROB+i)=(F32) mem[i];\
@@ -946,26 +959,26 @@ int beast2_main_corev4_mthrd(void* dummy)
 				*(CP_CI+i)=nan,\
 				*(CP_CI+MAX_KNOTNUM+i)=nan;
 			if (extra.tallyPosNegSeasonJump && MODEL.sid >=0) {
-				GET_CHANGPOINTS(result.spos_ncpPr,result.spos_ncp,sMINSEPDIST,sMAXNUMKNOT,result.samp,
+				GET_CHANGPOINTS(result.spos_ncpPr,result.spos_ncp,sMINSEPDIST,sLeftMargin,sRightMargin,sMAXNUMKNOT,result.samp,
 					result.spos_cpOccPr,result.spos_cp,result.spos_cpPr,result.spos_cpAbruptChange,result.spos_cpCI);
-				GET_CHANGPOINTS(result.sneg_ncpPr,result.sneg_ncp,sMINSEPDIST,sMAXNUMKNOT,result.samp,
+				GET_CHANGPOINTS(result.sneg_ncpPr,result.sneg_ncp,sMINSEPDIST,sLeftMargin,sRightMargin,sMAXNUMKNOT,result.samp,
 					result.sneg_cpOccPr,result.sneg_cp,result.sneg_cpPr,result.sneg_cpAbruptChange,result.sneg_cpCI);
 			}			
 			if (extra.tallyPosNegTrendJump) {
-				GET_CHANGPOINTS(result.tpos_ncpPr,result.tpos_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tY,
+				GET_CHANGPOINTS(result.tpos_ncpPr,result.tpos_ncp,tMINSEPDIST,tLeftMargin,tRightMargin,tMAXNUMKNOT,result.tY,
 					result.tpos_cpOccPr,result.tpos_cp,result.tpos_cpPr,result.tpos_cpAbruptChange,result.tpos_cpCI);
-				GET_CHANGPOINTS(result.tneg_ncpPr,result.tneg_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tY,
+				GET_CHANGPOINTS(result.tneg_ncpPr,result.tneg_ncp,tMINSEPDIST,tLeftMargin,tRightMargin,tMAXNUMKNOT,result.tY,
 					result.tneg_cpOccPr,result.tneg_cp,result.tneg_cpPr,result.tneg_cpAbruptChange,result.tneg_cpCI);
 			}
 			if (extra.tallyIncDecTrendJump) {
-				GET_CHANGPOINTS(result.tinc_ncpPr,result.tinc_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tslp,
+				GET_CHANGPOINTS(result.tinc_ncpPr,result.tinc_ncp,tMINSEPDIST,tLeftMargin,tRightMargin,tMAXNUMKNOT,result.tslp,
 					result.tinc_cpOccPr,result.tinc_cp,result.tinc_cpPr,result.tinc_cpAbruptChange,result.tinc_cpCI);
-				GET_CHANGPOINTS(result.tdec_ncpPr,result.tdec_ncp,tMINSEPDIST,tMAXNUMKNOT,result.tslp,
+				GET_CHANGPOINTS(result.tdec_ncpPr,result.tdec_ncp,tMINSEPDIST,tLeftMargin,tRightMargin,tMAXNUMKNOT,result.tslp,
 					result.tdec_cpOccPr,result.tdec_cp,result.tdec_cpPr,result.tdec_cpAbruptChange,result.tdec_cpCI);
 			}
-			#define OGET_CHANGPOINTS(NcpProb,KNOTNUM,MINSEP,MAX_KNOTNUM,PROBCURVE,CP,CPPROB,CP_CI)    \
+			#define OGET_CHANGPOINTS(NcpProb,KNOTNUM,MINSEP,LeftMargin,RightMargin,MAX_KNOTNUM,PROBCURVE,CP,CPPROB,CP_CI)    \
 			cptNumber=MAX_KNOTNUM;  \
-			trueCptNumber=FindChangepoint((F32PTR)PROBCURVE,mem,threshold,cptList,cptCIList,N,MINSEP,cptNumber);\
+			trueCptNumber=FindChangepoint_LeftRightMargins((F32PTR)PROBCURVE,mem,threshold,cptList,cptCIList,N,MINSEP,cptNumber,LeftMargin,RightMargin);\
 			for (int i=0; i < trueCptNumber; i++) {\
 				*(CP+i)=(F32) cptList[i]* dT+T0;\
 				*(CPPROB+i)=(F32) mem[i];\
@@ -982,12 +995,12 @@ int beast2_main_corev4_mthrd(void* dummy)
 				*(CP_CI+i)=nan,\
 				*(CP_CI+MAX_KNOTNUM+i)=nan;
 			if (extra.computeOutlierChngpt) {
-				OGET_CHANGPOINTS(result.oncpPr,result.oncp,oMINSEPDIST,oMAXNUMKNOT,result.ocpOccPr,result.ocp,result.ocpPr,result.ocpCI);
+				OGET_CHANGPOINTS(result.oncpPr,result.oncp,oMINSEPDIST,oLeftMargin,oRightMargin,oMAXNUMKNOT,result.ocpOccPr,result.ocp,result.ocpPr,result.ocpCI);
 			}
 			if (extra.tallyPosNegOutliers && MODEL.oid >=0) {
-				OGET_CHANGPOINTS(result.opos_ncpPr,result.opos_ncp,oMINSEPDIST,oMAXNUMKNOT,
+				OGET_CHANGPOINTS(result.opos_ncpPr,result.opos_ncp,oMINSEPDIST,oLeftMargin,oRightMargin,oMAXNUMKNOT,
 					result.opos_cpOccPr,result.opos_cp,result.opos_cpPr,result.opos_cpCI);
-				OGET_CHANGPOINTS(result.oneg_ncpPr,result.oneg_ncp,oMINSEPDIST,oMAXNUMKNOT,
+				OGET_CHANGPOINTS(result.oneg_ncpPr,result.oneg_ncp,oMINSEPDIST,oLeftMargin,oRightMargin,oMAXNUMKNOT,
 					result.oneg_cpOccPr,result.oneg_cp,result.oneg_cpPr,result.oneg_cpCI);
 			}
 		}

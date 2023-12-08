@@ -8,12 +8,17 @@
 #define PCG_DEFAULT_INCREMENT_64   1442695040888963407ULL 
 #define PCG_DEFAULT_GLOBAL_STATE_64     0x853c49e6748fea9bULL
 #define PCG_DEFAULT_GLOBAL_INCREMENT_64 0xda3e39cb94b95bdbULL
+void gen_pcg_print_state(local_pcg32_random_t* rng) {
+	r_printf("PCG State: \n");
+	r_printf("State: %"  PRIx64 "\n",rng->STATE);	
+	r_printf("Increment: %"  PRIx64  "\n",rng->INCREMENT);
+}
 void gen_pcg_random(local_pcg32_random_t* rng,U32PTR rnd,I32 N);
 void gen_pcg_set_seed(local_pcg32_random_t* rng,U64 initstate,U64 initseq)
 {
 	initstate=PCG_DEFAULT_GLOBAL_STATE_64 ^ initseq; 
-	initstate=initstate==0 ? PCG_DEFAULT_GLOBAL_STATE_64 : initstate;
-	initseq=initseq==0 ?   PCG_DEFAULT_GLOBAL_INCREMENT_64 : initseq;
+	initstate=initstate==0 ? PCG_DEFAULT_GLOBAL_STATE_64     : initstate;
+	initseq=initseq==0   ? PCG_DEFAULT_GLOBAL_INCREMENT_64 : initseq;
 	rng->STATE=0U;
 	rng->INCREMENT=(initseq << 1u)|1u;  	
 	U32 rnd;
@@ -39,5 +44,6 @@ void gen_pcg_random(local_pcg32_random_t* rng,U32PTR rnd,I32 N)
 void SetupPCG_GENERIC() {
 	local_pcg_set_seed=gen_pcg_set_seed;
 	local_pcg_random=gen_pcg_random;
+	local_pcg_print_state=gen_pcg_print_state;
 }
 #include "abc_000_warning.h"

@@ -24,7 +24,7 @@
 #if defined(IsInf)
     #undef IsInf	
 #endif
-#define IsInf(f)  (  (f) >FLOAT_MAX||(f)< FLOAT_MIN)
+#define IsInf(f)  (  ((float)f) >FLOAT_MAX||((float)f)< FLOAT_MIN)
 #ifdef __cplusplus
 	extern "C" {
 #endif 
@@ -98,3 +98,13 @@ enum { _False_=0,_True_=1 };
 #ifdef __cplusplus
 }
 #endif
+#define max(a,b)			(((a) > (b)) ? (a) : (b))
+#define min(a,b)			(((a) < (b)) ? (a) : (b))
+#define max3(a,b,c)         max( max(a,b),c)
+#define max4(a,b,c,d)       max( max3(a,b,c),d)
+#define _IsAlmostInteger(x)  ( fabs(x-round(x)) <1e-3 )
+#define RoundTo64(N)       ((N+63)/64*64)
+#define RoundTo8(N)        ((N+7)/8*8)
+#define PostiveMod(i,n)  (  i%(n)+(i<0)*(n)  )
+#define FLOORdiv(y,N) ((y >=0 ? y : y - (N-1))/N) 
+#define  UnknownStatus 99

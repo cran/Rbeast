@@ -3,10 +3,15 @@
 #include "abc_000_macro.h"
 #include "abc_datatype.h"
 typedef struct {
-	void** addr;
-	int    size;
-	int    align;
+	void**  addr;
+	int     size;
+	int     align;
+	I64     offset_from_origin;                        
 } MemNode;
+I64    memnodes_calc_offsets(MemNode* list,int* maxAlignment);
+void   memnodes_assign_from_alignedbase(MemNode* list,VOIDPTR prawaligned);  
+void   memnodes_assign_from_unalignedbase(MemNode* list,VOIDPTR pbase,int bufsize);
+I64    memnodes_find_max_common_size(MemNode* list,...);
 typedef struct MemPointers MemPointers;
 struct MemPointers
 {
@@ -29,18 +34,19 @@ struct MemPointers
 #define MyALLOC0(MEM,numElem,type,alignment) (type *)(MEM).alloc0(&(MEM),(I64) sizeof(type)* (I64)(numElem),alignment)
  typedef struct {
 	 int8_t* raw;
-	 int  max_len;
-	 int  cur_len;
+	 size_t  max_len;
+	 size_t  cur_len;
  } DynMemBuf,* _restrict  DynMemBufPtr;
  void dynbuf_init(DynMemBufPtr buf,int init_max_len);
  void dynbuf_kill(DynMemBufPtr buf);
  void dynbuf_requestmore(DynMemBufPtr buf,int moreBytes);
  void dynbuf_insert_bytes(DynMemBufPtr buf,char* newstr,int nbytes);
  void dynbuf_insert_str(DynMemBufPtr buf,char* newstr);
+ void dynbuf_alloc_list(DynMemBufPtr buf,MemNode *nodes);
  typedef struct {
 	 union {
 		 char   * raw;
-		 int8_t * i8;
+		 int8_t * i08;
 		 int16_t* i16;
 		 int32_t* i32;
 		 int64_t* i64;

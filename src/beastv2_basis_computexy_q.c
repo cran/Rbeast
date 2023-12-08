@@ -35,7 +35,7 @@ static void DD_0(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad)
 	TKNOT_PTR  KNOT=basis->KNOT;
 	I16PTR     KS=basis->ks;
 	I16PTR     KE=basis->ke;
-	int NUM_OF_SEG=basis->nKnot+1L; 
+	int NUM_OF_SEG=basis->nKnot+1L;  
 	int kCounter=1L;                  
 	for (I32 i=1; i <=NUM_OF_SEG; i++) {
 		I32 k1=KS[i-1]-1,k2=KE[i-1]-1;

@@ -39,7 +39,7 @@ VOID_PTR  mem_alloc_x(xMemPointers * _restrict self,I64 sizeInByte,U08 alignment
 	self->memNames[self->memNum]=malloc(strlen(name)+1);
 	strcpy(self->memNames[self->memNum],name);
 	if (self->printInfo )
-		r_printf("%#012x: %d bytes of MEM allocated for '%s' \n",newPointer,sizeInByte,self->memNames[self->memNum]);
+		r_printf("%12p: %" PRId64 "bytes of MEM allocated for '%s' \n",newPointer,sizeInByte,self->memNames[self->memNum]);
 	self->memNum++;
 	return newPointer;
 }
@@ -52,7 +52,7 @@ void mem_free_all_x(xMemPointers * _restrict self)
 		else
 			free_64(self->memPointer[i]);
 		if (self->printInfo)
-			r_printf("%#012x: Memory de-allocated for '%s' \n",self->memPointer[i],self->memNames[i]);
+			r_printf("%12p: Memory de-allocated for '%s' \n",self->memPointer[i],self->memNames[i]);
 		free(self->memNames[i]);
 	}
 	if (self->memPointer !=NULL)

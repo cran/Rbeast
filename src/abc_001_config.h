@@ -26,7 +26,6 @@
     #define LIB_Python(_X_)  QUOTE_IT(C:/Anaconda3/libs/_X_ )
     #define LIB_R(_X_)       QUOTE_IT(C:/Program Files/R/R-4.2.2/implib/_X_ )
 	#ifdef TARGET_32
-        #undef  LIB_R
 		#define LIB_R(_X_)       QUOTE_IT(C:/Program Files/R/R-4.2.2/implib/i386/_X_ )			
 	#endif
 	#if R_INTERFACE==1
@@ -35,11 +34,7 @@
 		#pragma comment( lib,LIB_R(Rlapack.lib) )
 	#endif
 #elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)
-	#define  DllExport  
-	#ifndef _GNU_SOURCE
-		#define _GNU_SOURCE
-	#endif
-	#include <fenv.h>	
+	#define  DllExport   
 #endif
 #define PTHREAD_INOUT 0
 #if PTHREAD_INOUT==1
@@ -123,4 +118,10 @@
 #ifdef CLANG_COMPILER
 	#undef sign    
 	#undef warning 
+#endif
+#if defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)
+	#ifndef _GNU_SOURCE
+		#define _GNU_SOURCE 1
+	#endif
+	#include <fenv.h>	
 #endif

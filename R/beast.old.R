@@ -32,8 +32,9 @@ beast.old <- function(y, option=list() ) {
     #extra$numThreadsPerCPU     = 2
     #extra$numParThreads        = 0
     
-   
-    ANS    = .Call( BEASTV4_rexFunction, list("beastv4",y,metadata,prior=NULL,mcmc=NULL,extra),   212345)   		   
+       
+    #ANS    = .Call( "rexFunction1", list("beastv4",y,metadata,prior=NULL,mcmc=NULL,extra),   212345,PACKAGE="Rbeast.mexw64")  
+    ANS    = .Call( BEASTV4_rexFunction, list("beast_bayes",y,metadata,prior=NULL,mcmc=NULL,extra),   212345)   		   
     invisible(return(ANS))    
   }
   else if (is.list(option)) {
@@ -88,7 +89,9 @@ beast.old <- function(y, option=list() ) {
     extra$consoleWidth         = 0
     #extra$numThreadsPerCPU     = 2
     #extra$numParThreads        = 0
-    ANS    = .Call( BEASTV4_rexFunction, list("beastv4",y,metadata,prior=NULL,mcmc=NULL,extra),   212345)   		   
+	
+	#ANS    = .Call( "rexFunction1", list("beastv4",y,metadata,prior=NULL,mcmc=NULL,extra),   212345,PACKAGE="Rbeast.mexw64")  	   
+    ANS    = .Call( BEASTV4_rexFunction, list("beast_bayes",y,metadata,prior=NULL,mcmc=NULL,extra),   212345)   		   
     invisible(return(ANS))  
   }
   else{

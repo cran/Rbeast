@@ -1,3 +1,12 @@
+# CHANGES IN Rbeast 1.0.0
+
+* Fix the warning message regarding "format ‘%x’ expects argument of type ‘unsigned int’, but argument 2 has type ‘VOID_PTR’ {aka ‘void *’} [-Wformat=]"
+
+* Fix the note message regarding checkRd: (-1) beast.Rd:155: Lost braces; missing escapes or markup?
+
+* Add the tseg.leftmargin and tseg.rightmargin arguments upon the request of  Racine Nassau
+
+
 # CHANGES IN Rbeast 0.9.8/9
 
 * Fix the warning message regarding "long long unsigned int[0]' [-Warray-bounds]" and the Wstrict-prototypes warning.

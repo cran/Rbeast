@@ -12,15 +12,17 @@ extern "C" {
 #endif
 #ifdef _WIN32
     #include <windows.h>
-#elif _POSIX_C_SOURCE >=199309L
-    #include <time.h>   
+#elif _POSIX_C_SOURCE >=199309L||defined (__MUSL__)  
+    #include <time.h>  
+    #include <time.h>    
 #else
     #include <unistd.h> 
+    #include <sys/time.h>  
 #endif
 static INLINE void Sleep_ms(int milliseconds) {
     #ifdef WIN32
         Sleep(milliseconds);
-    #elif _POSIX_C_SOURCE >=199309L
+    #elif _POSIX_C_SOURCE >=199309L||defined (__MUSL__)  
         struct timespec ts;
         ts.tv_sec=milliseconds/1000;
         ts.tv_nsec=(milliseconds%1000) * 1000000;

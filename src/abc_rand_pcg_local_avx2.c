@@ -11,11 +11,11 @@
 #ifdef MSVC_COMPILER
 #define __attribute__(x)
 #endif
-#ifdef CLANG_COMPILER
+#if  defined(CLANG_COMPILER) && !defined(ARM64_OS)  
     #pragma clang optimize on
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))),apply_to=function)
 #endif
-#ifdef  GCC_COMPILER
+#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
      #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
@@ -26,6 +26,13 @@
 #define PCG_DEFAULT_INCREMENT_64   1442695040888963407ULL 
 #define PCG_DEFAULT_GLOBAL_STATE_64     0x853c49e6748fea9bULL
 #define PCG_DEFAULT_GLOBAL_INCREMENT_64 0xda3e39cb94b95bdbULL
+void avx_pcg_print_state(local_pcg32_random_t* rng) {
+	r_printf("PCG State: \n");
+	r_printf("State: %"  PRIx64 " %" PRIx64 " %" PRIx64 " %" PRIx64 "\n",rng->state[0],rng->state[1],rng->state[2],rng->state[3] );
+	r_printf("Increment: %"  PRIx64  "\n",rng->increment);
+	r_printf("Mutiplier4: %"  PRIx64  "\n",rng->MULTIPLIER_4steps);
+	r_printf("INcrementr4: %"  PRIx64  "\n\n",rng->INCREMENT_4steps);
+}
  void avx_pcg_set_seed(local_pcg32_random_t *rng,U64 initstate,U64 initseq)
 {
 	 initstate=PCG_DEFAULT_GLOBAL_STATE_64 ^ initseq; 
@@ -41,6 +48,7 @@
 	rng->state[3]=state=state * PCG_DEFAULT_MULTIPLIER_64+rng->increment;
 	__m256i state256=_mm256_set_epi64x(rng->state[3],rng->state[2],rng->state[1],rng->state[0]);;
 	pcg_get_lcg_multiplier_shift_multistep(4L,PCG_DEFAULT_MULTIPLIER_64,rng->increment,&rng->MULTIPLIER_4steps,&rng->INCREMENT_4steps);
+	rng->BUF_PTR=4;
 	extern void init_gauss_rnd(void);
 	init_gauss_rnd(); 
 }
@@ -109,37 +117,35 @@ void avx_pcg_random(local_pcg32_random_t* rng,U32PTR rnd,I32 N) {
 	_mm256_zeroupper();
 }
 void avx_pcg_random_with_internalbuf(local_pcg32_random_t* rng,U32PTR rnd,I32 N) {
-	static  __m128 RAND_BUF;
-	static  I32    BUF_PTR=4;
 	__m256i oldstate=_mm256_loadu_si256(rng->state);
 	while (N > 0) {
-		if (BUF_PTR < 4) {
-			U32PTR rndbuf=((U32PTR)&RAND_BUF)+BUF_PTR;
-			if (N==1L||BUF_PTR==3) {
+		if (rng->BUF_PTR < 4) {
+			U32PTR rndbuf=(U32PTR) rng->INTERNAL_RNDBUF+rng->BUF_PTR;
+			if (N==1L||rng->BUF_PTR==3) {
 				rnd[0]=rndbuf[0];
-				BUF_PTR=4;
+				++rng->BUF_PTR;
 				++rnd;
 				--N;				
 			}
-			else if (BUF_PTR==0 && N >=4) {
-				_mm_storeu_ps(rnd,RAND_BUF);
-				BUF_PTR=4L;
+			else if (rng->BUF_PTR==0 && N >=4) {
+				_mm_storeu_ps(rnd,_mm_loadu_ps(rng->INTERNAL_RNDBUF));
+				rng->BUF_PTR=4L;
 				rnd+=4;
 				N       -=4;
 			} else {
-				int nAvailable=(4 - BUF_PTR);
+				int nAvailable=(4 - rng->BUF_PTR);
 				int nCopy=min(nAvailable,N);
 				rnd[0]=rndbuf[0];
 				rnd[1]=rndbuf[1];
                 if (nCopy==3) {
 					rnd[2]=rndbuf[2];
 				}
-				BUF_PTR+=nCopy;
+				rng->BUF_PTR+=nCopy;
 				rnd+=nCopy;
-				N       -=nCopy;
+				N            -=nCopy;
 			}
 		}
-		if (BUF_PTR !=4) {
+		if (rng->BUF_PTR !=4) {
 			continue;
 		}
 		const __m256i	INCREMENT_SHIFT=_mm256_set1_epi64x(rng->INCREMENT_4steps);
@@ -156,8 +162,8 @@ void avx_pcg_random_with_internalbuf(local_pcg32_random_t* rng,U32PTR rnd,I32 N)
 		__m128i r1=_mm256_castsi256_si128(result);
 		__m128i r2=_mm256_extracti128_si256(result,1);
 		__m128  r=_mm_shuffle_ps(_mm_castsi128_ps(r1),_mm_castsi128_ps(r2),_MM_SHUFFLE(2,0,2,0));
-		_mm_storeu_ps(&RAND_BUF,r);
-		BUF_PTR=0;
+		_mm_storeu_ps(rng->INTERNAL_RNDBUF,r);
+		rng->BUF_PTR=0;
 	}
 	_mm256_storeu_si256(rng->state,oldstate);
 	_mm256_zeroupper();
@@ -196,9 +202,10 @@ void avx_pcg_random_vec8_slow(local_pcg32_random_t* rng,U32PTR rnd,I32 N) {
 void SetupPCG_AVX2(void){
 	 local_pcg_set_seed=avx_pcg_set_seed;
 	 local_pcg_random=avx_pcg_random_with_internalbuf;
+	 local_pcg_print_state=avx_pcg_print_state;
 }
 #endif
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

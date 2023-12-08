@@ -25,38 +25,104 @@
 #include "beastv2_prior_precfunc.h" 
 #include "beastv2_xxyy_allocmem.h" 
 #include "beastv2_io.h" 
-#define LOCAL(...) do{ __VA_ARGS__ } while(0);
-#ifdef WIN64_OS	
-#include "abc_win32_demo.h"
-#endif
-void beast2_main_corev4_gui(void)
+static int whichCriteria;
+static void BEAST2_EvaluateModel_BIC(	BEAST2_MODELDATA* curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
+	                            BEAST2_YINFO_PTR  yInfo,BEAST2_HyperPar*hyperPar,F32PTR precVec,VOID_PTR stream)
 {
-#ifdef WIN64_OS	
+	I32 Npad=(I32)ceil((F32)N/8.0f) * 8; Npad=N;
+	I32 K=0;
+	for (I32 basisID=0; basisID < NUMBASIS; basisID++) {
+		BEAST2_BASIS_PTR basis=b+basisID;
+		if (basis->type !=OUTLIERID) {
+			int         NUM_SEG=basis->nKnot+1;
+			TKNOT_PTR   KNOT=basis->KNOT;
+			TORDER_PTR  ORDER=basis->ORDER;
+			BEAST2_BASESEG seg;
+			seg.ORDER1=basis->type==TRENDID ? 0 : 1;
+			for (int i=1; i <=NUM_SEG; i++) {
+				seg.R1=KNOT[(i - 1) - 1L];
+				seg.R2=KNOT[i - 1L] - 1L;
+				seg.ORDER2=basis->type==DUMMYID ? 0 : ORDER[i - 1L];
+				I32 k=basis->GenTerms(Xt_mars+Npad * K,N,&seg,&(basis->bConst));
+				K+=k;
+			}
+		}
+		else {
+			int         numOfSeg=basis->nKnot;
+			TKNOT_PTR   knotList=basis->KNOT;
+			BEAST2_BASESEG seg;
+			seg.ORDER1=seg.ORDER2=0; 
+			for (int i=1; i <=numOfSeg; i++) {
+				seg.R1=knotList[(i)-1L];
+				seg.R2=knotList[(i)-1L];
+				I32 k=basis->GenTerms(Xt_mars+Npad * K,N,&seg,&(basis->bConst));
+				K+=k;
+			}
+		}
+	}
+	curmodel->K=K;
+	F32PTR	GlobalMEMBuf=Xt_mars+K * Npad;
+	F32PTR	Xt_zeroBackup=GlobalMEMBuf;
+	if (yInfo->nMissing > 0) {
+		F32 fillvalue=0.f;
+		f32_mat_multirows_extract_set_by_scalar(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing,fillvalue);
+	}
+	F32PTR XtX=curmodel->XtX;
+	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,K,K,N,1.f,Xt_mars,Npad,Xt_mars,Npad,0.f,XtX,K);
+	F32PTR XtY=curmodel->XtY;
+	r_cblas_sgemv(CblasColMajor,CblasTrans,Npad,K,1,Xt_mars,Npad,yInfo->Y,1,0,XtY,1);
+	if (yInfo->nMissing > 0) {
+		f32_mat_multirows_set_by_submat(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing);
+	}
+	F32PTR cholXtX=curmodel->cholXtX;
+	F32PTR beta_mean=curmodel->beta_mean;
+	precVec[0]=0.0;
+	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,precVec,K,1,K);
+	solve_U_as_LU_invdiag_sqrmat(cholXtX,XtY,beta_mean,K);
+	F32 alpha2_star=(yInfo->YtY_plus_alpha2Q[0] - DOT(K,XtY,beta_mean)) * 0.5;
+	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
+	F32 half_log_det_prior=-.5f * K * logf(precVec[0]);
+	F32 marg_lik=half_log_det_post - half_log_det_prior - yInfo->alpha1_star * logf(alpha2_star);
+	curmodel->alpha2Q_star[0]=alpha2_star;
+	F32 sig2=curmodel->alpha2Q_star[0]/yInfo->alpha1_star;
+	if (whichCriteria==1)        
+		curmodel->marg_lik=yInfo->n*logf(sig2)+K*logf(yInfo->n);
+	else if (whichCriteria==2) 
+		curmodel->marg_lik=yInfo->n * logf(sig2)+K * 2;
+	else if (whichCriteria==3) 
+		curmodel->marg_lik=yInfo->n * logf(sig2)+K * 2+2.*(K*K+K)/(yInfo->n-K-1);
+	else if (whichCriteria==4) 
+		curmodel->marg_lik=yInfo->n * logf(sig2)+K * 2* logf( logf(yInfo->n)+0.0001);
+	return;
+}
+static  void ComputeMargLik_prec01_BIC(BEAST2_MODELDATA_PTR data,BEAST2_MODEL_PTR model,BEAST2_YINFO_PTR yInfo,BEAST2_HyperPar_PTR hyperPar)
+{
+	I32 K=data->K;
+	solve_U_as_LU_invdiag_sqrmat(data->cholXtX,data->XtY,data->beta_mean,K);
+	F32 alpha2_star=(yInfo->YtY_plus_alpha2Q[0] - DOT(K,data->XtY,data->beta_mean)) * 0.5;
+	F32 half_log_det_post=sum_log_diagv2(data->cholXtX,K);
+	F32 half_log_det_prior=-0.5f * model->logPrecVec[0] * K;
+	F32 marg_lik=half_log_det_post - half_log_det_prior - yInfo->alpha1_star * fastlog(alpha2_star);
+	data->alpha2Q_star[0]=alpha2_star;
+	F32 sig2=data->alpha2Q_star[0]/yInfo->alpha1_star;
+	if (whichCriteria==1)        
+		data->marg_lik=yInfo->n * logf(sig2)+K * logf(yInfo->n);
+	else if (whichCriteria==2) 
+		data->marg_lik=yInfo->n * logf(sig2)+K * 2;
+	else if (whichCriteria==3) 
+		data->marg_lik=yInfo->n * logf(sig2)+K * 2+2. * (K * K+K)/(yInfo->n - K - 1);
+	else if (whichCriteria==4) 
+		data->marg_lik=yInfo->n * logf(sig2)+K * 2 * logf(logf(yInfo->n)+0.0001);
+	return;
+}
+#define LOCAL(...) do{ __VA_ARGS__ } while(0);
+int beast2_main_corev4_bic(int _whichCritia_)   {
+	whichCriteria=_whichCritia_;
 	MemPointers MEM=(MemPointers){.init=mem_init,};
 	MEM.init(&MEM);
 	VSLStreamStatePtr stream;
 	const BEAST2_OPTIONS_PTR	opt=GLOBAL_OPTIONS;
 	const BEAST2_EXTRA          extra=opt->extra;
-	if (gData.N <=0)
-	{
-		EnterCriticalSection(&gData.cs);
-		gData.N=opt->io.N;
-		gData.optStatus=NoUpdate;
-		LeaveCriticalSection(&gData.cs);
-		WakeConditionVariable(&gData.cv);
-	}
-	if (gData.optStatus==NeedUpdate)
-	{
-		EnterCriticalSection(&gData.cs);
-		LeaveCriticalSection(&gData.cs);
-	}
-	if (gData.plotData[0][0]==NULL)
-	{
-		EnterCriticalSection(&gData.cs);
-		while (gData.plotData[0][0]==NULL)
-			SleepConditionVariableCS(&gData.cv,&gData.cs,INFINITE);
-		LeaveCriticalSection(&gData.cs);
-	}
 	typedef int QINT;
 	const QINT  q=opt->io.q;
 	CI_PARAM     ciParam={0,};
@@ -107,6 +173,8 @@ void beast2_main_corev4_gui(void)
 	} 
 	const CORESULT coreResults[MAX_NUM_BASIS];
 	SetupPointersForCoreResults(coreResults,MODEL.b,MODEL.NUMBASIS,&resultChain);
+	opt->prior.alpha1=0.;
+	opt->prior.alpha2=0.;
 	const BEAST2_HyperPar  hyperPar={.alpha_1=opt->prior.alpha1,.alpha_2=opt->prior.alpha2,.del_1=opt->prior.delta1,.del_2=opt->prior.delta2};
 	InitTimerFunc();
 	StartTimer();
@@ -115,6 +183,7 @@ void beast2_main_corev4_gui(void)
 	SetUpPrecFunctions(opt->prior.precPriorType,opt->io.q,&precFunc);
 	if (extra.printProgressBar) {
 		F32 frac=0.0; I32 firstTimeRun=1;
+		printProgress(frac,extra.consoleWidth,Xnewterm,firstTimeRun);
 	}
 	#undef  __DEBUG__ 
 	#ifdef __DEBUG__
@@ -151,59 +220,12 @@ void beast2_main_corev4_gui(void)
 		__START_IF_NOT_SKIP_TIMESESIRIES__  
 		if (!skipCurrentPixel) {
 		if (q==1) {  
-				yInfo.YtY_plus_alpha2Q[0]=yInfo.YtY_plus_alpha2Q[0]+2 *hyperPar.alpha_2;
+				yInfo.YtY_plus_alpha2Q[0]=yInfo.YtY_plus_alpha2Q[0]+2 *hyperPar.alpha_2; 
 				yInfo.alpha1_star=yInfo.n * 0.5+hyperPar.alpha_1;    
 		}	else {	
 				f32_add_val_matrixdiag(yInfo.YtY_plus_alpha2Q,hyperPar.alpha_2,q);
 				yInfo.alpha1_star=yInfo.n * 0.5+(hyperPar.alpha_1+q - 1) * 0.5;
 		}
-				EnterCriticalSection(&gData.cs);
-				{
-					int idx;
-					int  N=opt->io.N;
-					I32  Npad=N ; 
-					r_ippsMaxIndx_32f(yInfo.Y,N,&gData.yMax,&idx);
-					r_ippsMinIndx_32f(yInfo.Y,N,&gData.yMin,&idx);
-					gData.yMin=gData.yMin - (gData.yMax - gData.yMin)/10;
-					gData.yMax=gData.yMax+(gData.yMax - gData.yMin)/10;
-					gData.y=yInfo.Y;
-					gData.rowsMissing=yInfo.rowsMissing;
-					gData.nMissing=yInfo.nMissing;
-					if (opt->io.meta.hasSeasonCmpnt) {
-						gData.s=coreResults[0].x;
-						gData.curs=Xnewterm;
-						gData.S=MODEL.b[0].KNOT;
-						gData.sCI=ci[0].result;
-						gData.sProb=resultChain.scpOccPr;
-						gData.t=coreResults[1].x;
-						gData.curt=Xnewterm+Npad;
-						gData.T=MODEL.b[1].KNOT;
-						gData.tCI=ci[1].result;
-						gData.tProb=resultChain.tcpOccPr;
-					}
-					else {
-						gData.s=NULL;
-						gData.curs=NULL;
-						gData.S=NULL;
-						gData.sCI=NULL;
-						gData.sProb=NULL;
-						gData.t=coreResults[0].x;
-						gData.curt=Xnewterm  ;
-						gData.T=MODEL.b[0].KNOT;
-						gData.tCI=ci[0].result;
-						gData.tProb=resultChain.tcpOccPr;
-					}
-				}
-				LeaveCriticalSection(&gData.cs);
-				WakeConditionVariable(&gData.cv);
-				if (gData.hwnd==NULL)
-				{
-					EnterCriticalSection(&gData.cs);
-					while (gData.hwnd==NULL)
-						SleepConditionVariableCS(&gData.cv,&gData.cs,INFINITE);
-					LeaveCriticalSection(&gData.cs);
-				}
-				SetWindowPos(gData.hwnd,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
 		BEAST2_RNDSTREAM  RND;
 		{
 			RND.rnd32=RND32,RND.rnd16=RND16,RND.rnd08=RND08,RND.rndgamma=RNDGAMMA;
@@ -216,9 +238,6 @@ void beast2_main_corev4_gui(void)
 		ReInit_PrecValues(&MODEL,opt);
 		for ( U32 chainNumber=0;  chainNumber < MCMC_CHAINNUM; chainNumber++)
 		{
-					LARGE_INTEGER tStart,tEnd,tFrequency;
-					QueryPerformanceCounter(&tStart);
-					QueryPerformanceFrequency(&tFrequency);
 			const I32  N=opt->io.N; 
 			const I32  Npad=N;
 			const I32  Npad16=(N+15)/16 * 16;	
@@ -230,7 +249,7 @@ void beast2_main_corev4_gui(void)
 				precFunc.GetXtXPrecDiag(&MODEL);        
 				CvtKnotsToBinVec(MODEL.b,MODEL.NUMBASIS,N,&yInfo);
 				if (q==1) {
-					BEAST2_EvaluateModel(&MODEL.curr,MODEL.b,Xt_mars,N,MODEL.NUMBASIS,&yInfo,&hyperPar,&opt->prior.precValue,&stream); 
+					BEAST2_EvaluateModel_BIC(&MODEL.curr,MODEL.b,Xt_mars,N,MODEL.NUMBASIS,&yInfo,&hyperPar,&opt->prior.precValue,&stream); 
 				} else 	{
 					MR_EvaluateModel(    &MODEL.curr,MODEL.b,Xt_mars,N,MODEL.NUMBASIS,&yInfo,&hyperPar,&opt->prior.precValue,&stream);
 				}
@@ -349,32 +368,15 @@ void beast2_main_corev4_gui(void)
 							               MODEL.prop.cholXtX,
 							               MODEL.prop.precXtXDiag,KNEW,NewCol.k1,KNEW);
 				   MODEL.prop.K=KNEW;
-				   precFunc.ComputeMargLik(&MODEL.prop,&MODEL,&yInfo,&hyperPar);
-				   if ( IsNaN(MODEL.prop.marg_lik)||IsInf(MODEL.prop.marg_lik ) ) {
-					   if (++numBadIterations < 15) {
-						   precFunc.IncreasePrecValues(&MODEL);
-						   precFunc.GetXtXPrecDiag(&MODEL);
-						   precFunc.chol_addCol(MODEL.curr.XtX,MODEL.curr.cholXtX,MODEL.curr.precXtXDiag,MODEL.curr.K,1L,MODEL.curr.K);
-						   precFunc.ComputeMargLik(&MODEL.curr,&MODEL,&yInfo,&hyperPar);
-						   #if !(defined(R_RELEASE)||defined(M_RELEASE))
-						   r_printf("prec: %.4f|marg_lik_prop: %.4f|marg_like_curr: %.4f \n",MODEL.precVec[0],MODEL.prop.marg_lik,MODEL.curr.marg_lik);
-						   #endif
-						   continue;
-					   }  else {
-						   skipCurrentPixel=2;
-						   break;
-					   }					   
-				   }  else {
-					   numBadIterations=0;
+				   ComputeMargLik_prec01_BIC(&MODEL.prop,&MODEL,&yInfo,&hyperPar);
+				   if ( IsNaN(MODEL.prop.marg_lik)||IsInf(MODEL.prop.marg_lik ) ) {					  
+						   continue;				 
 				   } 
 				   if (q==1) {
 					   MODEL.prop.alpha2Q_star[0]=max(MODEL.prop.alpha2Q_star[0],MIN_ALPHA2_VALUE);
 				   }
 				}
-				F32  factor;				
-				if   ( NEW.jumpType==MOVE||basis->type==OUTLIERID) 	factor=0.;
-				else { factor=basis->ModelPrior(basis,&NewCol,&NEW); }
-				F32 delta_lik=MODEL.prop.marg_lik - MODEL.curr.marg_lik+factor;
+				F32 delta_lik=(- MODEL.prop.marg_lik+MODEL.curr.marg_lik  )/2.0;
 				I08     acceptTheProposal;
 				if      (delta_lik >   0)   acceptTheProposal=1;
 				else if (delta_lik < -23) 	acceptTheProposal=0;				
@@ -430,9 +432,7 @@ void beast2_main_corev4_gui(void)
 				U08 bStoreCurrentSample=(ite > MCMC_BURNIN) && (ite%MCMC_THINNING==0);
 				if (bResampleParameter||bStoreCurrentSample)	{		
 					if (q==1) {
-						F32 sig2=(*RND.rndgamma++) * 1.f/MODEL.curr.alpha2Q_star[0];
-						sig2=1.0f/sig2;					 
-						MODEL.sig2[0]=sig2 > MIN_SIG2_VALUE ? sig2 : MODEL.sig2[0];
+						MODEL.sig2[0]=MODEL.curr.alpha2Q_star[0]/(yInfo.alpha1_star);
 					}	else {
 						F32PTR MEMBUF=Xnewterm;
 						local_pcg_invwishart_upper( &stream,MODEL.sig2,MODEL.sig2+q*q,MEMBUF,q,
@@ -455,53 +455,12 @@ void beast2_main_corev4_gui(void)
 						r_ippsAdd_32f_I(MODEL.curr.beta_mean,MODEL.beta,K * q);
 					}
 				}
-				if (bResampleParameter && q==1) 
-				{
-					I32 ntries=0;
-					do {
-						if (ntries++==0)	precFunc.ResamplePrecValues(&MODEL,&hyperPar,&stream);							
-						else				precFunc.IncreasePrecValues(&MODEL);											
-						precFunc.GetXtXPrecDiag( &MODEL);
-						precFunc.chol_addCol(    MODEL.curr.XtX,MODEL.curr.cholXtX,MODEL.curr.precXtXDiag,MODEL.curr.K,1L,MODEL.curr.K);		
-						precFunc.ComputeMargLik( &MODEL.curr,&MODEL,&yInfo,&hyperPar);
-					} while (  IsNaN(MODEL.curr.marg_lik) && ntries < 20 );
-					if ( IsNaN(MODEL.curr.marg_lik) ) {
-						#if !(defined(R_RELEASE)||defined(M_RELEASE)) 
-						r_printf("skip3|prec: %.4f|marg_lik_cur: %.4f \n",MODEL.precVec[0],MODEL.curr.marg_lik);
-						#endif
-						skipCurrentPixel=3;
-						break;
-					} 
-				}
-				if (bResampleParameter && q>1) 
-				{
-					F32PTR MEMBUF=Xnewterm;					
-					I32    K=MODEL.curr.K;
-					I32 ntries=0;
-					do {
-						if (ntries++==0) {
-							r_cblas_sgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,K,q,q,1.0,MODEL.beta,K,MODEL.sig2+q*q,q,0.f,MEMBUF,K);
-							F32 sumq=DOT(K * q,MEMBUF,MEMBUF);
-							r_vsRngGamma(VSL_RNG_METHOD_GAMMA_GNORM_ACCURATE,stream,1L,MODEL.precVec,(hyperPar.del_1+K * q * 0.5f),0.f,1.f);
-							MODEL.precVec[0]=MODEL.precVec[0]/(hyperPar.del_2+0.5f * sumq);
-							MODEL.logPrecVec[0]=logf(MODEL.precVec[0]);
-						} else {
-							precFunc.IncreasePrecValues(&MODEL);
-						}
-						precFunc.GetXtXPrecDiag(&MODEL);
-						precFunc.chol_addCol(MODEL.curr.XtX,MODEL.curr.cholXtX,MODEL.curr.precXtXDiag,K,1,K);
-						precFunc.ComputeMargLik(&MODEL.curr,&MODEL,&yInfo,&hyperPar);
-					} while (IsNaN(MODEL.curr.marg_lik) && ntries < 20);
-					if ( IsNaN(MODEL.curr.marg_lik) ) {
-						#if !(defined(R_RELEASE)||defined(M_RELEASE)) 
-							r_printf("skip4|prec: %.4f|marg_lik_cur: %.4f \n",MODEL.precVec[0],MODEL.curr.marg_lik);
-						#endif
-						skipCurrentPixel=3;
-						break;
-					}  
-				}
 				if (!bStoreCurrentSample) continue;
 				sample++;
+				if (extra.printProgressBar && NUM_PIXELS==1 && sample%1000==0) {
+					F32 frac=(F32)(chainNumber * MCMC_SAMPLES+sample)/(MCMC_SAMPLES * MCMC_CHAINNUM);
+					printProgress(frac,extra.consoleWidth,Xnewterm,0);
+				}
 				*resultChain.marg_lik+=MODEL.curr.marg_lik;
 				if (q==1) {
 					resultChain.sig2[0]+=MODEL.sig2[0];
@@ -510,7 +469,7 @@ void beast2_main_corev4_gui(void)
 					r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,q,1.f,MODEL.sig2,q,MODEL.sig2,q,0.f,MEMBUF,q);
 					r_ippsAdd_32f_I(MEMBUF,resultChain.sig2,q*q);
 				}
-				F32PTR BETA=(extra.useMeanOrRndBeta==0) ? MODEL.curr.beta_mean : MODEL.beta;
+				F32PTR BETA=(extra.useMeanOrRndBeta==0)||1L  ? MODEL.curr.beta_mean : MODEL.beta;
 				{
 					F32PTR MEMBUF1=Xnewterm;					
 					for (I32 i=0; i < MODEL.NUMBASIS;++i) 
@@ -663,49 +622,6 @@ void beast2_main_corev4_gui(void)
 							InsertNewRowToUpdateCI(&ciParam,&ci[i]);						
 					}					
 				} 
-						EnterCriticalSection(&gData.cs);
-						gData.ite=ite;
-						gData.sample=sample;
-						if (opt->io.meta.hasSeasonCmpnt) {
-							gData.tKnotNum=MODEL.b[1].nKnot;
-							gData.sKnotNum=MODEL.b[0].nKnot;;
-						} else {
-							gData.tKnotNum=MODEL.b[0].nKnot;
-							gData.sKnotNum=0;
-						}
-						if (gData.yMaxT==gData.yMinT||ite%200==0) 	{
-							int idx;
-							r_ippsMaxIndx_32f(gData.curt,N,&gData.yMaxT,&idx);
-							r_ippsMinIndx_32f(gData.curt,N,&gData.yMinT,&idx);
-							gData.yMinT=gData.yMinT - (gData.yMaxT - gData.yMinT)/5;
-							gData.yMaxT=gData.yMaxT+(gData.yMaxT - gData.yMinT)/5;
-							if (gData.curs !=NULL) {
-								r_ippsMaxIndx_32f(gData.curs,N,&gData.yMaxS,&idx);
-								r_ippsMinIndx_32f(gData.curs,N,&gData.yMinS,&idx);
-								gData.yMinS=gData.yMinS - (gData.yMaxS - gData.yMinS)/5;
-								gData.yMaxS=gData.yMaxS+(gData.yMaxS - gData.yMinS)/5;
-							}
-						}
-						if (gData.sleepInterval > 5) {
-							Sleep_ms(gData.sleepInterval);
-							BEAST2_GeneratePlotData();
-						} else {
-							QueryPerformanceCounter(&tEnd);
-							if ((tEnd.QuadPart - tStart.QuadPart) * 1000/tFrequency.QuadPart > gData.timerInterval) {
-								BEAST2_GeneratePlotData();
-								tStart=tEnd;
-							}
-						}
-						while (gData.status==PAUSE && gData.quit==0)
-							SleepConditionVariableCS(&gData.cv,&gData.cs,INFINITE);
-						if (gData.quit)
-						{
-							LeaveCriticalSection(&gData.cs);
-							MEM.free_all(&MEM);
-							r_vslDeleteStream(&stream);
-							return;
-						}
-						LeaveCriticalSection(&gData.cs);
 			}
 			if (!skipCurrentPixel)
 			{
@@ -889,16 +805,6 @@ void beast2_main_corev4_gui(void)
 				q_warning("\nWARNING(#%d):The max number of bad iterations exceeded. Can't decompose the current time series\n",skipCurrentPixel);
 				break;
 			}
-					EnterCriticalSection(&gData.cs);
-					gData.curChainNumber=chainNumber;
-					if (opt->io.meta.hasSeasonCmpnt) {
-						gData.sN=*resultChain.sncp;
-					} else {
-						gData.sN=0;
-					}
-					gData.tN=*resultChain.tncp;
-					PostMessage(gData.hwnd,WM_USER+2,0,0);
-					LeaveCriticalSection(&gData.cs);
 		}
 		__END_IF_NOT_SKIP_TIMESESIRIES__  
 	}
@@ -1204,6 +1110,7 @@ void beast2_main_corev4_gui(void)
 		F64 elaspedTime=GetElaspedTimeFromBreakPoint();
 		if (NUM_OF_PROCESSED_GOOD_PIXELS > 0 && NUM_PIXELS > 1 && (pixelIndex%50==0||elaspedTime > 1)) 		{
 			F64 estTimeForCompletion=GetElapsedSecondsSinceStart()/NUM_OF_PROCESSED_GOOD_PIXELS * (NUM_PIXELS - pixelIndex);
+			printProgress2((F32)pixelIndex/NUM_PIXELS,estTimeForCompletion,extra.consoleWidth,Xnewterm,0);
 			if (elaspedTime > 1) SetBreakPointForStartedTimer();
 		}
 		#ifdef __DEBUG__
@@ -1215,16 +1122,6 @@ void beast2_main_corev4_gui(void)
 	} 
 	r_vslDeleteStream(&stream);
 	MEM.free_all(&MEM);
-	PostMessage(gData.hwnd,WM_USER+1,0,0);
-	EnterCriticalSection(&gData.cs);
-	gData.t=NULL;
-	gData.y=NULL;
-	gData.s=NULL;
-	gData.rowsMissing=NULL;
-	while (gData.status !=DONE)
-		SleepConditionVariableCS(&gData.cv,&gData.cs,INFINITE);
-	LeaveCriticalSection(&gData.cs);
-#endif
-	return;
+	return 1;
 } 
 #include "abc_000_warning.h"

@@ -1,9 +1,9 @@
 #include "abc_000_warning.h"
-#ifdef CLANG_COMPILER
+#if  defined(CLANG_COMPILER) && !defined(ARM64_OS)  
     #pragma clang optimize on
 	#pragma clang attribute push (__attribute__((target("avx,avx2,avx512f,avx512dq,avx512bw"))),apply_to=function)
 #endif
-#ifdef  GCC_COMPILER
+#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
 	 #pragma GCC target("avx,avx2,avx512f,avx512dq,avx512bw") 
@@ -353,7 +353,7 @@ v16sf pow512_ps(v16sf x,float n) {
     }
 }
 #endif 
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

@@ -8,14 +8,23 @@ static void DSVT(BEAST2_BASIS_PTR basis,I32 N,BEAST2_RNDSTREAM* PRAND)
 	I32 maxKnotNum=basis->prior.maxKnotNum;
 	I32 minKnotNum=basis->prior.minKnotNum;
 	basis->nKnot=minKnotNum;  
-	I32 SEP=N/(basis->nKnot+1);
-	I32 initKnot=1+SEP;
+	I32 leftMargin=basis->prior.leftMargin;
+	I32 rightargin=basis->prior.rightMargin;
+	I32 minSepDist=basis->prior.minSepDist;
+	I32 Nvalid=(N - rightargin) - (1+leftMargin+1)+1;
+	I32 SEP=Nvalid/max(basis->nKnot,1);
+	I32 initKnot=1+leftMargin+1;
 	for (I32 i=1; i <=basis->nKnot;++i) {
 		basis->ORDER[i - 1]=rndOrder;       
 		basis->KNOT[i - 1]=initKnot;
 		initKnot+=SEP;
 	}
 	basis->ORDER[basis->nKnot]=rndOrder;
+	I32 fakeStart=1L+(leftMargin - minSepDist);
+	I32 fakeEnd=(N+1) - rightargin+minSepDist;
+	basis->KNOT[INDEX_FakeStart]=fakeStart;
+	basis->KNOT[INDEX_FakeEnd]=fakeEnd;	 
+	basis->KNOT[-1]=1L;	    
 	basis->KNOT[basis->nKnot]=N+1L;
 	basis->CalcBasisKsKeK_TermType(basis); 
 }

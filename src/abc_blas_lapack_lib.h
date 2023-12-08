@@ -9,5 +9,5 @@
 #include "abc_vec.h" 
 #include "abc_tranpose.h" 
 #define r_mkl_simatcopy(C,T,N,numCISample,alpha,Matrix,N1,numCISample1) \
-	    i32_transpose_inplace_prev_two_ends(Matrix,N,numCISample )
+	    i32_transpose_inplace_prev_two_ends(Matrix,(U64) N,(U64) numCISample )
 #endif

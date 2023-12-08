@@ -11,7 +11,7 @@
 extern void* Get_Propose(I08,BEAST2_OPTIONS_PTR);
 extern pfnGenTerms * Get_GenTerms(I08 id,BEAST2_PRIOR_PTR prior);
 extern void* Get_CalcBasisKsKeK(I08 id,I08 precPriorType);
-extern void* Get_UpdateGoodVec(I08);
+extern void* Get_UpdateGoodVec_KnotList(I08);
 extern void* Get_ComputeY(I08,BEAST2_OPTIONS_PTR);
 extern void* Get_ModelPrior(I08);
 extern void* Get_GenRandomBasis(I08);
@@ -125,7 +125,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 	for (int i=0; i < NumBasis; i++)
 		MODEL.b[i].type=opt->prior.basisType[i];
 	I32 isComponentFixed[3]={0,0,0};
-	MODEL.did=MODEL.sid=MODEL.tid=MODEL.oid=-1;
+	MODEL.did=MODEL.sid=MODEL.tid=MODEL.oid=MODEL.vid=-1;
 	for (int i=0; i < NumBasis; i++) 	{
 		BEAST2_BASIS_PTR	basis=MODEL.b+i;
 		I08					type=basis->type;
@@ -136,6 +136,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.minKnotNum=opt->prior.trendMinKnotNum;
 			basis->prior.maxKnotNum=opt->prior.trendMaxKnotNum;
 			basis->prior.minSepDist=opt->prior.trendMinSepDist;
+			basis->prior.leftMargin=opt->prior.trendLeftMargin;
+			basis->prior.rightMargin=opt->prior.trendRightMargin;
 			basis->prior.minOrder=opt->prior.trendMinOrder;
 			basis->prior.maxOrder=opt->prior.trendMaxOrder;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
@@ -186,6 +188,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.minKnotNum=opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum=opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
+			basis->prior.leftMargin=opt->prior.seasonLeftMargin;
+			basis->prior.rightMargin=opt->prior.seasonRightMargin;
 			basis->prior.minOrder=opt->prior.seasonMinOrder;
 			basis->prior.maxOrder=opt->prior.seasonMaxOrder;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
@@ -231,6 +235,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.minKnotNum=opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum=opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
+			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
+			basis->prior.leftMargin=opt->prior.seasonLeftMargin;
 			basis->prior.minOrder=-1;
 			basis->prior.maxOrder=-1;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
@@ -283,6 +289,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.minKnotNum=opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum=opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
+			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
+			basis->prior.leftMargin=opt->prior.seasonLeftMargin;
 			basis->prior.minOrder=opt->prior.seasonMinOrder;
 			basis->prior.maxOrder=opt->prior.seasonMaxOrder;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
@@ -299,8 +307,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			I32 sMAXORDER=opt->io.meta.deseasonalize? opt->io.meta.period: basis->prior.maxOrder;
 			SVD->TERMS=MyALLOC(*MEM,N*sMAXORDER,F32,64);
 			SVD->SQR_CSUM=MyALLOC(*MEM,(N+1L) * sMAXORDER,F32,64);
-			CopyNumericObjToF32Arr(SVD->TERMS,opt->io.meta.svdTerms,N* sMAXORDER);
-			{
+			if(opt->io.meta.svdTerms_Object)	{
+				CopyNumericObjToF32Arr(SVD->TERMS,opt->io.meta.svdTerms_Object,N* sMAXORDER);
 				F32PTR ptr=SVD->TERMS;
 				F32PTR ptr1=SVD->SQR_CSUM; 
 				for (I32 order=1; order <=sMAXORDER; order++) {				 
@@ -346,7 +354,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 				.death=(U08)(1 * MAX_RAND_BYTE_VALUE),};
 		}
 		basis->Propose=Get_Propose(type,opt);		
-		basis->UpdateGoodVec=Get_UpdateGoodVec(type);
+		basis->UpdateGoodVec_KnotList=Get_UpdateGoodVec_KnotList(type);
 		basis->ComputeY=Get_ComputeY(type,opt);
 		basis->ModelPrior=Get_ModelPrior(opt->prior.modelPriorType);
 		basis->GenTerms=Get_GenTerms(type,&opt->prior);

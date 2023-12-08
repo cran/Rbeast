@@ -3,21 +3,25 @@
 beast.irreg <- function(  
                     y,    
                     time, 
-					deltat = NULL , 
-					period = NULL,                  
-                    season = c('harmonic','dummy','none'),
-                    scp.minmax=c(0,10), sorder.minmax=c(0,5), sseg.min=NULL,
-                    tcp.minmax=c(0,10), torder.minmax=c(0,1), tseg.min=NULL,
-                    detrend       = FALSE,
-                    deseasonalize = FALSE,
-                    mcmc.seed=0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
+					deltat     = NULL , 
+					period     = NULL,                  
+                    season     = c('harmonic','svd','dummy','none'),
+					scp.minmax = c(0,10), sorder.minmax=c(0,5), 
+					tcp.minmax = c(0,10), torder.minmax=c(0,1), 
+					sseg.min   = NULL, sseg.leftmargin = NULL,  sseg.rightmargin = NULL, 
+					tseg.min   = NULL, tseg.leftmargin = NULL,  tseg.rightmargin = NULL, 
+					method         = c('bayes','bic', 'aic','aicc','hic'),
+                    detrend        = FALSE,
+                    deseasonalize  = FALSE,
+                    mcmc.seed      = 0,  mcmc.burnin=200, mcmc.chains=3, mcmc.thin=5,mcmc.samples=8000,
 					ci             = FALSE,
                     precValue      = 1.5,
                     precPriorType  = c('componentwise','uniform','constant','orderwise'),					
                     print.options  = TRUE,
                     print.progress = TRUE,					
 					quiet          = FALSE,
-                    gui=FALSE,...)
+                    gui            = FALSE,
+					...)
 {
 
   #time=df$date
@@ -76,6 +80,9 @@ beast.irreg <- function(
    metadata$detrend           = detrend
    metadata$missingValue      = NaN
    metadata$maxMissingRate    = 0.7500
+   if ( hasArg("maxMissingRate") ) {
+		metadata$maxMissingRate    = list(...)[['maxMissingRate']]
+   }   
    if ( hasArg('hasOutlier') ) {   
         hasOutlier =list(...)[['hasOutlier']]
 		metadata$hasOutlierCmpnt=as.logical(hasOutlier)		           
@@ -84,31 +91,35 @@ beast.irreg <- function(
         freq                = list(...)[['freq']]  
 		metadata$period     = deltat*freq		       
    }
-
-
-		
 		
 #......End of displaying MetaData ......
    prior = list()
    prior$modelPriorType	  = 1   
    if (!(season=='none')){
     prior$seasonMinOrder   = sorder.minmax[1]
-	  prior$seasonMaxOrder   = sorder.minmax[2]
+	prior$seasonMaxOrder   = sorder.minmax[2]
     prior$seasonMinKnotNum = scp.minmax[1]
     prior$seasonMaxKnotNum = scp.minmax[2]
     if (!is.null(sseg.min) && !is.na(sseg.min))   prior$seasonMinSepDist = sseg.min
+	if (!is.null(sseg.leftmargin)  && !is.na(sseg.leftmargin))  prior$seasonLeftMargin = sseg.leftmargin
+	if (!is.null(sseg.rightmargin) && !is.na(sseg.rightmargin)) prior$seasonRightMargin = sseg.rightmargin
    }   
    prior$trendMinOrder	  = torder.minmax[1]
    prior$trendMaxOrder	  = torder.minmax[2]
    prior$trendMinKnotNum  = tcp.minmax[1]
    prior$trendMaxKnotNum  = tcp.minmax[2]
-   if (!is.null(tseg.min) && !is.na(tseg.min))   prior$trendMinSepDist = tseg.min
-   if ( hasArg('ocp') ) {    
-        
+   if (!is.null(tseg.min) && !is.na(tseg.min))                 prior$trendMinSepDist = tseg.min   
+   if (!is.null(tseg.leftmargin)  && !is.na(tseg.leftmargin))  prior$trendLeftMargin  = tseg.leftmargin
+   if (!is.null(tseg.rightmargin) && !is.na(tseg.rightmargin)) prior$trendRightMargin = tseg.rightmargin
+   
+   if ( hasArg('ocp') ) {   
 		metadata$hasOutlierCmpnt = TRUE	
         prior$outlierMaxKnotNum	 =list(...)[['ocp']] 
    }  
-   prior$K_MAX            = 300
+   prior$K_MAX            = 550
+   prior$precValue        = precValue
+   prior$precPriorType    = precPriorType
+   
  
 #......End of displaying pripr ......
 
@@ -151,14 +162,21 @@ beast.irreg <- function(
 	warning('R is not running in the inteactive mode. Resetting gui to FALSE.');
 	gui = FALSE
  }
+
+
+ method = match.arg(method) 
+ funstr = ifelse(gui,"beastv4demo", paste0("beast_",method)) 
  
- funstr=ifelse(!gui,"beastv4","beastv4demo")  
   if ( hasArg("cputype") )  {
     cputype = list(...)[['cputype']]  
 	cputype = switch(cputype, sse=1, avx2=2, avx512=3);	
-	ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra,cputype),   212345)   		   
+	ANS     = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra,cputype),   212345)   		   
  } else {
-	ANS    = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
+    if (hasArg("local")){ # run the local developer's version of Rbeast
+		#ANS  = .Call( "rexFunction1", list(funstr,y,metadata,prior,mcmc,extra),   212345, PACKAGE="Rbeast.mexw64")  
+	} else{
+	    ANS  = .Call( BEASTV4_rexFunction, list(funstr,y,metadata,prior,mcmc,extra),   212345)   		   
+	}	    		   
  }
  		   
  invisible(return(ANS))    

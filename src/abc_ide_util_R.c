@@ -6,10 +6,13 @@
 #include "abc_common.h"
 #include "abc_date.h"
 #if R_INTERFACE==1
+int  JDN_to_DateNum(int jdn) {
+	return jdn - 2440588;
+}
 SEXP getListElement(SEXP list,const char* str) {
 	SEXP elmt=NULL; 
 	SEXP names=getAttrib(list,R_NamesSymbol);
-	for (int i=0; i < length(list); i++)
+	for (int i=0; i < length(names); i++)
 		if (strcmp(CHAR(STRING_ELT(names,i)),str)==0) {
 			elmt=VECTOR_ELT(list,i);
 			break;
@@ -19,8 +22,8 @@ SEXP getListElement(SEXP list,const char* str) {
 SEXP getListElement_CaseIn(SEXP list,const char* str)
 {
 	SEXP elmt=NULL; 
-	SEXP names=getAttrib(list,R_NamesSymbol);
-	for (int i=0; i < length(list); i++)
+	SEXP names=getAttrib(list,R_NamesSymbol); 
+	for (int i=0; i < length(names); i++)
 		if (strcicmp(CHAR(STRING_ELT(names,i)),str)==0) {
 			elmt=VECTOR_ELT(list,i);
 			break;
@@ -59,7 +62,7 @@ void GetFieldNameByIdx(VOID_PTR strucVar,I32 ind0,char* str,int buflen) {
 	SEXP names=getAttrib(strucVar,R_NamesSymbol);
 	int  n=length(names);
 	if (ind0 < n) {
-		char* name=CHAR(STRING_ELT(names,ind0));
+		const char* name=CHAR(STRING_ELT(names,ind0));
 		strncpy(str,name,buflen);
 		str[buflen - 1]=0;
 	}	else {
@@ -68,11 +71,10 @@ void GetFieldNameByIdx(VOID_PTR strucVar,I32 ind0,char* str,int buflen) {
 }
 I32 GetCharArray(void *ptr,char * dst,int n) {
 	dst[0]=0;
-	if (TYPEOF((SEXP)ptr) !=STRSXP) {
+	if (ptr==NULL||TYPEOF((SEXP)ptr) !=STRSXP) {
 		return 0;
 	}
-	char* tmpstr;
-	tmpstr=CHAR(STRING_ELT(ptr,0));
+	const char* tmpstr=CHAR(STRING_ELT(ptr,0));
 	strncpy(dst,tmpstr,n);
 	dst[n]=0;
 	return (I32) strlen(dst);
@@ -81,8 +83,7 @@ I32 GetCharVecElem(void* ptr,int idx,char* dst,int n) {
 	if (TYPEOF((SEXP)ptr) !=STRSXP) {
 		return 0;
 	}
-	char* tmpstr;
-	tmpstr=CHAR(STRING_ELT((SEXP)ptr,idx));
+	const char* tmpstr=CHAR(STRING_ELT((SEXP)ptr,idx));
 	strncpy(dst,tmpstr,n);
 	dst[n]=0;
 	return (I32)strlen(dst);
@@ -104,8 +105,8 @@ void* GetField123(const void* structVar,char* fname,int nPartial) {
 	if (!structVar) return NULL;
 	void* elem=(void*)getListElement_CaseIn(structVar,fname);
 	if (elem==NULL) {	 
-		SEXP names=getAttrib(structVar,R_NamesSymbol);
-		for (int i=0; i < length(structVar); i++)
+		SEXP names=getAttrib(structVar,R_NamesSymbol); 
+		for (int i=0; i < length(names); i++)
 			if (strcicmp_nfirst(CHAR(STRING_ELT(names,i)),fname,nPartial)==0) {
 				elem=VECTOR_ELT(structVar,i);
 				break;
@@ -217,12 +218,15 @@ void *CreateNumVar(DATA_TYPE dtype,int *dims,int ndims,VOIDPTR * data_ptr) {
 			return tmpSEXP;
 }
 void *CreateStructVar(FIELD_ITEM *fieldList,int nfields) { 	
-	int nfields_new=0;
+	int nfields_actual=0;
 	for (int i=0; i < nfields;++i) {
-		nfields_new++;
-		if (fieldList[i].name[0]==0) 	break;
+		nfields_actual++;
+		if (fieldList[i].name[0]==0) {
+			nfields_actual--;
+			break;
+		}
 	}
-	nfields=nfields_new;
+	nfields=nfields_actual;
 	SEXP LIST;
 	SEXP NAMES;
 	int  nprt=0L;
@@ -330,7 +334,7 @@ void ConsumeInterruptSignal() { return ; }
 		R_ReadConsole=GetReadConsole();
 		char str[100];
 		str[0]=0;
-		while (stricmp(str,"exit") !=0) {
+		while (strcicmp(str,"exit") !=0) {
 			R_ReadConsole("",str,10,0);
 			str[4]=0;
 		}

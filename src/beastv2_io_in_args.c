@@ -12,15 +12,14 @@
 #include "abc_date.h"
 #include "beastv2_func.h"    
 #include "beastv2_io.h"
-#define _IsAlmostInteger(x)  ( fabs(x-round(x)) <1e-3 )
+#define CondErrMsgRet0(cond,...)   if(cond) { r_error(__VA_ARGS__); return 0;}
+#define CondErrActionRet0(cond,Action,...)   if(cond) { (Action) ;r_error(__VA_ARGS__); return 0;}
+#define ifelse(cond,a,b)  ((cond)?(a):(b))
 static int  GetArg_0th_Data(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) {
-	if (nrhs < 2L) {
-		r_error("ERROR: At least one input argument is needed!\n");
-		return 0;
-	}
+	CondErrMsgRet0( nrhs < 2L,"ERROR: At least one input argument is needed!\n" );
 	VOIDPTR DATA=prhs[1];
 	int     numel=GetNumberOfElements(DATA);
-	if ( !(IsNumeric(DATA) && numel > 2)  && !(IsStruct(DATA) && numel >=1) && !IsCell(DATA)) {
+	if (IsEmpty(DATA)||( !(IsNumeric(DATA) && numel > 2) && !(IsStruct(DATA) && numel >=1) && !IsCell(DATA) ) ) {
 		r_error("ERROR: The input data should be numeric and must be long enough.\n");
 		return 0;
 	}
@@ -30,11 +29,11 @@ static int  GetArg_0th_Data(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) {
 		q=numel;
 		io->pdata=malloc(sizeof(VOID_PTR) * q);
 		io->dtype=malloc(sizeof(DATA_TYPE) * q);
-		for (I32 i=0; i < q; i++) {
+		for (int i=0; i < q; i++) {
 			Y=GetFieldByIdx(DATA,i);
 			io->pdata[i]=GetData(Y);
 			io->dtype[i]=GetDataType(Y);
-		}
+		}		
 	} else {
 		q=1;
 		io->pdata=malloc(sizeof(VOID_PTR) * q);
@@ -44,13 +43,10 @@ static int  GetArg_0th_Data(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) {
 		Y=DATA;
 	}
 	for (int i=0; i < q; i++) {
-		if (io->dtype[i]==DATA_UNKNOWN) {
-			r_error("ERROR: The input data has an uknown numeric type!\n");
-			return 0;
-		}
+		CondErrMsgRet0( io->dtype[i]==DATA_UNKNOWN,"ERROR: The input data has an uknown numeric type!\n");		
 	}
 	io->q=q;
-	io->timedim=-1L;   
+	io->timedim=UnknownStatus;   
 	I32 ndims=GetNumOfDim(Y);	
 	if (ndims==0||	 
 		ndims==1)      
@@ -89,429 +85,347 @@ static int  GetArg_0th_Data(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) {
 	}
 	return 1;
 }
+static float ParsePeriod(BEAST2_IO_PTR _OUT_ io);
+static int   Parse_whichDimIsTime(BEAST2_IO_PTR _OUT_ io,int Nrawtime,int userWhichDim);
 static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) {
-	VOIDPTR  tmp;
 	BEAST2_METADATA_PTR meta=&io->meta;
-	int METADATA_NONE=0;
-	int METADATA_NumericScalar=0;
-	int METADATA_NumericVector=0;
-	int METADATA_CharVector=0;
-	int METADATA_CharScaler=0;
-	int METADATA_Struct=0;
-	int METADATA_OTHER=0;
-	VOIDPTR pmeta=nrhs < 3 ? NULL : prhs[2L];
+	meta->nrhs=nrhs;
+	int METADATA_NONE=_False_;
+	int METADATA_NumericScalar=_False_;
+	int METADATA_NumericVector=_False_;
+	int METADATA_CharVector=_False_;
+	int METADATA_CharScaler=_False_;
+	int METADATA_Struct=_False_;
+	int METADATA_OTHER=_False_;
+	VOIDPTR pmeta=(nrhs < 3) ? NULL : prhs[2L];
 	VOIDPTR TIMEobj=NULL;
-	meta->whichDimIsTime=-1L;	
-	meta->startTime=getNaN();
-	meta->deltaTime=getNaN();
-	meta->isDate=0;
+	int     userWhichDimIsTime=UnknownStatus;
 	if ( pmeta==NULL||IsEmpty(pmeta) ) {
-		METADATA_NONE=1;
+		METADATA_NONE=_True_;
 	} else if ( IsNumeric(pmeta) ) {
-		int numel=GetNumberOfElements(pmeta);
-		if      (numel==0) METADATA_NONE=1;
-		else if (numel==1) METADATA_NumericScalar=1;
-		else if (numel > 1)  METADATA_NumericVector=1,TIMEobj=pmeta;
-		else 			     METADATA_OTHER=1;		
+		int  numel=GetNumberOfElements(pmeta);
+		if      (numel==0) METADATA_NONE=_True_;
+		else if (numel==1) METADATA_NumericScalar=_True_;
+		else if (numel > 1 ) METADATA_NumericVector=_True_,TIMEobj=pmeta;
+		else 			     METADATA_OTHER=_True_;
 	} else if ( IsChar(pmeta) ) {
 		int numel=GetNumberOfElements(pmeta);
-		if      (numel==0) METADATA_NONE=1;
-		else if (numel==1) METADATA_OTHER=1;
-		else if (numel > 1)  METADATA_CharVector=1,TIMEobj=pmeta;
-		else 			     METADATA_OTHER=1;
+		if      (numel==0) METADATA_NONE=_True_;
+		else if (numel==1) METADATA_CharScaler=_True_;
+		else if (numel > 1 ) METADATA_CharVector=_True_,TIMEobj=pmeta;
+		else 			     METADATA_OTHER=_True_;
 	} else if (IsStruct(pmeta) ) {
-		METADATA_Struct=1;	
-		TIMEobj=(tmp=GetField123Check(pmeta,"time",2))           ? tmp            : NULL;
-		TIMEobj=tmp && IsEmpty(tmp)? NULL: tmp;  
-		meta->whichDimIsTime=(tmp=GetField123Check(pmeta,"whichDimIsTime",2)) ? GetScalar(tmp) : -1;		
-		if (io->ndim==1 && meta->whichDimIsTime !=-1) {			
-			q_warning("WARNING: metadata$whichDimIsTime=%d is ignored because 'whichDimIsTime' is used only for 2D matrix or 3D array inputs "
-					  "but your input is a 1D vector.\n",io->meta.whichDimIsTime);
-		}
-		I08 isDefaultStartTime=0;
-		tmp=GetField123Check(pmeta,"startTime",2);
-		tmp=tmp && IsEmpty(tmp) ? NULL : tmp;
-		if (tmp && IsClass(tmp,"Date")) {
-			int   days=GetScalar(tmp);
-			meta->startTime=fractional_civil_from_days(days);
-			meta->isDate=1;
-		} else if (tmp && IsNumeric(tmp)) {
-			char* msg="A valid startTime should be either a numeric scalar,a vector of two values (Year,Month),or a vector of three values (Year,Month,Day).";
-			I32   n=GetNumberOfElements(tmp);
-			if (n==1)
-				meta->startTime=GetScalar(tmp);
-			else if (n==2) {
-				F32 Y=GetNumericElement(tmp,0),M=GetNumericElement(tmp,1);
-				meta->startTime=Y+M/12-1/24.0;
-				meta->isDate=1;
-				q_warning("WARNING: metadata$startTime=[%g,%g] is interpreted as %04d/%02d/15 (Year/Month/Day) and converted to "
-					      "a decimal year of %g. If not making sense,supply a correct start time: %s\n",Y,M,(int)Y,(int)M,meta->startTime,msg);
-			}
-			else if (n==3) {
-				F32 Y=GetNumericElement(tmp,0),M=GetNumericElement(tmp,1),D=GetNumericElement(tmp,2);
-				meta->startTime=(F32) YMDtoF32time((int)Y,(int)M,(int)D);
-				meta->isDate=1;
-				q_warning("WARNING: Your metadata$startTime=[%g,%g,%g] is interpreted as %04d/%02d/%02d (Year/Month/Day) and converted to "
-					       "a decimal year of %g. If not making sense,supply a correct start time: %s\n",Y,M,D,(int)Y,(int)M,(int)D,meta->startTime,msg);
-			}
-			else {
-				r_error("ERROR: Your metadata$startTime has more than three elements. %s\n",msg);
-				return 0;
-			}
-		} else {
-			meta->startTime=getNaN();
-			isDefaultStartTime=1L;
-		}
-		tmp=GetField123Check(pmeta,"deltaTime",3);
-		tmp=tmp && IsEmpty(tmp) ? NULL : tmp;
-		if ( tmp==NULL  ) {
-			meta->deltaTime=getNaN();
-		} 
-		else if (tmp && IsNumeric(tmp)) {
-			meta->deltaTime=GetScalar(tmp);
-		}
-		else if (tmp && IsChar(tmp)) {
-			char s[100+1];
-			s[0]=0;
-			int  slen=GetCharVecElem(tmp,0,s,100);
-			F64  dt=extract_fyear(s);
-			if (IsNaN(dt)) {
-				r_error("ERROR: Unable to intepret metadata$deltaTime='%s'!\n",s);
-				return 0;
-			}
-			meta->deltaTime=dt;
-			meta->isDate=1;
-		}
-		else {
-			r_error("ERROR: metadata$deltaTime is of unrecognizable type!\n");
-			return 0;
-		}
-		if (meta->deltaTime <=0) {
-			r_error("ERROR: metadata$deltaTime must be a positive time interval!\n");
-			return 0;
-		}
+		METADATA_Struct=_True_;
+		TIMEobj=GetField123Check(pmeta,"time",2) ; 
+		VOIDPTR  tmp;
+		userWhichDimIsTime=(tmp=GetField123Check(pmeta,"whichDimIsTime",2)) ? GetScalar(tmp) : UnknownStatus;
 	} else {
-		METADATA_OTHER=1;
+		METADATA_OTHER=_True_;
 	}
-	if (METADATA_OTHER==1) {
-		r_error("ERROR: The 'metadata' parameter given is of unsupported type.\n");
-		return 0;
-	}
-	meta->hasSeasonCmpnt=-1;
-	meta->period=getNaN();
-	I08 metaProcessed=0;
+	CondErrMsgRet0(METADATA_OTHER==_True_,"ERROR: The 'metadata' parameter given is of unsupported type.\n");
+	meta->hasSeasonCmpnt=UnknownStatus;
+	I08 ISDATE=UnknownStatus;
+	F32 START=getNaN();
+	F32 DT=getNaN();
+	F32 PERIOD=getNaN();
 	if (METADATA_NONE||METADATA_NumericScalar||METADATA_CharVector||METADATA_CharScaler||METADATA_NumericVector) {
+		START=getNaN();
+		DT=getNaN();
+		PERIOD=getNaN();
 		if (METADATA_NumericScalar) {
-			meta->period=GetScalar(pmeta);
-			if (meta->period <=0) {
-				meta->hasSeasonCmpnt=0;
-				q_warning("WARNING: A negative or zero value of period (%g) means no periodic/seasonal component in the input time series!\n",meta->period);
-			} else {
-				meta->hasSeasonCmpnt=1;
-				if (!_IsAlmostInteger(meta->period)) {
-					r_error("ERROR: When metadata is supplied as a single number %g,it must be an integer to specify the period of the regular time seires!\n",meta->period);
-					return 0;
+			PERIOD=GetScalar(pmeta);
+			if (!IsNaN(PERIOD) ) {
+				if (PERIOD <=0.) {
+					q_warning("WARNING: A negative or zero value of period (%g) means no periodic/seasonal component in the input time series!\n",meta->period);
+				} else{ 
+					CondErrMsgRet0(!_IsAlmostInteger(PERIOD),
+						"ERROR: When metadata is supplied as a single number %g,it must be an integer to specify the period of the regular time seires!\n",meta->period);
+					PERIOD=round(PERIOD);
 				}
-				meta->period=round(meta->period);
-			} 
-		}
-		else if (METADATA_CharScaler) {
-			char period[100+1];
-			GetCharArray(pmeta,period,100);
-			if (strcicmp(period,"none")==0) {
-				meta->hasSeasonCmpnt=0;
-				meta->period=0;
-			} else {
-				r_error("ERROR: When metadata is supplied as a string to speciify period,it can only be 'none'!\n");
-				return 0;
 			}
+			meta->hasSeasonCmpnt=PERIOD <=0.0? _False_ :_True_; 
+		}	else if (METADATA_CharScaler) {
+			char period[10+1];
+			GetCharArray(pmeta,period,10L);
+			CondErrMsgRet0( strcicmp(period,"none") !=0,"ERROR: When metadata is supplied as a string to speciify period,it can only be 'none'!\n");
+ 			meta->hasSeasonCmpnt=_False_;
+			PERIOD=0.0;
+		}	else {
+			meta->hasSeasonCmpnt=_True_;
 		}
-		else {
-			meta->hasSeasonCmpnt=1;
-		}
-		meta->hasOutlierCmpnt=0;
-		meta->seasonForm='S';
-		meta->detrend=0;
-		meta->deseasonalize=0;
+		meta->seasonForm=ifelse( meta->hasSeasonCmpnt,'S','N');
+		meta->hasOutlierCmpnt=_False_;		
+		meta->detrend=_False_;
+		meta->deseasonalize=_False_;
 		meta->missingValue=getNaN();
-		meta->maxMissingRate=0.75;
-		metaProcessed=1;
-	} 
-	if (METADATA_Struct) {
+		meta->maxMissingRate=0.75f;
+	}
+	else if (METADATA_Struct) {
+		VOIDPTR  tmp;
+		tmp=GetField123Check(pmeta,"startTime",2); 
+		TimeScalarInfo timevalue;
+		Parse_SingelDateObject(tmp,&timevalue);
+		START=timevalue.value;
+		if (timevalue.unit=='Y')  ISDATE=_True_;
+		CondErrMsgRet0(timevalue.unit=='B',"ERROR: cannot interpret the metadata$startTime input,'\n");
+		tmp=GetField123Check(pmeta,"deltaTime",3);
+		Parse_TimeIntervalObject(tmp,&timevalue);
+		DT=timevalue.fyear;
+		if (timevalue.unit !='U' && timevalue.unit !='B') ISDATE=_True_;
+		CondErrMsgRet0(timevalue.unit=='B',"ERROR: cannot interpret the metadata$deltaTime input,'\n");
+		CondErrMsgRet0(DT             <=0,"ERROR: metadata$deltaTime must be a positive time interval!\n");
 		tmp=GetField123Check(pmeta,"period",2);
-		if (tmp==NULL||IsEmpty(tmp)) {
-			meta->period=getNaN();
+		Parse_TimeIntervalObject(tmp,&timevalue);
+		PERIOD=timevalue.fyear;
+		if (timevalue.unit !='U' && timevalue.unit !='B') ISDATE=_True_;
+		CondErrMsgRet0(timevalue.unit=='B',"ERROR: cannot interpret the metadata$period input,'\n");
+		if (PERIOD<=0) {
+			meta->hasSeasonCmpnt=_False_;
+			q_warning("WARNING: A negative or zero value of period (%g) indicates no periodic/seasonal component in the input time series!\n",PERIOD);
 		}
-		else if (tmp && IsNumeric(tmp)) {
-			meta->period=GetScalar(tmp);
-			if (meta->period <=0) {
-				meta->hasSeasonCmpnt=0;
-				q_warning("WARNING: A negative or zero value of period (%g) indicates no periodic/seasonal component in the input time series!\n",meta->period);
-			}
-			if (meta->period > 0) {
-				if (meta->period/meta->deltaTime > 2.0) {
-					meta->hasSeasonCmpnt=1;
-				}				
-			}
+		if (PERIOD > 0 && PERIOD/DT >=2.0) {
+			meta->hasSeasonCmpnt=_True_;			
 		}
-		else if (tmp && IsChar(tmp)) {
-			char s[100+1];
-			s[0]=0;
-			int  slen=GetCharVecElem(tmp,0,s,100);
-			if (strcicmp(s,"none")==0) {
-				meta->hasSeasonCmpnt=0;
-				meta->period=0;
-			}
-			else {
-				F64  dt=extract_fyear(s);
-				if (IsNaN(dt)) {
-					r_error("ERROR: Unable to intepret metadata$period='%s'!\n",s);
-					return 0;
-				}
-				meta->period=dt;
-				meta->isDate=1;
-			}
+		if (PERIOD > 0 && PERIOD/DT < 2.0) {
+			meta->hasSeasonCmpnt=_False_;
+			q_warning("WARNING: The value metadata$period/metadata$deltTime=%g/%g=%g is unreasonalbe for a siginal with seasonal componet,so no seasonal component is "
+				"assumed and the trend-only model is fitted. Perios is also set to 0.0\n",PERIOD,DT,PERIOD/DT);
+			PERIOD=0;
 		}
-		else {
-			r_error("ERROR: metadata$period is of unrecognizable type!\n");
-			return 0;
-		}
-		tmp=GetField123Check(pmeta,"season",2);
-		tmp=tmp && IsEmpty(tmp) && !IsChar(tmp) ? NULL : tmp;
+		tmp=( tmp=GetField123Check(pmeta,"season",2),tmp && !IsChar(tmp) ? NULL : tmp);
 		char season[20+1];
-		season[0]=0;
-		if (tmp) {
-			GetCharArray(tmp,season,20);
-			ToUpper(season);
-		}
-	   if (meta->hasSeasonCmpnt==0) {
-		   if (tmp && season[0] !='N'){
+		GetCharArray(tmp,season,20); 
+		ToUpper(season);
+		char a=season[0],b=season[1];
+	   if (meta->hasSeasonCmpnt==_False_ && a !='N' && a !='\0' ) {
 			   q_warning("WARNING: A confilict found between metadata$season=%s and period=%g. '%s' suggests a time series with periodic variations but "
 				         "period=%g or period='none' suggests a trend-only time series without any periodic variations. The season parameter is "
-				         "ignored and no seasonal component is assumed for the input.\n",season,meta->period,season,meta->period);
-	        }		
-		} else if  (tmp !=NULL && IsChar(tmp) ) {			
-			int  hasSeasonCmpt_season=1;
-			char a=season[0],b=season[1];
-			if      (a=='N' && b=='O') 		hasSeasonCmpt_season=0;							    
-			else if (a=='H' && b=='A') 		hasSeasonCmpt_season=1,meta->seasonForm='S'; 	
-			else if (a=='D' && b=='U')		hasSeasonCmpt_season=1,meta->seasonForm='D';			
-			else if (a=='S' && b=='V')		hasSeasonCmpt_season=1,meta->seasonForm='V';			
+				         "ignored and no seasonal component is assumed for the input.\n",season,PERIOD,season,PERIOD);
+		} else if  (tmp  && IsChar(tmp) ) {			
+			int  hasSeasonCmpt_bySeasonStr=_True_;			
+			if    ((a=='N' && b=='O')||a=='\0')		hasSeasonCmpt_bySeasonStr=_False_;								
+			else if (a=='H' && b=='A') 					hasSeasonCmpt_bySeasonStr=_True_,meta->seasonForm='S';    	
+			else if (a=='D' && b=='U')					hasSeasonCmpt_bySeasonStr=_True_,meta->seasonForm='D';		
+			else if (a=='S' && b=='V')					hasSeasonCmpt_bySeasonStr=_True_,meta->seasonForm='V';		
 			else {
-				hasSeasonCmpt_season=1;
+				hasSeasonCmpt_bySeasonStr=_True_;
 				meta->seasonForm='S';  
 				q_warning("WARNING: metadata$season='%s' has an unrecongizable string. The default season='harmonic' is used instead.\n",season);
 			}
-			if (meta->hasSeasonCmpnt==1 && hasSeasonCmpt_season==0) {
-				hasSeasonCmpt_season=1;
+			if (meta->hasSeasonCmpnt==_True_ && hasSeasonCmpt_bySeasonStr==_False_) {
+				hasSeasonCmpt_bySeasonStr=_True_;
 				meta->seasonForm='S';
 				q_warning("WARNING: A confilict found between metadata$season='none' and period=%g. season='none' suggests a time series with "
 					       "no periodic variations but period=%g suggests otherwise. The season='none' parameter is ignored and "
-					      "the data is assumed to have a seasonal component.\n",meta->period,meta->period);
+					      "the data is assumed to have a seasonal component.\n",PERIOD,PERIOD);
 			}
-			if (meta->seasonForm=='V') {
-				meta->svdTerms=GetFieldCheck(pmeta,"svdTerms");
-				if (meta->svdTerms==NULL) {
-					meta->seasonForm='S';  
-					q_warning("WARNING: metadata$svdTerms is missing. The default season='harmonic' is used instead.\n");
-				}
-			}	 
-			meta->hasSeasonCmpnt=hasSeasonCmpt_season;
+			meta->hasSeasonCmpnt=hasSeasonCmpt_bySeasonStr;
 		} 	else	{
-			if (meta->hasSeasonCmpnt==-1||meta->hasSeasonCmpnt==1) {
-				meta->hasSeasonCmpnt=1;
+			if (meta->hasSeasonCmpnt==UnknownStatus||meta->hasSeasonCmpnt==_True_) {
+				meta->hasSeasonCmpnt=_True_;
 				meta->seasonForm='S';
 				q_warning("WARNING: metadata$season is either missing or not given as a valid specifier string (e.g.,none,harmonic,or dummy). A default season='harmonic' is assumed.\n");
 			}
 		}	
-		if (meta->hasSeasonCmpnt==-1) {
-			r_error("ERROR: hasSeasonCmpnt=-1; there must be somethong wrong!");
-			return 0;
+		if (meta->seasonForm=='V') {
+			meta->svdTerms_Object=GetFieldCheck(pmeta,"svdTerms");
+			meta->svdYseason_Object=GetFieldCheck(pmeta,"svdYseason");
 		}
-		meta->hasOutlierCmpnt=(tmp=GetField123Check(pmeta,"hasOutlierCmpnt",2)) ? GetScalar(tmp) : 0L;
-		meta->detrend=(tmp=GetField123Check(pmeta,"detrend",3)) ?  GetScalar(tmp) : 0L;
-		meta->deseasonalize=(tmp=GetField123Check(pmeta,"deseasonalize",3)) ?  GetScalar(tmp) : 0L;
-		meta->missingValue=(tmp=GetField123Check(pmeta,"missingValue",2))   ? GetScalar(tmp) : getNaN();
-		meta->maxMissingRate=(tmp=GetField123Check(pmeta,"maxMissingRate",2)) ? GetScalar(tmp) : 0.75;
-		metaProcessed=1;
+		meta->hasOutlierCmpnt=(tmp=GetField123Check(pmeta,"hasOutlierCmpnt",2)) ? GetScalar(tmp) : _False_;
+		meta->detrend=(tmp=GetField123Check(pmeta,"detrend",3)) ?  GetScalar(tmp)   : _False_;
+		meta->deseasonalize=(tmp=GetField123Check(pmeta,"deseasonalize",3)) ?  GetScalar(tmp)   : _False_;
+		meta->missingValue=(tmp=GetField123Check(pmeta,"missingValue",0))   ? GetScalar(tmp)   : getNaN();
+		meta->maxMissingRate=(tmp=GetField123Check(pmeta,"maxMissingRate",0)) ? GetScalar(tmp)   : 0.75;
 	} 
-    if (TIMEobj) { 
-		I32    Nrawtime;
-		meta->isDate=!IsNumeric(TIMEobj) ? 1 : meta->isDate;
-		F32PTR f32time=CvtTimeObjToF32Arr(TIMEobj,&Nrawtime); 
-		if (f32time==NULL) {
-			r_error("ERROR: Unable to read and intepret 'time' or 'metadata$time'!\n");
-			return 0;
-		}
-		int matcheNumDims=(Nrawtime==io->dims[0])+(Nrawtime==io->dims[1])+(Nrawtime==io->dims[2]);
-		if (matcheNumDims==0) {
-			free(f32time);
-			r_error("ERROR: The input data must have the same length as the time in metadata.\n");
-			return 0;
-		} else if ( matcheNumDims==1) {
-			int  timeDimMatched;
-			if (Nrawtime==io->dims[0])  timeDimMatched=1;
-			if (Nrawtime==io->dims[1])  timeDimMatched=2;
-			if (Nrawtime==io->dims[2])  timeDimMatched=3;
-			if ( io->meta.whichDimIsTime !=-1 && io->meta.whichDimIsTime !=timeDimMatched) {
-				q_warning("WARNING: the specified metadata$whichDimIsTime=%d is ignored; 'whichDimIsTime=%d' is instead used based on the match between the input data and time.\n",io->meta.whichDimIsTime,timeDimMatched);
-			}
-			io->meta.whichDimIsTime=timeDimMatched;
-			io->timedim=timeDimMatched;
-		} else { 
-			int whichDimIsTime=meta->whichDimIsTime;	
-			if ( whichDimIsTime==-1||( io->ndim==2 && whichDimIsTime !=1 && whichDimIsTime !=2 ) ) {
-				free(f32time);
-				r_error("ERROR: For a 2D matrix input of size [%d x %d] (i.e.,multiple time series),metadata$whichDimIsTime must be given "
-						"to tell which dim of the matrix  refers to time. It must take a value out of 1 or 2 only.\n",io->dims[0],io->dims[1]);
-				return 0;
-			}
-			if (whichDimIsTime==-1||(io->ndim==3 && whichDimIsTime !=1 && whichDimIsTime !=2 && whichDimIsTime !=3)) {
-				free(f32time);
-				r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e.,stacked time series images),metadata$whichDimIsTime must be given "
-					"to tell which dim of the 3D array  refers to time. It must take a value out of 1,2 or 3 only.\n",io->dims[0],io->dims[1],io->dims[2]);
-				return 0;
-			}
-			if ( io->dims[whichDimIsTime] !=Nrawtime ) {
-				free(f32time);
-				r_error("ERROR: The length of the time dimension of the input (whichDimIsTime=%d) doesn't match the length of time/metadata$time (i.e.,%d!=%d).\n",whichDimIsTime,io->dims[whichDimIsTime],Nrawtime);
-				return 0;
-			}
-			io->timedim=whichDimIsTime;
-		}
-		meta->deltaTime=meta->deltaTime < 0 ? getNaN() : meta->deltaTime; 
-		io->T.dT=meta->deltaTime;
-		io->T.start=meta->startTime;
-		io->N=TsAggegrationPrepare(f32time,Nrawtime,&io->T,meta->isDate,&meta->period);
-		if (IsNaN(meta->deltaTime)) {
-			if (io->T.isRegular) {
-			}	else {
-				if (meta->isDate && !io->T.asDailyTS) {
-					q_warning("WARNING: The input time series is irregular (or may span across leap years) and BEAST needs to aggregate/resample it into regular data "
-						"at a user-specified interval 'metadata$deltaTime/deltat' (for faster computation). But deltaTime is missing,a best guess of it %g year=%g months=%g days is used. "
-						"If not making sense,please specify metadata$deltaTime/deltat explicitly. \n",io->T.dT,io->T.dT*12,io->T.dT*365.0);
-				}	else {
-					q_warning("WARNING: The input data is irregular and for faster computaiton,BEAST needs to aggregate/resample it into regular data "
-						"at a user-specified interval 'metadata$deltaTime/deltat' But deltaTime is missing,a best guess of it %g is used. "
-						"If not making sense,please specify metadata$deltaTime/deltat explicitly. \n",io->T.dT);
-				}
-			}
-		}
-		meta->deltaTime=io->T.dT;
-		meta->startTime=io->T.start;
-		meta->isOrdered=io->T.isOrderd;
-		meta->isRegular=io->T.isRegular;
-		meta->needAggregate=io->T.needAggregate;
-		free(f32time);
-	}
 	else {
-		meta->isOrdered=1;
-		meta->isRegular=1;
-		meta->needAggregate=0;
+		CondErrMsgRet0(  _True_,"ERROR: The 'metadata' parameter given is of unsupported type.\n");
+	}
+	CondErrMsgRet0(meta->hasSeasonCmpnt==UnknownStatus,"ERROR: Cnnot determine whether the input time series has a seasonal/periodic componnet or net.\n");
+	if (meta->hasSeasonCmpnt==0) PERIOD=0;        
+	if (DT  < 0.)      DT=getNaN(); 
+	TimeVecInfo tvec={ 0 };
+	TimeVec_init(&tvec);
+     if (TIMEobj) { 
+		int Nrawtime=TimeVec_from_TimeObject(TIMEobj,&tvec);        
+	    if(tvec.isDate==1) ISDATE=_True_;                            
+		CondErrMsgRet0( Nrawtime<=1,"ERROR: Unable to read and intepret 'time' or 'metadata$time'!\n");
+		userWhichDimIsTime=Parse_whichDimIsTime(io,Nrawtime,userWhichDimIsTime);  
+		CondErrMsgRet0(userWhichDimIsTime <=0,"ERROR: Unable to dtermine which dimo of the input data refers to the time'!\n");
+	} else {
+		int Nrawtime=0;
+		userWhichDimIsTime=Parse_whichDimIsTime(io,Nrawtime,userWhichDimIsTime);
+		CondErrMsgRet0(userWhichDimIsTime <=0,"ERROR: Unable to dtermine which dimo of the input data refers to the time'!\n");
 		int isDefaultDeltaTime=0;
 		int isDefaultStartTime=0;
-		if (IsNaN(meta->startTime)) {
-			meta->startTime=1.f;
+		if (IsNaN(START)) {
+			START=1.f;
 			isDefaultStartTime=1L;
 		}
-		if (IsNaN(meta->deltaTime)) {
-			meta->deltaTime=1.f;
+		if (IsNaN(DT)) {
+			DT=1.f;
 			isDefaultDeltaTime=1L;
 		}
 		char *warningMsg="WARNING: If the input data is regular and ordered in time,the times of individual datapoints are determined fully by 'metadata$startTime' and 'metadata$deltaTime'.";
 		if (isDefaultDeltaTime && isDefaultStartTime) {
 			q_warning("%s But startTime and deltaTime are missing and a default value 1 is used for both!\n",warningMsg);
+			if (ISDATE==_True_) { 
+				q_warning("WARNING! The default sartTime=1 and deltaTime=1  are used,but the 'period' field specifies that the time is date\n");
+			}
 		} else if (isDefaultStartTime) {
 			q_warning("%s But startTime is missing and a default value 1 is used!\n",warningMsg);
+			if (ISDATE==_True_) { 
+				q_warning("WARNING! The default startTime=1 is used,but the 'period' field specifies that the time is date\n");
+			}
 		} else if (isDefaultDeltaTime) {
 			q_warning("%s But deltaTime is missing and a default value 1 is used!\n",warningMsg);
-		}
-		if (io->timedim==-1) {
-			int whichDimIsTime=meta->whichDimIsTime;
-			if (whichDimIsTime==-1||(io->ndim==2 && whichDimIsTime !=1 && whichDimIsTime !=2)) {
-				r_error("ERROR: For a 2D matrix input of size [%d x %d] (e.g.,multiple time series),metadata$whichDimIsTime must be given "
-					"to tell which matrix dim refers to time. It must take a value out of 1 or 2 only.\n",io->dims[0],io->dims[1]);
-				return 0;
+			if (ISDATE==_True_) { 
+				q_warning("WARNING! The default deltaTime=1 is used,but the 'period' field specifies that the time is date\n");
 			}
-			if (whichDimIsTime==-1||(io->ndim==3 && whichDimIsTime !=1 && whichDimIsTime !=2 && whichDimIsTime !=3)) {
-				r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e.,stacked time series images),metadata$whichDimIsTime must be given "
-					"to tell which aray dim refers to time. It must take a value out of 1,2 or 3 only.\n",io->dims[0],io->dims[1],io->dims[2]);
-				return 0;
-			}
-			io->timedim=meta->whichDimIsTime;
 		}
-		meta->whichDimIsTime=io->timedim; 
-		io->N=io->dims[io->timedim - 1L];
-		io->T.isRegular=1;
-		io->T.isOrderd=1;
-		io->T.needAggregate=0;
-		io->T.needReordered=0;
-		io->T.asDailyTS=0;
-		io->T.data_dT=io->T.dT=meta->deltaTime;
-		io->T.data_start=io->T.start=meta->startTime;
-        #define isEqaulOneDay(dT) ( fabs(dT-1./365.)<1e-3||fabs(dT - 1./366.) < 1e-3)
-		F32 dT=io->T.dT;
-		if (meta->isDate && isEqaulOneDay(dT)  ) {
-			io->T.asDailyTS=1;
-			io->T.data_dT=io->T.dT=meta->deltaTime=1L;
-			io->T.data_start=io->T.start=meta->startTime=F32time2DateNum(meta->startTime);
-			meta->period=meta->period * 365;
-			if (meta->isDate && isEqaulOneDay(dT) && meta->hasSeasonCmpnt==1 && meta->period>=300.) {
-				int Nrawtime=io-> N;
-				F32PTR f32time=malloc(sizeof(F32) * Nrawtime);
-				for (int i=0; i < Nrawtime; i++) {
-					f32time[i]=fractional_civil_from_days((int)meta->startTime+i);
-				}
-				io->T.dT=1./365;
-				io->T.start=f32time[0];
-				meta->period=meta->period/365.0;
-				io->N=TsAggegrationPrepare(f32time,Nrawtime,&io->T,meta->isDate,&meta->period);
-				meta->deltaTime=io->T.dT;
-				meta->startTime=io->T.start;
-				meta->isOrdered=io->T.isOrderd;
-				meta->isRegular=io->T.isRegular;
-				meta->needAggregate=io->T.needAggregate;
-				if (meta->needAggregate==1 && meta->isRegular==0) {
-					r_printf("INFO: The regular daily time series will be treated as irregular time series because time is converted into "
-						"fractional/decimal years and some years have 365 days but others have 366 days.\n");
-				}
-				free(f32time);
+		int N=io->dims[userWhichDimIsTime - 1];   
+		TimeVec_from_StartDeltaTime(&tvec,START,DT,N,ISDATE);         
+		PERIOD=tvec.isDateNum==1 ? PERIOD * 365 : PERIOD; 
+		START=tvec.data_start;   
+		DT=tvec.data_dt;      
+	}
+	ISDATE=ISDATE==UnknownStatus ? _False_ : ISDATE; 
+	TimeVec_SortCheckRegularOrder(&tvec); 
+	tvec.isDate=ISDATE;
+	tvec.data_period=PERIOD;
+	tvec.out.start=START; 
+	tvec.out.dT=DT;  
+	TimeVec_UpdateUserStartDt(&tvec); 
+	if (TIMEobj && IsNaN(DT)) {
+		F32 dT_new=tvec.out.dT;
+		if (io->T.isRegular==0) {
+			if (ISDATE && io->T.out.asDailyTS==1) {
+				q_warning("WARNING: The input time series is irregular (or may span across leap years) and BEAST needs to aggregate/resample it into regular data "
+					"at a user-specified interval 'metadata$deltaTime/deltat' (for faster computation). But deltaTime is missing,a best guess of it %g year=%g months=%g days is used. "
+					"If not making sense,please specify metadata$deltaTime/deltat explicitly. \n",dT_new,dT_new * 12,dT_new * 365.0);
+			} else {
+				q_warning("WARNING: The input data is irregular and for faster computaiton,BEAST needs to aggregate/resample it into regular data "
+					"at a user-specified interval 'metadata$deltaTime/deltat' But deltaTime is missing,a best guess of it %g is used. "
+					"If not making sense,please specify metadata$deltaTime/deltat explicitly. \n",dT_new);
 			}
 		}
 	}
-	if (meta->whichDimIsTime==1) { io->rowdim=2,io->coldim=3,io->timedim=1; }
-	if (meta->whichDimIsTime==2) { io->rowdim=1,io->coldim=3,io->timedim=2; }
-	if (meta->whichDimIsTime==3) { io->rowdim=1,io->coldim=2,io->timedim=3; }
-	io->imgdims[0]=io->dims[io->rowdim - 1];
-	io->imgdims[1]=io->dims[io->coldim - 1];
-	io->numOfPixels=(I64)io->dims[0] * io->dims[1] * io->dims[2]/io->dims[io->timedim - 1L];
+	PERIOD=tvec.data_period;
+	START=tvec.out.start;
+	DT=tvec.out.dT;;
+	io->N=tsAggegrationPrepare(&tvec);
+	meta->IsPeriodEstimated=0;
+	if ( meta->hasSeasonCmpnt && IsNaN(PERIOD)) {		
+		io->T=tvec; 
+		F32  estPeriod=ParsePeriod(io);
+		char* season;
+		char* msg;
+		season=io->meta.seasonForm=='S' ?      "harmonic" :
+			    io->meta.seasonForm=='V' ?     "svd":
+			                                     "dummy";
+		msg="suggests that the time series has a periodic/seasonal component. \"metadata$period\" is needed but missing.";
+		if (estPeriod > 0) {
+			q_warning( "WARNING: metadata$season='%s' %s A BEST GUESS of numbers of datapoints per period is %d,giving period=num_sample_per_period * deltaTime "
+				"=%d*%g=%g. Please make sure this estimate makes sense; otherwise,the BEAST decomposition result will be incorrect.\n",
+				season,msg,(int)estPeriod,(int)estPeriod,DT,DT * estPeriod);
+		}	else {
+			r_error("ERROR: metadata$season='%s' %s BEAST tried to estimate it via an auotcorrelation method but failed to get a reliable estimate. "
+				"Please specify the period value EXPLICILTY. Or if your input has no periodic/seasonal component at all,"
+				" set metadata$season='none' or period=0,which will fit a trend-only model.\n",season,msg);
+			return 0;
+		}
+		meta->IsPeriodEstimated=1;
+		PERIOD=estPeriod * DT; 
+	}
 	if (meta->hasSeasonCmpnt==1) {	
-		F32 freq=meta->period=meta->period/meta->deltaTime;		   
-		if (freq <=0) {
-			r_error("ERROR: BEAST can't handle a time series with a periodic componnet (\"metadata$season='%s'\") but with metadata$period=%g or period='none' specified. If you mean to "
-				    "handle trend-only time series,use the trend-only BEAST version by specifying metadata$season='none'.",meta->seasonForm=='S' ? "harmonic" : "dummy",meta->period* meta->deltaTime);
-			return 0;
-		}
-		if (freq < 2.000) {
-			r_error("ERROR: In metadata,season='%s' and period=%g suggests the presence of a periodic component but the ratio of period/deltaTime=%g is less than 2 (i.e.,%g data sample per period). If you mean to "
-				    "handle trend-only time series,use the trend-only BEAST version by specifying metadata$season='none'.",meta->seasonForm=='S' ? "harmonic" : "dummy",meta->period * meta->deltaTime,freq,freq);
-			return 0;
-		}
-		if (meta->seasonForm=='D' && !IsNaN(freq) && !_IsAlmostInteger(freq)  ) {
-			r_error("ERROR: For a dummy seasonal component (\"metadata$season='dummy'\"),metadata$period=%g must be a multiple of metadata$deltaTime by an INTEGER number. "
-				    "Your period/deltaTime ratio is %g.",freq*meta->deltaTime,freq);
-			return 0;
-		}
+		F32 freq=PERIOD/DT;
+		CondErrMsgRet0(freq <=0,"ERROR: BEAST can't handle a time series with a periodic componnet (\"metadata$season='%s'\") but with metadata$period=%g or period='none' specified. If you mean to "
+				    "handle trend-only time series,use the trend-only BEAST version by specifying metadata$season='none'.",meta->seasonForm=='S' ? "harmonic" : "dummy",PERIOD);
+		CondErrMsgRet0(freq <2,"ERROR: BEAST can't handle a time series with a periodic componnet (\"metadata$season='%s'\") but with metadata$period=%g and metadata$deltaTime=%g specified,"
+			                    "which gives only 'period/deltatime=%g' data points per period,If you mean to "
+							    "handle trend-only time series,use the trend-only BEAST version by specifying metadata$season='none'.",meta->seasonForm=='S' ? "harmonic" : "dummy",PERIOD,DT,PERIOD/DT);
+		CondErrMsgRet0(meta->seasonForm=='D' && !IsNaN(freq) && !_IsAlmostInteger(freq),"ERROR: For a dummy seasonal component (\"metadata$season='dummy'\"),metadata$period=%g must be a multiple of metadata$deltaTime by an INTEGER number. "
+			"Your period/deltaTime ratio is %g.",freq* DT,freq);
+		CondErrMsgRet0(meta->seasonForm=='V' && !IsNaN(freq) && !_IsAlmostInteger(freq),"ERROR: For a SVD seasonal component (\"metadata$season='dummy'\"),metadata$period=%g must be a multiple of metadata$deltaTime by an INTEGER number. "
+			"Your period/deltaTime ratio is %g.",freq* DT,freq);	 
 	}
-	meta->nrhs=nrhs;
+	meta->startTime=START;  
+	meta->deltaTime=DT;     
+	meta->period=PERIOD/DT;
+	TimeVec_kill_fyearArray(&tvec); 
+	io->T=tvec;
 	return 1;
 }
- static int ParsePeriod(BEAST2_IO_PTR _OUT_ io ) {
-		if (!io->meta.hasSeasonCmpnt||   
-			io->meta.period > 0        )  
-		{
-			return 1;
+static int Parse_whichDimIsTime(BEAST2_IO_PTR _OUT_ io,int Nrawtime,int userWhichDim) {
+		int whichDim_final=userWhichDim;
+		if ( io->ndim==1 && userWhichDim !=UnknownStatus && userWhichDim !=1) {
+			q_warning("WARNING: metadata$whichDimIsTime=%d is ignored because 'whichDimIsTime' is used only for 2D matrix or 3D array inputs but your input is a 1D vector.\n",userWhichDim);
 		}
+		if (Nrawtime > 0) {
+			int matcheNumDims=(Nrawtime==io->dims[0])+(Nrawtime==io->dims[1])+(Nrawtime==io->dims[2]);
+			if (matcheNumDims==0) {
+				r_error("ERROR: The input data must have the same length as the time in metadata.\n");
+				return -1;
+			}
+			else if (matcheNumDims==1) {
+				int  timeDimMatched;
+				if (Nrawtime==io->dims[0])  timeDimMatched=1;
+				if (Nrawtime==io->dims[1])  timeDimMatched=2;
+				if (Nrawtime==io->dims[2])  timeDimMatched=3;
+				if (userWhichDim !=UnknownStatus && userWhichDim !=timeDimMatched) {
+					q_warning("WARNING: the specified metadata$whichDimIsTime=%d is ignored; 'whichDimIsTime=%d' is instead used based on the match between the input data and time.\n",userWhichDim,timeDimMatched);
+				}
+				whichDim_final=timeDimMatched;
+			}
+			else { 
+				if (userWhichDim==UnknownStatus||(io->ndim==2 && userWhichDim !=1 && userWhichDim !=2)) {
+					r_error("ERROR: For a 2D matrix input of size [%d x %d] (i.e.,multiple time series),metadata$whichDimIsTime must be given "
+						"to tell which dim of the matrix  refers to time. It must take a value out of 1 or 2 only.\n",io->dims[0],io->dims[1]);
+					return 0;
+				}
+				if (userWhichDim==UnknownStatus||(io->ndim==3 && userWhichDim !=1 && userWhichDim !=2 && userWhichDim !=3)) {
+					r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e.,stacked time series images),metadata$whichDimIsTime must be given "
+						"to tell which dim of the 3D array  refers to time. It must take a value out of 1,2 or 3 only.\n",io->dims[0],io->dims[1],io->dims[2]);
+					return 0;
+				}
+				if (userWhichDim>3||userWhichDim <1) {
+					r_error("ERROR: the input (whichDimIsTime=%d) muust be an integer of 1,2,or 3.\n",userWhichDim+1);
+					return 0;
+				} else {
+					if (io->dims[userWhichDim - 1] !=Nrawtime) {
+						r_error("ERROR: The length of the time dimension of the input (whichDimIsTime=%d) doesn't match the length of time/metadata$time (i.e.,%d!=%d).\n",userWhichDim,io->dims[userWhichDim],Nrawtime);
+						return 0;
+					}
+				}
+				whichDim_final=userWhichDim;
+			}
+		}	
+		else {
+			if (io->timedim==UnknownStatus) {
+				if (userWhichDim==UnknownStatus||(io->ndim==2 && userWhichDim !=1 && userWhichDim !=2)) {
+					r_error("ERROR: For a 2D matrix input of size [%d x %d] (e.g.,multiple time series),metadata$whichDimIsTime must be given "
+						"to tell which matrix dim refers to time. It must take a value out of 1 or 2 only.\n",io->dims[0],io->dims[1]);
+					return 0;
+				}
+				if (userWhichDim==UnknownStatus||(io->ndim==3 && userWhichDim !=1 && userWhichDim !=2 && userWhichDim !=3)) {
+					r_error("ERROR: For a 3D array input of size [%d x %d x %d] (i.e.,stacked time series images),metadata$whichDimIsTime must be given "
+						"to tell which aray dim refers to time. It must take a value out of 1,2 or 3 only.\n",io->dims[0],io->dims[1],io->dims[2]);
+					return 0;
+				}
+				whichDim_final=userWhichDim;
+			}	else {
+				whichDim_final=io->timedim;
+			}
+		}
+		io->timedim=io->meta.whichDimIsTime=whichDim_final;
+		if (io->meta.whichDimIsTime==1) { io->rowdim=2,io->coldim=3,io->timedim=1; }
+		if (io->meta.whichDimIsTime==2) { io->rowdim=1,io->coldim=3,io->timedim=2; }
+		if (io->meta.whichDimIsTime==3) { io->rowdim=1,io->coldim=2,io->timedim=3; }
+		io->imgdims[0]=io->dims[io->rowdim - 1];
+		io->imgdims[1]=io->dims[io->coldim - 1];
+		io->numOfPixels=(I64)io->dims[0] * io->dims[1] * io->dims[2]/io->dims[io->timedim - 1L];
+		return whichDim_final;		
+}
+ static float ParsePeriod(BEAST2_IO_PTR _OUT_ io ) {
 		BEAST2_YINFO Yinfo;
 		F32PTR       MEMBUF;
 		int    N=io->N;		
@@ -555,20 +469,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) 
 			if (++goodPixelVisited > MaxNumPixelVisisted) 	break;
 		}
 		free(tmp);
-		if (period > 0) {
-			q_warning("WARNING: metadata$season='%s' suggests that the time series has a periodic/seasonal component. \"metadata$period\" "
-				"is needed but missing. A BEST GUESS of numbers of datapoints per period is %d,giving period=num_sample_per_period*deltaTime "
-				"=%d*%g=%g. Please make sure this estimate makes sense; otherwise,the BEAST decomposition result will be incorrect.\n",
-				io->meta.seasonForm=='S' ? "harmonic" : "dummy",(int)period,(int)period,io->meta.deltaTime,period * io->meta.deltaTime);
-		} else {
-			r_error("ERROR: metadata$season='%s' suggests that the time series has a periodic/seasonal component.  \"metadata$period\" "
-				"is needed but missing. BEAST tried to estimate it via an auotcorrelation method but failed to "
-				"get a reliable estimate. Please specify the period value EXPLICILTY. Or if your input has no periodic/seasonal component at all,"
-				" set metadata$season='none' or period=0,which will fit a trend-only model.\n",io->meta.seasonForm=='S' ? "harmonic" : "dummy");
-			return 0;
-		}
-		io->meta.period=period;
-		return 1;
+	return period;
 }
 static int __GetPrecPriorType( VOID_PTR S ) {
 	VOID_PTR  tmp=GetField123Check(S,"precPriorType",5);
@@ -606,6 +507,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 		U08   trendMinSepDist,seasonMinSepDist;
 		U08   trendMinKnotNum,seasonMinKnotNum;
 		U08   trendMaxKnotNum,seasonMaxKnotNum,outlierMaxKnotNum;
+		U08   trendLeftMargin,trendRightMargin;
+		U08   seasonLeftMargin,seasonRightMargin;
 		U08   seasonBasisFuncType,trendBasisFuncType,outlierBasisFuncType;
 		U08   modelPriorType;
 		U08   precPriorType;
@@ -633,18 +536,22 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 				o.seasonMinSepDist=(tmp=GetField123Check(S,"seasonMinSepDist",10)) ? GetScalar(tmp) : (m.seasonMinSepDist=1);
 				o.seasonMinKnotNum=(tmp=GetField123Check(S,"seasonMinKnotNum",10)) ? GetScalar(tmp) : (m.seasonMinKnotNum=1);
 				o.seasonMaxKnotNum=(tmp=GetField123Check(S,"seasonMaxKnotNum",10)) ? GetScalar(tmp) : (m.seasonMaxKnotNum=1);
+				o.seasonLeftMargin=(tmp=GetField123Check(S,"seasonLeftMargin",10)) ? GetScalar(tmp) : (m.seasonLeftMargin=1);
+				o.seasonRightMargin=(tmp=GetField123Check(S,"seasonRightMargin",10)) ? GetScalar(tmp) : (m.seasonRightMargin=1);
 			}
 			o.trendMinOrder=(tmp=GetField123Check(S,"trendMinOrder",10)) ?   GetScalar(tmp) : (m.trendMinOrder=1);
 			o.trendMaxOrder=(tmp=GetField123Check(S,"trendMaxOrder",10)) ?   GetScalar(tmp) : (m.trendMaxOrder=1);
 			o.trendMinSepDist=(tmp=GetField123Check(S,"trendMinSepDist",10)) ?  GetScalar(tmp) : (m.trendMinSepDist=1);
 			o.trendMinKnotNum=(tmp=GetField123Check(S,"trendMinKnotNum",10)) ?  GetScalar(tmp) : (m.trendMinKnotNum=1);			
 			o.trendMaxKnotNum=(tmp=GetField123Check(S,"trendMaxKnotNum",10)) ?  GetScalar(tmp) : (m.trendMaxKnotNum=1);
+			o.trendLeftMargin=(tmp=GetField123Check(S,"trendLeftMargin",10)) ? GetScalar(tmp) : (m.trendLeftMargin=1);
+			o.trendRightMargin=(tmp=GetField123Check(S,"trendRightMargin",10)) ? GetScalar(tmp) : (m.trendRightMargin=1);
 			if (io->meta.hasOutlierCmpnt) {
 				o.outlierMaxKnotNum=(tmp=GetField123Check(S,"outlierMaxKnotNum",10)) ? GetScalar(tmp) : (m.outlierMaxKnotNum=1);
 				o.outlierSigFactor=(tmp=GetFieldCheck(S,"outlierSigFactor")) ? GetScalar(tmp) : (m.outlierSigFactor=1);
 			}
 			o.sigFactor=(tmp=GetFieldCheck(S,"sigFactor")) ?			GetScalar(tmp) : (m.sigFactor=1);
-			o.sig2=(tmp=GetField123Check(S,"sig2",2)) ?				GetScalar(tmp) : (m.sig2=1);
+			o.sig2=(tmp=GetField123Check(S,"sig2",2)) ?			GetScalar(tmp) : (m.sig2=1);
 			o.precValue=(tmp=GetField123Check(S,"precValue",5)) ?		GetScalar(tmp) : (m.precValue=1);
 			o.alpha1=(tmp=GetField123Check(S,"alpha1",0)) ?			GetScalar(tmp) : (m.alpha1=1);
 			o.alpha2=(tmp=GetField123Check(S,"alpha2",0)) ?			GetScalar(tmp) : (m.alpha2=1);
@@ -675,19 +582,77 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	I32 period=io->meta.period;
 	I32 N=io->N;
 	if (io->meta.hasSeasonCmpnt) {
-		if (m.seasonMinOrder)                                o.seasonMinOrder=1L;				   o.seasonMinOrder=min(o.seasonMinOrder,period/2 - 1);    o.seasonMinOrder=max(o.seasonMinOrder,1L);
-		if (m.seasonMaxOrder)                                o.seasonMaxOrder=(period/2 - 1);      o.seasonMaxOrder=min(o.seasonMaxOrder,(period/2 - 1));  o.seasonMaxOrder=max(o.seasonMaxOrder,o.seasonMinOrder);
-		if (m.seasonMinSepDist||o.seasonMinSepDist <=0)   o.seasonMinSepDist=period/2;          o.seasonMinSepDist=max(o.seasonMinSepDist,o.seasonMaxOrder);		 o.seasonMinSepDist=min(o.seasonMinSepDist,N/2 - 1); 
-		if (m.seasonMinKnotNum)                              o.seasonMinKnotNum=0;                   o.seasonMinKnotNum=max(min(o.seasonMaxKnotNum,o.seasonMinKnotNum),0);
-		if (m.seasonMaxKnotNum)                              o.seasonMaxKnotNum=min(floor(N/(o.seasonMinSepDist+1) - 1.f),5);  o.seasonMaxKnotNum=min(o.seasonMaxKnotNum,floor(N/(o.seasonMinSepDist+1) - 1.f));   o.seasonMaxKnotNum=max(o.seasonMaxKnotNum,o.seasonMinKnotNum);
+		if (io->meta.seasonForm=='S') {
+			if (m.seasonMinOrder)      o.seasonMinOrder=1L;				   o.seasonMinOrder=min(o.seasonMinOrder,period/2 - 1);    o.seasonMinOrder=max(o.seasonMinOrder,1L);
+			if (m.seasonMaxOrder)      o.seasonMaxOrder=(period/2 - 1);    o.seasonMaxOrder=min(o.seasonMaxOrder,(period/2 - 1));  o.seasonMaxOrder=max(o.seasonMaxOrder,o.seasonMinOrder);
+		}	else if (io->meta.seasonForm=='V') {
+			if (m.seasonMinOrder)      o.seasonMinOrder=1L;				   o.seasonMinOrder=min(o.seasonMinOrder,period - 1);   o.seasonMinOrder=max(o.seasonMinOrder,1L);
+			if (m.seasonMaxOrder)      o.seasonMaxOrder=(period/2 - 1);    o.seasonMaxOrder=min(o.seasonMaxOrder,period );  o.seasonMaxOrder=max(o.seasonMaxOrder,o.seasonMinOrder);
+		}
+		if (m.seasonMinSepDist||o.seasonMinSepDist <=0)   o.seasonMinSepDist=period/2;         
+		o.seasonMinSepDist=max(o.seasonMinSepDist,o.seasonMaxOrder);		 
+		o.seasonMinSepDist=min(o.seasonMinSepDist,N/2 - 1       ); 
+		if (m.seasonLeftMargin||o.seasonLeftMargin  < 0)   o.seasonLeftMargin=o.seasonMinSepDist;          
+		if (m.seasonRightMargin||o.seasonRightMargin < 0)   o.seasonRightMargin=o.seasonMinSepDist;
+		I32 Nleft=N - (1+o.seasonLeftMargin+o.seasonRightMargin);
+		if (Nleft < 1) {
+			if (N - (1+o.seasonMinSepDist * 2) < 1) {
+				o.seasonLeftMargin=0;
+				o.seasonRightMargin=0;
+			} else {
+				o.seasonLeftMargin=o.seasonMinSepDist;
+				o.seasonRightMargin=o.seasonMinSepDist;
+			}
+			q_warning("WARNING: prior$seasonLeftMargin and prior$seasonRightMargin are too large,and no remaining data points are "
+				      "available as potential changepoints! Their vaules are changed to %d and %d.",o.seasonLeftMargin,o.seasonRightMargin);
+			Nleft=N - (1+o.seasonLeftMargin+o.seasonRightMargin);
+		}
+		I32 MaxChangePointPossible=ceil((Nleft+0.0)/(o.seasonMinSepDist+1.0));
+		if (m.seasonMinKnotNum   )   o.seasonMinKnotNum=0;                  
+		if (m.seasonMaxKnotNum==0)   o.seasonMinKnotNum=min(o.seasonMaxKnotNum,o.seasonMinKnotNum);
+		o.seasonMinKnotNum=max(o.seasonMinKnotNum,0);
+		o.seasonMinKnotNum=min(o.seasonMinKnotNum,MaxChangePointPossible);
+		if (m.seasonMaxKnotNum)     o.seasonMaxKnotNum=min(MaxChangePointPossible,5);
+		o.seasonMaxKnotNum=min(o.seasonMaxKnotNum,MaxChangePointPossible);
+		o.seasonMaxKnotNum=max(o.seasonMaxKnotNum,o.seasonMinKnotNum);
 	}
-	if (m.trendMinOrder)                             o.trendMinOrder=0L;				                      o.trendMinOrder=max(o.trendMinOrder,0L);
-	if (m.trendMaxOrder)                             o.trendMaxOrder=1L;				                      o.trendMaxOrder=max(o.trendMaxOrder,o.trendMinOrder);	
-	if (m.trendMinSepDist||o.trendMinSepDist <=0) o.trendMinSepDist=io->meta.hasSeasonCmpnt? period/2: 3 ; o.trendMinSepDist=max(o.trendMinSepDist,o.trendMaxOrder+1);	o.trendMinSepDist=min(o.trendMinSepDist,N/2 - 1);
-	if (m.trendMinKnotNum)                           o.trendMinKnotNum=0;	                                      o.trendMinKnotNum=max(min(o.trendMaxKnotNum,o.trendMinKnotNum),0);
-	if (m.trendMaxKnotNum)                           o.trendMaxKnotNum=min(floor(N/(o.trendMinSepDist+1) - 1.f),10); o.trendMaxKnotNum=min(o.trendMaxKnotNum,floor(N/(o.trendMinSepDist+1) - 1.f)); o.trendMaxKnotNum=max(o.trendMaxKnotNum,o.trendMinKnotNum);
-	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum=o.trendMaxKnotNum;      o.outlierMaxKnotNum=max(o.outlierMaxKnotNum,1L); 
-	if (m.K_MAX )            o.K_MAX=500;                  
+	{ 
+		if (m.trendMinOrder||o.trendMinOrder < 0)      o.trendMinOrder=0L;
+		if (m.trendMaxOrder)                             o.trendMaxOrder=1L;				                    
+		o.trendMaxOrder=max(o.trendMaxOrder,o.trendMinOrder);	
+		if (m.trendMinSepDist||o.trendMinSepDist <=0) o.trendMinSepDist=io->meta.hasSeasonCmpnt? period/2: 3 ;
+		o.trendMinSepDist=max(o.trendMinSepDist,o.trendMaxOrder+1);
+		o.trendMinSepDist=min(o.trendMinSepDist,N/2 - 1);
+		if (m.trendLeftMargin||o.trendLeftMargin < 0)     o.trendLeftMargin=o.trendMinSepDist;
+		if (m.trendRightMargin||o.trendRightMargin < 0)    o.trendRightMargin=o.trendMinSepDist;
+		I32 Nleft=N - (1+o.trendLeftMargin+o.trendRightMargin);
+		if (Nleft < 1) {
+			if (N - (1+o.trendMinSepDist * 2) < 1) {
+				o.trendLeftMargin=0;
+				o.trendRightMargin=0;
+			}
+			else {
+				o.trendLeftMargin=o.trendMinSepDist;
+				o.trendRightMargin=o.trendMinSepDist;
+			}
+			q_warning("WARNING: prior$trendLeftMargin and prior$trendRightMargin are too large,and no remaining data points are "
+				"available as potential changepoints! Their vaules are changed to %d and %d.",o.trendRightMargin,o.trendRightMargin);
+			Nleft=N - (1+o.trendLeftMargin+o.trendRightMargin);
+		}
+		I32 MaxChangePointPossible=ceil((Nleft+0.0)/(o.trendMinSepDist+1.0));
+		if (m.trendMinKnotNum)       o.trendMinKnotNum=0;	   
+		o.trendMinKnotNum=max(min(o.trendMaxKnotNum,o.trendMinKnotNum),0);
+		if (m.trendMinKnotNum)        o.trendMinKnotNum=0;
+		if (m.trendMaxKnotNum==0)   o.trendMinKnotNum=min(o.trendMinKnotNum,o.trendMaxKnotNum);
+		o.trendMinKnotNum=max(o.trendMinKnotNum,0);
+		o.trendMinKnotNum=min(o.trendMinKnotNum,MaxChangePointPossible);
+		if (m.trendMaxKnotNum)     o.trendMaxKnotNum=min(MaxChangePointPossible,10);
+		o.trendMaxKnotNum=min(o.trendMaxKnotNum,MaxChangePointPossible);
+		o.trendMaxKnotNum=max(o.trendMaxKnotNum,o.trendMinKnotNum);	 
+	}
+	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum=o.trendMaxKnotNum;    
+	o.outlierMaxKnotNum=max(o.outlierMaxKnotNum,1L); 
+	if (m.K_MAX )            o.K_MAX=550;                  
 	if (m.sigFactor)         o.sigFactor=1.8;            o.sigFactor=max(o.sigFactor,1.02);
 	if (m.outlierSigFactor)  o.outlierSigFactor=2.5;            o.outlierSigFactor=max(o.outlierSigFactor,1.5);
 	if (m.sig2 )             o.sig2=0.2f;				  o.sig2=max(o.sig2,0.01);
@@ -742,14 +707,14 @@ static int  GetArg_3rd_MCMC___(VOIDPTR prhs[],int nrhs,BEAST2_MCMC_PTR mcmc,BEAS
 		} else {
 			VOIDPTR tmp;
 			o.maxMoveStepSize=(tmp=GetField123Check(S,"maxMoveStepSize",2))? GetScalar(tmp) : (m.maxMoveStepSize=1);
-			o.samples=(tmp=GetField123Check(S,"samples",2)) ?        GetScalar(tmp) : (m.samples=1);
+			o.samples=(tmp=GetField123Check(S,"samples",3)) ?        GetScalar(tmp) : (m.samples=1);
 			o.thinningFactor=(tmp=GetField123Check(S,"thinningFactor",2)) ? GetScalar(tmp) : (m.thinningFactor=1);
 			o.burnin=(tmp=GetField123Check(S,"burnin",2)) ?         GetScalar(tmp) : (m.burnin=1);
 			o.chainNumber=(tmp=GetField123Check(S,"chainNumber",2)) ?    GetScalar(tmp) : (m.chainNumber=1);
-			o.seed=(tmp=GetField123Check(S,"seed",2)) ?			GetScalar(tmp) : (m.seed=1);
+			o.seed=(tmp=GetField123Check(S,"seed",4)) ?			GetScalar(tmp) : (m.seed=1);
 			o.ridgeFactor=(tmp=GetField123Check(S,"ridgeFactor",2)) ?	GetScalar(tmp) : (m.ridgeFactor=1);
-			o.trendResamplingOrderProb=(tmp=GetField123Check(S,"trendResamplingOrderProb",2)) ? GetScalar(tmp) : (m.trendResamplingOrderProb=1);
-			o.seasonResamplingOrderProb=(tmp=GetField123Check(S,"seasonResamplingOrderProb",2)) ? GetScalar(tmp) : (m.seasonResamplingOrderProb=1);
+			o.trendResamplingOrderProb=(tmp=GetField123Check(S,"trendResamplingOrderProb",5)) ? GetScalar(tmp) : (m.trendResamplingOrderProb=1);
+			o.seasonResamplingOrderProb=(tmp=GetField123Check(S,"seasonResamplingOrderProb",5)) ? GetScalar(tmp) : (m.seasonResamplingOrderProb=1);
 			o.credIntervalAlphaLevel=(tmp=GetField123Check(S,"credIntervalAlphaLevel",2)) ? GetScalar(tmp) : (m.credIntervalAlphaLevel=1);
 		}
 	} 
@@ -817,8 +782,7 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 			#define _1(x)       o.x=(tmp=GetFieldCheck(S,#x))? GetScalar(tmp): (m.x=1)
 			#define _2(x,y)     _1(x);_1(y)
 			#define _3(x,y,z)   _1(x);_2(y,z)
-			#define _4(x,y,z,w) _2(y,z);_2(y,z)
-			#define _5(x,y,z,w) _2(y,z);_3(y,z)
+			#define _4(x,y,z,w) _2(x,y);_2(z,w)
 			_2(printProgressBar,printOptions);
 			_2(computeCredible,fastCIComputation);
 			_2(computeSeasonOrder,computeTrendOrder);
@@ -864,6 +828,7 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	I08 hasSeasonCmpnt=opt->prior.basisType[0]==SEASONID||opt->prior.basisType[0]==DUMMYID||opt->prior.basisType[0]==SVDID;
 	I08 hasHarmonicCmpnt=opt->prior.basisType[0]==SEASONID ;
 	I08 hasDummyCmpnt=opt->prior.basisType[0]==DUMMYID;
+	I08 hasSVDCmpnt=opt->prior.basisType[0]==SVDID;
 	I08 hasOutlierCmpnt=opt->prior.basisType[opt->prior.numBasis - 1]==OUTLIERID;
 	I08 hasTrendCmpnt=1;
 	I08 hasAlways=1;
@@ -886,9 +851,11 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	if (hasDummyCmpnt) {
 		opt->extra.computeSeasonOrder=0;	
 		opt->extra.computeSeasonAmp=0; 
-		opt->mcmc.seasonResamplingOrderProb=0;
 		opt->prior.seasonMinOrder=0;
 		opt->prior.seasonMaxOrder=0;		
+	}
+	if (hasSVDCmpnt) { 
+		opt->extra.computeSeasonAmp=0; 
 	}
 	if (!hasOutlierCmpnt) {
 		opt->extra.computeOutlierChngpt=0;
@@ -928,8 +895,8 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	for (I32 i=0; i < PRIOR->numBasis; i++) {		
 		I08 type=PRIOR->basisType[i];
 		if (type==SEASONID)			KMAX+=(PRIOR->seasonMaxOrder*2) * (PRIOR->seasonMaxKnotNum+1);
-		if (type==DUMMYID)			KMAX+=(opt->io.meta.period)    * (PRIOR->seasonMaxKnotNum+1);
-		if (type==SVDID)			    KMAX+=(opt->io.meta.period) * (PRIOR->seasonMaxKnotNum+1);
+		if (type==DUMMYID)			KMAX+=(opt->io.meta.period)     * (PRIOR->seasonMaxKnotNum+1);
+		if (type==SVDID)			    KMAX+=(opt->io.meta.period)     * (PRIOR->seasonMaxKnotNum+1);
 		if (type==TRENDID)			KMAX+=(PRIOR->trendMaxOrder+1) * (PRIOR->trendMaxKnotNum+1);
 		if (type==OUTLIERID)			KMAX+=PRIOR->outlierMaxKnotNum;
 	}
@@ -972,28 +939,20 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 int BEAST2_GetArgs(VOIDPTR prhs[],int nrhs,A(OPTIONS_PTR) opt) {
 	int  failed=!GetArg_0th_Data(prhs,nrhs,&opt->io)||
 		          !GetArg_1st_MetaData(prhs,nrhs,&opt->io)|| 				  
-		          !ParsePeriod(&opt->io)||
 			      !GetArg_2nd_Prior__(prhs,nrhs,&opt->prior,&opt->io)||
 			      !GetArg_3rd_MCMC___(prhs,nrhs,&opt->mcmc,opt)||
 			      !GetArg_4th_EXTRA__(prhs,nrhs,&opt->extra,opt->io.meta.whichDimIsTime,opt->io.ndim) ;
 	int success=!failed;	
 	if (success) 	success=PostCheckArgs(opt); 	
 	if (success) 	BEAST2_print_options(opt);	
-	if (opt->io.T.asDailyTS) {
-		opt->io.meta.deltaTime=1./365;
-		opt->io.meta.startTime=fractional_civil_from_days((int)(opt->io.meta.startTime));
-	}
 	return success;
 }
 void BEAST2_DeallocateTimeSeriesIO(BEAST2_IO_PTR  o) {
-	if (o->T.numPtsPerInterval !=NULL) {
-		free(o->T.numPtsPerInterval);
-		o->T.numPtsPerInterval=NULL;
+	if (o->T.out.numPtsPerInterval !=NULL) {
+		free(o->T.out.numPtsPerInterval);
+		o->T.out.numPtsPerInterval=NULL;
 	}
-	if (o->T.sortedTimeIdx !=NULL) {
-		free(o->T.sortedTimeIdx);
-		o->T.sortedTimeIdx=NULL;
-	}
+	TimeVec_kill(&o->T);
 	if (o->pdata !=NULL) {
 		free(o->pdata);
 		o->pdata=NULL;

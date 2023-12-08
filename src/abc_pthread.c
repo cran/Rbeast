@@ -6,6 +6,7 @@
 #elif defined(MAC_OS)
 	#include <sys/param.h>
 	#include <sys/sysctl.h>
+   #include "abc_pthread.h"  
 #elif defined(LINUX_OS)||defined(SOLARIS_OS)
 	#include <unistd.h> 
 #endif
@@ -19,6 +20,17 @@
     #include <sched.h>  
     #include <pthread.h>
 #endif
+void PrintBits(size_t const size,void const* const ptr) {	
+    unsigned char* b=(unsigned char*)ptr;
+    unsigned char byte;
+    int i,j;
+    for (i=size - 1; i >=0; i--) {
+        for (j=7; j >=0; j--) {
+            byte=(b[i] >> j) & 1;
+            r_printf("%u",byte);
+        }
+    }
+}
 int CountSetBits32(uint32_t x)  {
     x=x - ((x >> 1) & 0x55555555);
     x=(x & 0x33333333)+((x >> 2) & 0x33333333);
@@ -44,9 +56,12 @@ int CountSetBits64(uint64_t x) {
     return x & 0x7f;
 }
 int GetNumCores(void)  {
+    static int CORE_COUNT=0;
+    if (CORE_COUNT > 0) {
+        return CORE_COUNT;
+    }
 #if defined(_WIN32)||defined(WIN64_OS)    
-    uint32_t count;
-	count=GetCPUInfo(); 
+    uint32_t count=GetCPUInfo(); 
 #elif defined(__MACH__)
     int nm[2];
     size_t   len=4;
@@ -60,11 +75,49 @@ int GetNumCores(void)  {
         if(count < 1) { count=1; }
     }
 #else
-    uint32_t count;
-    count=sysconf(_SC_NPROCESSORS_ONLN);
+    uint32_t count=sysconf(_SC_NPROCESSORS_ONLN);
 #endif
-	return count >=1 ? count : 1L;
+    CORE_COUNT=count >=1 ? count : 1L;
+    return  CORE_COUNT;
 }
+#if defined(_WIN32)||defined(WIN64_OS)||defined(MAC_OS) 
+void  CPU_ZERO(cpu_set_t* cs) {
+    cs->core_count=GetNumCores();
+    if (cs->core_count > 256) cs->core_count=256; 
+    cs->core_mask[0]=cs->core_mask[1]=cs->core_mask[2]=cs->core_mask[3]=0;
+}
+void    CPU_SET(int num,cpu_set_t* cs) {
+    num=num%cs->core_count;;
+    int grpId=num/64;
+    int bitId=num - grpId * 64;
+    cs->core_mask[grpId]|=(1 << bitId);
+}
+int   CPU_ISSET(int num,cpu_set_t* cs) {
+    num=num%cs->core_count;;
+    int grpId=num/64;
+    int bitId=num - grpId * 64;
+    return (cs->core_mask[grpId] & (1 << bitId));
+}
+int   CPU_get_first_bit_id(cpu_set_t* cs) {
+    int grpId=0;
+    for (grpId=0; grpId < 4; grpId++) {
+        if (cs->core_mask[grpId] !=0)   break;
+    }
+    if (grpId < 4) {
+        int      num=0;
+        uint64_t mask=cs->core_mask[grpId];
+        for (num=0; num < 64; num++) {
+            if (mask & (1 << num)) {
+                break;
+            }
+        }
+        return grpId * 64+num;
+    }
+    else {
+        return 0;
+    }
+}
+#endif
 #if defined(_WIN32)||defined(WIN64_OS)
 typedef struct __CPUINFO {
     DWORD (WINAPI* GetActiveProcessorGroupCount)     (void);
@@ -90,27 +143,25 @@ typedef struct __CPUINFO {
     BOOL  (WINAPI*  GetNumaHighestNodeNumber)(  PULONG HighestNodeNumber   );
     BOOL  (WINAPI*  GetNumaProcessorNodeEx)  (
                 PPROCESSOR_NUMBER Processor,
-                PUSHORT           NodeNumber   );
+                PUSHORT           NodeNumber   ); 
     BOOL(WINAPI* GetNumaAvailableMemoryNode) (
                 UCHAR      Node,
                 PULONGLONG AvailableBytes   ); 
     char isInitilized;
 } CPUFUCINFO;
 typedef struct __CPUINFO1 {
-    DWORD logicalProcessorCount;
-    DWORD numaNodeCount;    
+    DWORD numaNodeCount;
+    DWORD processorPackageCount;
     DWORD processorCoreCount;
+    DWORD logicalProcessorCount;        
     DWORD processorL1CacheCount;
     DWORD processorL2CacheCount;
     DWORD processorL3CacheCount ;
-    DWORD processorPackageCount;
-    DWORD processorGroupCount;
-    DWORD coreCountPerGrp[10];
-    DWORD currentGroup;
-    DWORD currentCoreNumber;
-    uint64_t currentThreadAffinity;
-    char cpuGroup[256];
-    char numCPUCoresToUseber[256];
+    DWORD    processorGroupCount;
+    DWORD    coreCountPerGrp[10];
+    uint64_t affinityPerGrp[10];
+    char    cpuGroup[256];
+    char    coreIDinGroup[256];
 } CPUINFO;
 static CPUFUCINFO cpuFunc={0,};
 static CPUINFO    cpuInfo={0,};
@@ -140,7 +191,7 @@ static int  GetCoreNumbers_WIN32(void) {
     uint64_t currentGroupAffinity;
     return cpuInfo.logicalProcessorCount;
 }
-static int GetCoreNumbers_WIN7V1(void) {
+static int  GetCoreNumbers_WIN7V1(void) {
     cpuInfo=(CPUINFO){ 0,};
     InitCPUFuncs();
     if (NULL==cpuFunc.GetActiveProcessorGroupCount)   {
@@ -161,8 +212,7 @@ static int GetCoreNumbers_WIN7V1(void) {
     cpuInfo.numaNodeCount=numaCount+1L;
     return cpuInfo.logicalProcessorCount; 
 }
-static int GetCoreNumbers_WINXP(void)
-{         
+static int GetCoreNumbers_WINXP(void) {         
     cpuInfo=(CPUINFO){ 0,};
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer=NULL;
     PCACHE_DESCRIPTOR Cache;
@@ -232,8 +282,7 @@ static int GetCoreNumbers_WIN7V2(void) {
                              RelationAll,(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX) buffer,&returnLength);         
          if (FALSE==fOK) {
             if (GetLastError()==ERROR_INSUFFICIENT_BUFFER)  {
-               if (buffer) 
-                   free(buffer);
+               if (buffer)     free(buffer);
                buffer=(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)malloc(returnLength);
                if (NULL==buffer) {  
                     return (-1);
@@ -245,6 +294,8 @@ static int GetCoreNumbers_WIN7V2(void) {
                 done=TRUE;
          }
     }
+    int num_RelationProcessorCore=0;
+    int num_RelationGroup=0;
      PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX  ptr=buffer;
      DWORD byteOffset=0;
      while (byteOffset < returnLength) {
@@ -255,20 +306,30 @@ static int GetCoreNumbers_WIN7V2(void) {
                 break;
             case RelationProcessorCore:
                 cpuInfo.processorCoreCount++;
-                cpuInfo.logicalProcessorCount+=ptr->Processor.Flags+1L;
+                cpuInfo.logicalProcessorCount+=ptr->Processor.Flags+1L;                 
                 break;
             case RelationCache:
+                if (ptr->Cache.Level==1)                {
+                    cpuInfo.processorL1CacheCount++;
+                }  else if (ptr->Cache.Level==2)            {
+                    cpuInfo.processorL2CacheCount++;
+                } else if (ptr->Cache.Level==3)   {
+                    cpuInfo.processorL3CacheCount++;
+                }
                 break;
             case RelationProcessorPackage:
                 cpuInfo.processorPackageCount++;
                 break;
             case RelationGroup:
                 {
+                    int numGrp_sofar=cpuInfo.processorGroupCount;
                     int activeCount=ptr->Group.ActiveGroupCount;
                     for (int i=0; i < activeCount; i++) {
-                          cpuInfo.coreCountPerGrp[cpuInfo.processorGroupCount+i]=ptr->Group.GroupInfo[i].ActiveProcessorCount;
+                          cpuInfo.coreCountPerGrp[numGrp_sofar+i]=ptr->Group.GroupInfo[i].ActiveProcessorCount;
+                          cpuInfo.affinityPerGrp [numGrp_sofar+i]=ptr->Group.GroupInfo[i].ActiveProcessorMask;
                      }
-                    cpuInfo.processorGroupCount+=activeCount;
+                    numGrp_sofar+=activeCount;
+                    cpuInfo.processorGroupCount+=numGrp_sofar;
                 }
                 break;
             default:
@@ -277,53 +338,78 @@ static int GetCoreNumbers_WIN7V2(void) {
             byteOffset+=ptr->Size;
             ptr=(char*)ptr+ptr->Size;
         }
-     PROCESSOR_NUMBER procNum;
-     cpuFunc.GetCurrentProcessorNumberEx(&procNum);
-     cpuInfo.currentGroup=procNum.Group;
-     cpuInfo.currentCoreNumber=procNum.Number;
-     GROUP_AFFINITY grpAffinity;
-     cpuFunc.GetThreadGroupAffinity( GetCurrentThread(),&grpAffinity);
-     cpuInfo.currentThreadAffinity=grpAffinity.Mask;
+     int idx=0;
+     for (int grp=0; grp < cpuInfo.processorGroupCount; grp++) {
+         int coreCountsPerGrp=cpuInfo.coreCountPerGrp[grp];
+         for (int i=0; i < coreCountsPerGrp; i++) {
+             cpuInfo.cpuGroup[idx%256]=grp;
+             cpuInfo.coreIDinGroup[idx%256]=i;
+             idx++;
+         }
+     }
      return cpuInfo.logicalProcessorCount;
     #endif
      return 0;
 }
 static void RankCPU(void) {
-#ifdef WIN64_OS
+   #ifdef WIN64_OS
+    PROCESSOR_NUMBER procNum;
+    cpuFunc.GetCurrentProcessorNumberEx(&procNum);
+    int curGrp=procNum.Group;
+    int curNo=procNum.Number;
     int nGrp=cpuInfo.processorGroupCount;
-    int curGrp=cpuInfo.currentGroup;
-    int curNo=cpuInfo.currentCoreNumber;
-    int coreCounts=cpuInfo.coreCountPerGrp[curGrp];
+    int coreCountsPerGrp=cpuInfo.coreCountPerGrp[curGrp];
     int idx=0;
-    for (int i=0; i < coreCounts; i++) {
+    for (int i=0; i < coreCountsPerGrp; i++) {
         if (i !=curNo) {
             cpuInfo.cpuGroup[idx]=curGrp;
-            cpuInfo.numCPUCoresToUseber[idx]=i;
+            cpuInfo.coreIDinGroup[idx]=i;
             idx++;
         }
     }
-    idx=coreCounts - 1;
+    idx=coreCountsPerGrp - 1;
     cpuInfo.cpuGroup[idx]=curGrp;
-    cpuInfo.numCPUCoresToUseber[idx]=curNo;
-    idx=coreCounts;
+    cpuInfo.coreIDinGroup[idx]=curNo;
+    idx=coreCountsPerGrp;
     for (int grp=0; grp < nGrp; grp++) {
         if (grp==curGrp)
             continue;        
-        coreCounts=cpuInfo.coreCountPerGrp[grp];
-        for (int i=0; i < coreCounts; i++) {
+        coreCountsPerGrp=cpuInfo.coreCountPerGrp[grp];
+        for (int i=0; i < coreCountsPerGrp; i++) {
             cpuInfo.cpuGroup[idx%256]=grp;
-            cpuInfo.numCPUCoresToUseber[idx%256]=i;
+            cpuInfo.coreIDinGroup[idx%256]=i;
             idx++;
         }
     }
-#endif
+  #endif
 }
-int GetCPUInfo() {
+int sched_getcpu(void) {
+    if (cpuFunc.GetCurrentProcessorNumberEx !=NULL) {
+        PROCESSOR_NUMBER procNum;
+        cpuFunc.GetCurrentProcessorNumberEx(&procNum);
+        int currentGroup=procNum.Group;
+        int currentCoreNumber=procNum.Number;
+        int coreNum=0;
+        for (int nGrp=0; nGrp < (currentGroup - 1); nGrp++) {
+            coreNum+=cpuInfo.coreCountPerGrp[nGrp];
+        }
+        coreNum+=currentCoreNumber;
+        return coreNum;
+    }    else {
+        return GetCurrentProcessorNumber();
+    }
+    GROUP_AFFINITY grpAffinity;
+    GetThreadGroupAffinity(GetCurrentThread(),&grpAffinity);
+    uint64_t  currentThreadAffinity=grpAffinity.Mask;
+}
+int GetCPUInfo(void) {
+    if (cpuInfo.logicalProcessorCount > 0) {
+        return cpuInfo.logicalProcessorCount;
+    }
     InitCPUFuncs();
     int nCores;
     if (cpuFunc.GetLogicalProcessorInformationEx !=NULL) {    
         nCores=GetCoreNumbers_WIN7V2();
-        RankCPU();
     }  else  {
         nCores=GetCoreNumbers_WIN32();
     }
@@ -332,51 +418,62 @@ int GetCPUInfo() {
 }
 void PrintCPUInfo() {
     r_printf("\nCPU Information:\n");
-    r_printf(" - Number of NUMA nodes: %d\n",cpuInfo.numaNodeCount);
-    r_printf((" - Number of physical processors (sockets): %d\n"),cpuInfo.processorPackageCount);
-    r_printf((" - Number of processor cores: %d\n"),cpuInfo.processorCoreCount);
-    r_printf((" - Number of logical processors: %d\n"),cpuInfo.logicalProcessorCount);
-    r_printf(" - Number of processor groups: %d\n",cpuInfo.processorGroupCount);
+    r_printf(" - Number of NUMA nodes: %d\n",(int)cpuInfo.numaNodeCount);
+    r_printf((" - Number of physical processors (sockets): %d\n"),(int)cpuInfo.processorPackageCount);
+    r_printf((" - Number of processor cores: %d\n"),(int)cpuInfo.processorCoreCount);
+    r_printf((" - Number of logical processors: %d\n"),(int)cpuInfo.logicalProcessorCount);
+    r_printf(" - Number of processor groups: %d\n",(int)cpuInfo.processorGroupCount);
     for (int i=0; i < cpuInfo.processorGroupCount; i++) {
-        r_printf(" -- Processor group #%d: %d cores\n",i,cpuInfo.coreCountPerGrp[i]);
+        r_printf(" -- Processor group #%d: %d cores\n",i,(int)cpuInfo.coreCountPerGrp[i]);
     }
-    r_printf((" - Number of processor L1/L2/L3 caches: %d/%d/%d\n"),cpuInfo.processorL1CacheCount,
-        cpuInfo.processorL2CacheCount,cpuInfo.processorL3CacheCount);
-    r_printf(" - Group ID of current thread: %d\n",cpuInfo.currentGroup);
-    r_printf(" - Core ID of current thread: %d\n",cpuInfo.currentCoreNumber);
-    r_printf(" - CPU affinity mask of current thread: %#x\n",cpuInfo.currentThreadAffinity);
+    r_printf((" - Number of processor L1/L2/L3 caches: %d/%d/%d\n"),(int)cpuInfo.processorL1CacheCount,(int)cpuInfo.processorL2CacheCount,(int)cpuInfo.processorL3CacheCount);
 }
- void CPU_ZERO(cpu_set_t* cpus) {
-    memset(cpus,0,sizeof(cpu_set_t));
-}
-void CPU_SET(int i,cpu_set_t* cpus) {     
-    #ifdef WIN64_OS
-    cpus->ProcNumber.Group=cpuInfo.cpuGroup[i];
-    cpus->ProcNumber.Number=cpuInfo.numCPUCoresToUseber[i];
-    #endif
-}
-int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (void*),void* arg)
-{
+ #include <stdlib.h>     
+ int pthread_attr_setaffinity_np(pthread_attr_t* attr,size_t cpusetsize,const cpu_set_t* cpuset) {
+     if (cpuset==NULL)   return 0; 
 #ifdef WIN64_OS
-    if (cpuFunc.CreateRemoteThreadEx==NULL) {
-        r_printf("the CreateRemoteThreadEx funnction is not detected!\n");
+     if (attr->lpAttributeList !=NULL) {
+         DeleteProcThreadAttributeList(attr->lpAttributeList);
+         free(attr->lpAttributeList);
+         attr->lpAttributeList=NULL;
+     }
+    DWORD  attributeCounts=1L;
+    attr->lpAttributeList=malloc(attr->sizeAttributeList);
+    InitializeProcThreadAttributeList(attr->lpAttributeList,attributeCounts,0,&attr->sizeAttributeList);
+    int coreId=CPU_get_first_bit_id(cpuset);    
+    attr->ProcNumber.Group=cpuInfo.cpuGroup[coreId];
+    attr->ProcNumber.Number=cpuInfo.coreIDinGroup[coreId];
+    attr->ProcNumber.Reserved=0;    
+    BOOL fok=UpdateProcThreadAttribute( attr->lpAttributeList,0L,PROC_THREAD_ATTRIBUTE_IDEAL_PROCESSOR,
+                                         &attr->ProcNumber,sizeof(PROCESSOR_NUMBER),NULL,NULL);
+    return fok;
+#else
+    return 0;
+#endif
+}
+int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (void*),void* arg) {
+#ifdef WIN64_OS
+    if (cpuFunc.CreateRemoteThreadEx==NULL||attr==NULL||attr->lpAttributeList==NULL ) {
         *tid=CreateThread(NULL,NULL,(LPTHREAD_START_ROUTINE) start,arg,0,0);
     }  else {
         *tid=cpuFunc.CreateRemoteThreadEx(
             GetCurrentProcess(),
             (LPSECURITY_ATTRIBUTES)NULL,
-            (SIZE_T)attr->dwStackSize, 
-            (LPTHREAD_START_ROUTINE)start,
-            (LPVOID)arg,
-            (DWORD)0,
-            (LPPROC_THREAD_ATTRIBUTE_LIST)attr->lpAttributeList,
+            (SIZE_T) attr->dwStackSize, 
+            (LPTHREAD_START_ROUTINE) start,
+            (LPVOID) arg,
+            (DWORD) 0,
+            (LPPROC_THREAD_ATTRIBUTE_LIST) attr->lpAttributeList,
             (LPDWORD)NULL
         );
     }
 #else
-    * tid=CreateThread(NULL,attr->dwStackSize,(LPTHREAD_START_ROUTINE)start,arg,0,0);
+    if (attr!=NULL)
+        *tid=CreateThread(NULL,attr->dwStackSize,(LPTHREAD_START_ROUTINE)start,arg,0,0);
+    else
+        *tid=CreateThread(NULL,NULL,(LPTHREAD_START_ROUTINE)start,arg,0,0);
 #endif
-    return 0;
+    return  (tid==NULL);               
 }
 #endif
 #if defined(_WIN32)||defined(WIN64_OS)
@@ -405,10 +502,10 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
             }
             static INLINE unsigned __int64  readgsqword_good(unsigned __int64 Offset) {
                 unsigned __int64 ret;
-                unsigned __int64 volatile Offset1=Offset;
+                unsigned __int64 volatile OffsetVolatile=Offset;
                 __asm__("mov{" "q" " %%" "gs" ":%[offset],%[ret]|%[ret],%%" "gs" ":%[offset]}"
-                    : [ret] "=r" (ret)
-                    : [offset] "m" ((*(unsigned __int64*)(size_t)Offset1)));
+                    : [ret]    "=r" (ret)
+                    : [offset] "m" ((*(unsigned __int64*)(size_t)OffsetVolatile)));
                 return ret;
             }
             int get_thread_stacksize(void) {
@@ -427,7 +524,7 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
         *((size_t*) arg)=get_thread_stacksize();  return 0; 
     }
     int pthread_attr_getstacksize_win32(pthread_attr_t* attr,size_t* stacksize) {
-        static int default_stacksize=0;
+        static size_t default_stacksize=0;
         if (attr->dwStackSize > 0) {
             *stacksize=attr->dwStackSize;            
         } else{
@@ -453,6 +550,6 @@ int get_thread_stacksize(void) {
 #else 
 int get_thread_stacksize(void) {
     return  0;
-    }
+}
 #endif
 #include "abc_000_warning.h"

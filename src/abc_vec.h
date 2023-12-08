@@ -71,6 +71,13 @@ extern "C" {
 	void f32_to_strided_mem(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset,DATA_TYPE dtype);
 	void f32_from_strided_mem(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDataType);
 	void arr_from_strided_mem(VOID_PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset,DATA_TYPE srcDstDataType);
+	void f32_interp1dvec_cycled_inplace(F32PTR Y,int P,I32PTR goodIndices,int Pgood);
+	void f32_rep_vec1d_upto_inplace(F32PTR Y,int P,int N);
+	void f32_compute_seasonal_avg(F32PTR y,int N,int P,F32PTR mean,I32PTR NumGoodPtsPerTime);
+	void f32_deseasonalize_inplace(F32PTR y,int N,int P,F32PTR mean_tmp,I32PTR NumGoodPtsPerTime_tmp);
+	F32 f32_nansum(F32PTR x,int N) ;
+	F32 f32_nanmean(F32PTR x,int N,int* Ngood);
+	F32 f32_absmax(F32PTR x,int N);
 	I64  sub2ind(int* dims,int ndim,int* subs);
 	void ind2sub(int* dims,int ndim,I64 ind,int* subs);
 	int  ndarray_get1d_stride_offset(int* dims,int ndim,int* subs,int whichdim,I64* stride,I64* offset);
@@ -78,12 +85,12 @@ extern "C" {
 	void f32_set1d_to_ndarray(F32PTR src,VOID_PTR dst,int* dims,int ndim,int* subs,int whichdim,DATA_TYPE dstDtype);
 	void f32_get2d_from_ndarray(F32PTR dst,VOID_PTR src,int* dims,int ndim,int* subs,int d1,int d2,DATA_TYPE srcDtype);
 	void f32_set2d_from_ndarray(F32PTR src,VOID_PTR dst,int* dims,int ndim,int* subs,int d1,int d2,DATA_TYPE dstDtype);
-	void f32_set_nan_by_value(F32PTR a,I32 N,F32 missingValue);
+	void f32_set_value_to_nan(F32PTR a,I32 N,F32 missingValue);
 	int f32_normalize_multicols_zeroout_nans(F32PTR Y,I32PTR BadRowIndices,I32 ldy,I32 N,I32 q,F32PTR mean,F32PTR sd);
 	extern void f32_transpose_inplace(F32PTR Mat,I32 ROW,I32 COL);
 	extern void i32_transpose_inplace(I32PTR Mat,I32 NROW,I32 NCOL);
 	void i32_transpose_inplace_prev(I32PTR Mat,I32 NROW,I32 NCOL);
-	void i32_transpose_inplace_prev_two_ends(I32PTR Mat,I32 NROW,I32 NCOL);
+	void i32_transpose_inplace_prev_two_ends(I32PTR Mat,U64 NROW,U64 NCOL);
 	extern void f32_fill_val_matrixdiag(F32PTR mat,const F32 value,I32 N);
 	extern void f32_add_val_matrixdiag(F32PTR mat,const F32 value,I32 N);
 	extern F32 f32_sum_matrixdiag(F32PTR mat,I32 N);

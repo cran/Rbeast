@@ -93,7 +93,7 @@ void InsertNewRowToUpdateCI(CI_PARAM* _restrict info,CI_RESULT* _restrict ci)
 		I64 offset=ci->samplesInserted * N;
 		r_cblas_scopy(N,newDataRow,1,ci->CI95+offset,1); 
 		ci->samplesInserted++;
-		I32 nSamples=info->nSamples;
+		U32 nSamples=info->nSamples;
 		if (ci->samplesInserted==nSamples) {
 			r_mkl_simatcopy('C','T',N,nSamples,1,ci->CI95,N,nSamples);
 			r_cblas_scopy(N * nSamples,ci->CI95,1L,ci->CI05,1L);

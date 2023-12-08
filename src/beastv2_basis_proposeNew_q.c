@@ -247,8 +247,8 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 	{
 		newIdx=RANDINT(1,(U16)nKnot,*(PRND->rnd16)++);  
 		I32 oldKnot=knotList[newIdx - 1];
-		I32 r1=knotList[(newIdx - 1) - 1];
-		I32 r2=knotList[(newIdx+1) - 1];
+		I32 r1=newIdx==1     ?  knotList[INDEX_FakeStart]: knotList[(newIdx - 1) - 1];
+		I32 r2=newIdx==nKnot ?  knotList[INDEX_FakeEnd]  : knotList[(newIdx+1) - 1];
 		I32 minSepDist=basis->prior.minSepDist;
 		I32 MCMC_maxMoveStepSize=basis->mcmc_MoveStep;
 		r1=max(r1+minSepDist+1,oldKnot - MCMC_maxMoveStepSize);

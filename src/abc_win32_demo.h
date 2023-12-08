@@ -58,7 +58,7 @@ typedef struct GlobalStruct
 	F32 yMin,yMax;
 	int N,sample;
 	F32PTR  y;
-	F32PTR  t,tCI,ct;
+	F32PTR  t,tCI,curt;
 	I32PTR  T;  
 	I32PTR  tProb;
 	I16     tKnotNum;

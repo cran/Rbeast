@@ -9,7 +9,8 @@
 #else
     #include <alloca.h> 
 #endif
-void  gen_i32_add_val_inplace(const int C,const I32PTR X,const int N) {
+#define STATIC static 
+STATIC void  gen_i32_add_val_inplace(const int C,const I32PTR X,const int N) {
 	#define UNROLL_NUMBER 4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -21,7 +22,7 @@ void  gen_i32_add_val_inplace(const int C,const I32PTR X,const int N) {
 	}
 	for (; i < N;++i) X[i]+=C;
 }
-I32   gen_i32_sum(const I32PTR X,const int N) 
+STATIC I32   gen_i32_sum(const I32PTR X,const int N) 
 {
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -31,7 +32,7 @@ I32   gen_i32_sum(const I32PTR X,const int N)
 	for (; i < N;++i)								sum+=X[i];
 	return sum;
 }
-void gen_f32_fill_val(const F32 C,F32PTR X,int N) {
+STATIC void gen_f32_fill_val(const F32 C,F32PTR X,int N) {
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -42,7 +43,7 @@ void gen_f32_fill_val(const F32 C,F32PTR X,int N) {
 	}
 	for (; i < N;++i) 		X[i]=C;
 }
-F32 gen_f32_sum(const F32PTR X,int N ) {
+STATIC  F32 gen_f32_sum(const F32PTR X,int N ) {
      #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F64 sum=0;
@@ -51,7 +52,7 @@ F32 gen_f32_sum(const F32PTR X,int N ) {
 	for (; i < N;++i)								sum=sum+X[i];
 	return (F32)sum;
 }
-void gen_f32_add_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
+STATIC void gen_f32_add_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
 #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -63,7 +64,7 @@ void gen_f32_add_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
 	}
 	for (; i < N;++i) DST[i]=SRC2[i]+SRC1[i];
 }
-void gen_f32_sub_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
+STATIC  void gen_f32_sub_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
 #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -75,7 +76,7 @@ void gen_f32_sub_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
 	}
 	for (; i < N;++i) DST[i]=SRC2[i] - SRC1[i];
 }
-void gen_f32_add_vec_inplace(const F32PTR SRC,const F32PTR DST,const int N)
+STATIC  void gen_f32_add_vec_inplace(const F32PTR SRC,const F32PTR DST,const int N)
 {
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -88,7 +89,7 @@ void gen_f32_add_vec_inplace(const F32PTR SRC,const F32PTR DST,const int N)
 	}
 	for (; i < N;++i) DST[i]+=SRC[i];
 }
-void gen_f32_sub_vec_inplace(const F32PTR SRC,F32PTR DST,int N) {
+STATIC void gen_f32_sub_vec_inplace(const F32PTR SRC,F32PTR DST,int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -100,7 +101,7 @@ void gen_f32_sub_vec_inplace(const F32PTR SRC,F32PTR DST,int N) {
 	}
 	for (; i < N;++i) DST[i] -=SRC[i];
 }
-void gen_f32_subrev_val_inplace(const F32 C,F32PTR X,int N) {
+STATIC void gen_f32_subrev_val_inplace(const F32 C,F32PTR X,int N) {
     const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -111,7 +112,7 @@ void gen_f32_subrev_val_inplace(const F32 C,F32PTR X,int N) {
 	}
 	for (; i < N;++i) 		X[i]=C - (X[i]);
 }
-void gen_f32_add_val_inplace(const F32 C,F32PTR X,int N) {
+STATIC void gen_f32_add_val_inplace(const F32 C,F32PTR X,int N) {
     const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -122,7 +123,7 @@ void gen_f32_add_val_inplace(const F32 C,F32PTR X,int N) {
 	}
 	for (; i < N;++i) 		X[i]=X[i]+C;
 }
-void gen_f32_mul_val_inplace(const F32 C,F32PTR X,const int N) {
+STATIC void gen_f32_mul_val_inplace(const F32 C,F32PTR X,const int N) {
     const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -133,7 +134,7 @@ void gen_f32_mul_val_inplace(const F32 C,F32PTR X,const int N) {
 	}
 	for (; i < N;++i) 		X[i]=X[i]*C;
 }
-void gen_f32_mul_vec_inplace(const F32PTR SRC,F32PTR DST,int N) {
+STATIC void gen_f32_mul_vec_inplace(const F32PTR SRC,F32PTR DST,int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -145,7 +146,7 @@ void gen_f32_mul_vec_inplace(const F32PTR SRC,F32PTR DST,int N) {
 	}
 	for (; i < N;++i) DST[i] *=SRC[i];
 }
-void gen_f32_mul_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
+STATIC void gen_f32_mul_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -157,7 +158,7 @@ void gen_f32_mul_vec(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N) {
 	}
 	for (; i < N;++i) DST[i]=SRC1[i] * SRC2[i];
 }
-void gen_f32_add_v_v2_vec_inplace(const F32PTR SRC,const F32PTR x,F32PTR x2,int N) {
+STATIC void gen_f32_add_v_v2_vec_inplace(const F32PTR SRC,const F32PTR x,F32PTR x2,int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -171,7 +172,7 @@ void gen_f32_add_v_v2_vec_inplace(const F32PTR SRC,const F32PTR x,F32PTR x2,int 
 		x[i]+=SRC[i]; x2[i]+=SRC[i] * SRC[i];
 	}
 }
-void gen_f32_sqrt_vec_inplace(const F32PTR X,const int N)
+STATIC void gen_f32_sqrt_vec_inplace(const F32PTR X,const int N)
 {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -184,7 +185,7 @@ void gen_f32_sqrt_vec_inplace(const F32PTR X,const int N)
 	}
 	for (; i < N;++i) 		X[i]=sqrtf(X[i]);
 }
-void gen_f32_cos_vec_inplace(const F32PTR X,const int N)
+STATIC  void gen_f32_cos_vec_inplace(const F32PTR X,const int N)
 {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -197,7 +198,7 @@ void gen_f32_cos_vec_inplace(const F32PTR X,const int N)
 	}
 	for (; i < N;++i) 		X[i]=cosf(X[i]);
 }
-void gen_f32_sin_vec_inplace(const F32PTR X,const int N)
+STATIC  void gen_f32_sin_vec_inplace(const F32PTR X,const int N)
 {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -211,7 +212,7 @@ void gen_f32_sin_vec_inplace(const F32PTR X,const int N)
 	for (; i < N;++i) 		X[i]=sinf(X[i]);
     #undef  UNROLL_NUMBER 
 }
-void gen_f32_sincos_vec_inplace(const F32PTR in_outsin,F32PTR outcos,const int N)
+STATIC void gen_f32_sincos_vec_inplace(const F32PTR in_outsin,F32PTR outcos,const int N)
 {
 #define UNROLL_NUMBER  2
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -228,7 +229,7 @@ void gen_f32_sincos_vec_inplace(const F32PTR in_outsin,F32PTR outcos,const int N
 	}
 #undef  UNROLL_NUMBER 
 }
-void gen_f32_pow_vec_inplace(F32PTR X,F32 pow,int N){
+STATIC void gen_f32_pow_vec_inplace(F32PTR X,F32 pow,int N){
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -241,7 +242,7 @@ void gen_f32_pow_vec_inplace(F32PTR X,F32 pow,int N){
 	for (; i < N;++i) 		X[i]=powf(X[i],pow);
 	#undef  UNROLL_NUMBER 
 }
-void gen_f32_log_vec_inplace(const F32PTR X,const int N)
+STATIC void gen_f32_log_vec_inplace(const F32PTR X,const int N)
 {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -255,8 +256,7 @@ void gen_f32_log_vec_inplace(const F32PTR X,const int N)
 	for (; i < N;++i) 		X[i]=logf(X[i]);
 	 #undef  UNROLL_NUMBER 
 }
-void gen_f32_exp_vec_inplace(const F32PTR X,const int N)
-{
+STATIC void gen_f32_exp_vec_inplace(const F32PTR X,const int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -269,7 +269,7 @@ void gen_f32_exp_vec_inplace(const F32PTR X,const int N)
 	for (; i < N;++i) 		X[i]=expf(X[i]);
 	#undef  UNROLL_NUMBER 
 }
-void gen_f32_sqrt_vec(const F32PTR X,F32PTR Y,int N) {
+STATIC void gen_f32_sqrt_vec(const F32PTR X,F32PTR Y,int N) {
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER);
 	I32 i=0;
@@ -282,7 +282,7 @@ void gen_f32_sqrt_vec(const F32PTR X,F32PTR Y,int N) {
 	for (; i < N;++i) Y[i]=X[i]*X[i];
 	#undef  UNROLL_NUMBER 
 }
-void  gen_f32_avgstd(const F32PTR X,int N,F32PTR avg,F32PTR std) {
+STATIC void  gen_f32_avgstd(const F32PTR X,int N,F32PTR avg,F32PTR std) {
      #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F64 sumx=0;
@@ -301,7 +301,7 @@ void  gen_f32_avgstd(const F32PTR X,int N,F32PTR avg,F32PTR std) {
 	avg[0]=AVG;
 	#undef  UNROLL_NUMBER 
 }
-void gen_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample,F32 scale,F32 offset,int N) {
+STATIC void gen_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample,F32 scale,F32 offset,int N) {
 	F32 inv_sample_scale=1./(F64) Nsample *scale;
 	F32 inv_sample_scale2=1./(F64)Nsample * scale*scale;
 	I32 i=0;
@@ -312,7 +312,7 @@ void gen_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample,F32 scale
 		SX[i]=avg+offset;
 	}
 }
-I32 gen_f32_maxidx_slow(const F32PTR  X,const int N,F32PTR val) {
+STATIC I32 gen_f32_maxidx_slow(const F32PTR  X,const int N,F32PTR val) {
 	F32 maxVal=X[0];
 	I32 maxIdx=0;
 	for (I32 i=1; i < N; i++) {
@@ -324,7 +324,7 @@ I32 gen_f32_maxidx_slow(const F32PTR  X,const int N,F32PTR val) {
 	*val=maxVal;
 	return maxIdx;
 }
-I32 gen_f32_maxidx(const F32PTR  X,const  int N,F32PTR val) {
+STATIC I32 gen_f32_maxidx(const F32PTR  X,const  int N,F32PTR val) {
 	#define UNROLL_NUMBER  2 
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F32 maxVal=X[0];
@@ -348,7 +348,7 @@ I32 gen_f32_maxidx(const F32PTR  X,const  int N,F32PTR val) {
 	return maxIdx;
 	#undef UNROLL_NUMBER
 }
-I32 gen_f32_minidx(const F32PTR  X,const int  N,F32PTR val) {
+STATIC I32 gen_f32_minidx(const F32PTR  X,const int  N,F32PTR val) {
 	#define UNROLL_NUMBER  2 
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F32 minVal=X[0];
@@ -372,7 +372,7 @@ I32 gen_f32_minidx(const F32PTR  X,const int  N,F32PTR val) {
 	return minIdx;
 	#undef UNROLL_NUMBER
 }
-void gen_f32_diff_back(const F32PTR  X,F32PTR result,const int N) {
+STATIC void gen_f32_diff_back(const F32PTR  X,F32PTR result,const int N) {
 	#define UNROLL_NUMBER  4 
 	I32 i=1;       
 	for (; i < N-(UNROLL_NUMBER-1); i+=UNROLL_NUMBER) {		
@@ -386,7 +386,7 @@ void gen_f32_diff_back(const F32PTR  X,F32PTR result,const int N) {
 	}
 	result[0]=result[1];
 }
-void gen_f32_seq(F32PTR p,F32 x0,F32 dX,int N)
+STATIC void gen_f32_seq(F32PTR p,F32 x0,F32 dX,int N)
 { 
 	#define UNROLL_NUMBER  4 
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -406,8 +406,7 @@ void gen_f32_seq(F32PTR p,F32 x0,F32 dX,int N)
 	}
 #undef UNROLL_NUMBER
 }
-void gen_i32_seq(I32PTR p,I32 x0,I32 dX,int N)
-{
+STATIC  void gen_i32_seq(I32PTR p,I32 x0,I32 dX,int N) {
 #define UNROLL_NUMBER  4 
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	int i=0;
@@ -426,7 +425,7 @@ void gen_i32_seq(I32PTR p,I32 x0,I32 dX,int N)
 	}
 #undef UNROLL_NUMBER
 }
-void gen_f32_to_f64_inplace(F32PTR data32,int N) {
+STATIC void gen_f32_to_f64_inplace(F32PTR data32,int N) {
 	#define UNROLL_NUMBER  4 
 	F64PTR data64=(F64PTR) data32;	
 	int i;
@@ -442,7 +441,7 @@ void gen_f32_to_f64_inplace(F32PTR data32,int N) {
 		data64[j]=(F64)data32[j];
 	}
 }
-void gen_f64_to_f32_inplace(F64PTR data64,int N) {
+STATIC void gen_f64_to_f32_inplace(F64PTR data64,int N) {
 	#define UNROLL_NUMBER  4 
 	F32PTR data32=(F64PTR) data64;	
 	int i=0;
@@ -456,7 +455,7 @@ void gen_f64_to_f32_inplace(F64PTR data64,int N) {
 		data32[i]=data64[i];
 	}
 }
-void gen_i32_to_f32_scaleby_inplace(I32PTR X,int N,F32 scale) {
+STATIC void gen_i32_to_f32_scaleby_inplace(I32PTR X,int N,F32 scale) {
     const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -467,7 +466,7 @@ void gen_i32_to_f32_scaleby_inplace(I32PTR X,int N,F32 scale) {
 	}
 	for (; i < N;++i) 		*(F32PTR)(X+i)=X[i]*scale;
 }
-void gen_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
+STATIC void gen_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -478,7 +477,7 @@ void gen_i32_increment_bycond_inplace(I32PTR x,F32PTR cond,int N) {
 	}
 	for (; i < N;++i) if (cond[i] > 0)++x[i]; 
 }
-void gen_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N) {
+STATIC void gen_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N) {
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -496,7 +495,7 @@ void gen_i32_increment_vec2_bycond_inplace(I32PTR x,I32PTR y,F32PTR cond,int N) 
 		if (cond[i] < 1e-10 && cond[i]>-1e-10)++*(y+i);
 	}
 }
-I32 gen_i08_sum_binvec(U08PTR binvec,I32 N) {
+STATIC I32 gen_i08_sum_binvec(U08PTR binvec,I32 N) {
 	I32   SUM=0;
 	I32	  i=0;
 	U08PTR binvec_old=binvec;
@@ -520,7 +519,7 @@ I32 gen_i08_sum_binvec(U08PTR binvec,I32 N) {
 	}
 	return SUM;
 }
-F32  gen_f32_dot( const F32PTR x,const F32PTR y,const int N) {
+STATIC F32  gen_f32_dot( const F32PTR x,const F32PTR y,const int N) {
 	  #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F32 sum=0;
@@ -531,7 +530,7 @@ F32  gen_f32_dot( const F32PTR x,const F32PTR y,const int N) {
 	for (; i < N;++i) 		sum+=x[i]*y[i];
 	return sum;
 }
-F32  gen_f32_dot2x1( const F32PTR x,const F32PTR y,const F32PTR v,const int N,F32PTR res) {
+STATIC F32  gen_f32_dot2x1( const F32PTR x,const F32PTR y,const F32PTR v,const int N,F32PTR res) {
 	#define UNROLL_NUMBER 4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F32 sumX=0;
@@ -548,7 +547,7 @@ F32  gen_f32_dot2x1( const F32PTR x,const F32PTR y,const F32PTR v,const int N,F3
 	res[0]=sumX;
 	return sumY;
 }
-F32  gen_f32_dot2x1_dir( const F32PTR x,const F32PTR y,const F32PTR v,const int N,F32PTR res,int dir) {
+STATIC F32  gen_f32_dot2x1_dir( const F32PTR x,const F32PTR y,const F32PTR v,const int N,F32PTR res,int dir) {
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F32 sumX=0;
 	F32 sumY=0;	
@@ -577,7 +576,7 @@ F32  gen_f32_dot2x1_dir( const F32PTR x,const F32PTR y,const F32PTR v,const int 
 	res[0]=sumX;
 	return sumY;
 }
-void gen_f32_dot2x2(const F32PTR x1,const F32PTR x2,const F32PTR y1,const F32PTR y2,const int N,F32PTR res1,F32PTR res2 ) {
+STATIC void gen_f32_dot2x2(const F32PTR x1,const F32PTR x2,const F32PTR y1,const F32PTR y2,const int N,F32PTR res1,F32PTR res2 ) {
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	F32 sum11=0;
 	F32 sum21=0;
@@ -601,7 +600,7 @@ void gen_f32_dot2x2(const F32PTR x1,const F32PTR x2,const F32PTR y1,const F32PTR
 	res2[0]=sum12;
 	res2[1]=sum22;
 }
-void gen_f32_gemm_XtY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void gen_f32_gemm_XtY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 {
 	int COL;
  	for (COL=0; COL < N-(2-1); COL+=2) {
@@ -638,7 +637,7 @@ static void __F32copyFrmStidedMem(F32PTR dst,F32PTR src,int N,int stride) {
 		src+=stride;
 	}
 }
-void gen_f32_gemm_XY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void gen_f32_gemm_XY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 { 
     F32     XROW_FIXEXD[4096];
     F32PTR  Xrow=(2*K <=4096) ? XROW_FIXEXD : alloca(2*K * sizeof(F32));
@@ -664,7 +663,7 @@ void gen_f32_gemm_XY2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32P
             *(Crow+ldc * col )=gen_f32_dot(Xrow1,B+col*ldb,K);            
 	}
 }
-void gen_f32_gemm_XtYt2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void gen_f32_gemm_XtYt2x2(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 { 
     F32     YROW_FIXEXD[4096];
     F32PTR  Yrow=(2*K <=4096) ? YROW_FIXEXD : alloca(2*K * sizeof(F32));
@@ -704,7 +703,7 @@ static INLINE F32 __gen_f32_dot_stride(F32PTR  x,F32PTR y,int N,I32 ystride) {
 	}
 	return sum;
 }
-void gen_f32_gemm_XYt2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
+STATIC void  gen_f32_gemm_XYt2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32PTR C,int ldc)
 {
     F32     XROW_FIXEXD[4096];
     F32PTR  Xrow=(2 * K <=4096) ? XROW_FIXEXD : alloca( 2*K * sizeof(F32) );
@@ -718,7 +717,7 @@ void gen_f32_gemm_XYt2x1(int M,int N,int K,F32PTR A,int lda,F32PTR B,int ldb,F32
             *(Crow+ldc * col)=__gen_f32_dot_stride(Xrow1,B+col,K,ldb);
     }
 }
-static  void gen_f32_axpy_inplace(const F32 c,const F32PTR x,F32PTR y,const int N) {
+STATIC   void gen_f32_axpy_inplace(const F32 c,const F32PTR x,F32PTR y,const int N) {
 #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -731,7 +730,7 @@ static  void gen_f32_axpy_inplace(const F32 c,const F32PTR x,F32PTR y,const int 
 	for (; i < N;++i)
 		y[i]+=x[i] * c;
 }
-static INLINE void _f32_axpy_inplace(const F32 c,const F32PTR x,F32PTR y,const int N) {
+STATIC  INLINE void _f32_axpy_inplace(const F32 c,const F32PTR x,F32PTR y,const int N) {
 #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
@@ -757,7 +756,7 @@ static INLINE void _f32_axpy_inplace_x2(const F32PTR a,const F32PTR x1,const F32
 	for (;i<N;++i)
 		y[i]+=x1[i] * a[0]+x2[i] * a[1];
 }
-void gen_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
+STATIC  void gen_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
 {
 	memset(C,0,sizeof(F32) * N);
 	int row=0;
@@ -779,7 +778,7 @@ void gen_f32_gemv_Xb(int N,int K,F32PTR X,int lda,F32PTR b,F32PTR C)
 			_f32_axpy_inplace(b[col],X+col * lda+row,C+row,n);
 	}
 }
-I32 gen_f32_findindex(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag) {
+STATIC I32 gen_f32_findindex(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  cnt=0;
@@ -843,8 +842,8 @@ I32 gen_f32_findindex(F32PTR  x,I32PTR indices,F32 value,int N,CmpFlag flag) {
     }
 	return cnt;
 }
-void  gen_f32_scatter_val_byindex(F32PTR  x,I32PTR indices,F32 value,int N) {
-#define UNROLL_NUMBER  4
+STATIC void  gen_f32_scatter_val_byindex(F32PTR  x,I32PTR indices,F32 value,int N) {
+	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	int  i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -855,7 +854,7 @@ void  gen_f32_scatter_val_byindex(F32PTR  x,I32PTR indices,F32 value,int N) {
 	}
 	for (; i < N;++i)    x[indices[i]]=value;
 }
-void  gen_f32_scatter_vec_byindex(F32PTR  x,I32PTR indices,F32PTR values,int N) {
+STATIC void  gen_f32_scatter_vec_byindex(F32PTR  x,I32PTR indices,F32PTR values,int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -867,7 +866,7 @@ void  gen_f32_scatter_vec_byindex(F32PTR  x,I32PTR indices,F32PTR values,int N) 
     }   
     for (; i < N;++i)    x[indices[i]]=values[i]; 
 }
-void gen_f32_gatherVec_scatterVal_byindex(F32PTR  x,I32PTR indices,F32PTR values,F32 newValue,int N) {
+STATIC void gen_f32_gatherVec_scatterVal_byindex(F32PTR  x,I32PTR indices,F32PTR values,F32 newValue,int N) {
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -886,7 +885,7 @@ void gen_f32_gatherVec_scatterVal_byindex(F32PTR  x,I32PTR indices,F32PTR values
         x[indices[i]]=newValue;
     }
 }
-void gen_f32_gather2Vec_scatterVal_byindex(F32PTR  x,F32PTR  y,I32PTR indices,F32PTR values,F32 newValue,int N){
+STATIC void gen_f32_gather2Vec_scatterVal_byindex(F32PTR  x,F32PTR  y,I32PTR indices,F32PTR values,F32 newValue,int N){
     #define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -911,7 +910,7 @@ void gen_f32_gather2Vec_scatterVal_byindex(F32PTR  x,F32PTR  y,I32PTR indices,F3
         y[indices[i]]=newValue;
     }
 }
-void gen_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const int N) {
+STATIC void gen_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const int N) {
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -925,7 +924,7 @@ void gen_f32_scale_inplace(const F32 gain,const F32 offset,const F32PTR x,const 
 		x[i]=x[i] * gain+offset;
 	}
 }
-void gen_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
+STATIC void gen_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -939,7 +938,7 @@ void gen_f32_hinge_pos(const F32PTR X,const F32PTR Y,const F32 knot,const int N)
 		Y[i]=X[i] >=knot ? X[i] - knot : 0;
 	}
 }
-void gen_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
+STATIC void gen_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N) {
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -953,7 +952,7 @@ void gen_f32_hinge_neg(const F32PTR X,const F32PTR Y,const F32 knot,const int N)
 		Y[i]=X[i] <=knot ? knot - X[i] : 0;
 	}
 }
-void gen_f32_step_pos(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N) {
+STATIC void gen_f32_step_pos(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N) {
 	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
     int  i=0;
@@ -967,8 +966,8 @@ void gen_f32_step_pos(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 kno
 		Z[i]=X[i] >=knot ? Y[i] : 0;
 	}
 }
-void gen_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N) {
-#define UNROLL_NUMBER  4
+STATIC void gen_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 knot,const int N) {
+	#define UNROLL_NUMBER  4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	int  i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
@@ -982,7 +981,7 @@ void gen_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 kno
 	}
 }
 #include "abc_vec.h"
-void SetupVectorFunction_Generic(void) {
+  void SetupVectorFunction_Generic(void) {
     i32_add_val_inplace=&gen_i32_add_val_inplace;;
     i32_sum=&gen_i32_sum;
     f32_fill_val=&gen_f32_fill_val;

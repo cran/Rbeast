@@ -26,17 +26,17 @@ void BEAST2_fetch_timeSeries(A(YINFO_PTR)  yInfo,int pixelIndex,F32PTR GlobalMEM
 	int    Nraw=io->dims[io->timedim - 1L];
 	I32    q=io->q; 
 	F32PTR Y=yInfo->Y;
-	if ( !io->meta.needAggregate ) {
+	if ( !io->T.out.needAggregate && !io->T.out.needReOrder)  {
 		for (I32 i=0; i < q; i++) {
 			f32_from_strided_mem(Y+i * Nraw,io->pdata[i],Nraw,stride,offset,io->dtype[i]);
 		}
-		f32_set_nan_by_value(Y,Nraw*q,io->meta.missingValue); 
+		f32_set_value_to_nan(Y,Nraw*q,io->meta.missingValue); 
 	} else {
 		for (I32 i=0; i < q; i++) {
 			f32_from_strided_mem(GlobalMEMBuf,io->pdata[i],Nraw,stride,offset,io->dtype[i]);
-			f32_set_nan_by_value(GlobalMEMBuf,Nraw,io->meta.missingValue);
+			f32_set_value_to_nan(GlobalMEMBuf,Nraw,io->meta.missingValue);
 			I32    Nnew=io->N;
-			tsAggegrationPerform(Y+Nnew * i,Nnew,GlobalMEMBuf,Nraw,io->T.numPtsPerInterval,io->T.sortedTimeIdx+io->T.startIdxOfFirsInterval);
+			tsAggegrationPerform(Y+Nnew * i,Nnew,GlobalMEMBuf,Nraw,io->T.out.numPtsPerInterval,io->T.sorted_time_indices+io->T.out.startIdxOfFirsInterval);
 		}
 	}
 }
@@ -57,8 +57,8 @@ static int  __timeseries_deseasonalize_detrend(A(YINFO_PTR)  yInfo,BEAST2_BASIS_
 	if (yInfo->Yseason){
 		F32PTR TERMS=NULL;
 		if      (basis[0].type==SEASONID){ SEASON_CONST* bConst=&basis[0].bConst.season; TERMS=bConst->TERMS;} 
-		else if (basis[0].type==DUMMYID) { DUMMY_CONST* bConst=&basis[0].bConst.dummy;  TERMS=bConst->TERMS;}
-		else if (basis[0].type==SVDID)  {  SVD_CONST* bConst=&basis[0].bConst.dummy;	 TERMS=bConst->TERMS;	}	
+		else if (basis[0].type==DUMMYID) { DUMMY_CONST * bConst=&basis[0].bConst.dummy;  TERMS=bConst->TERMS;}
+		else if (basis[0].type==SVDID)  {  SVD_CONST   * bConst=&basis[0].bConst.svd;	 TERMS=bConst->TERMS;	}	
 		SCPY(Kseason * N,TERMS,X);
 		X+=Kseason * N;
 		K+=Kseason;		
@@ -104,6 +104,32 @@ I08 BEAST2_preprocess_timeSeries(A(YINFO_PTR)  yInfo,BEAST2_BASIS_PTR basis,F32P
 	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,N,1.0,Y,N,Y,N,0.f,yInfo->YtY_plus_alpha2Q,q);
 	yInfo->n=N - yInfo->nMissing;
 	skipCurrentPixel=yInfo->nMissing > (N * opt->io.meta.maxMissingRate) ? 1L : 0L;
+	if (skipCurrentPixel) {
+		return skipCurrentPixel;
+	}
+	if ('V'==opt->io.meta.seasonForm && opt->io.meta.svdTerms_Object==NULL) {
+		void compute_seasonal_svdbasis_from_originalY(F32PTR y,int N,int P,F32PTR Yout,int  Kmax,VOID_PTR BUF);
+		void compute_seasonal_svdbasis_from_seasonalY(F32PTR y,int N,int P,F32PTR Yout,int  Kmax,VOID_PTR BUF);
+		int Kmax=opt->prior.seasonMaxOrder;
+		int P=opt->io.meta.period;
+		SVD_CONST* bConst=basis[0].type==SVDID ? &basis[0].bConst.svd : &basis[1].bConst.svd;
+		F32PTR   Yout=bConst->TERMS;
+		if (opt->io.meta.svdYseason_Object) {
+			F32PTR y=bConst->TERMS; 
+			CopyNumericObjToF32Arr(y,opt->io.meta.svdYseason_Object,N);		
+			compute_seasonal_svdbasis_from_seasonalY(y,N,P,Yout,Kmax,Xtmp);
+		} else{
+			compute_seasonal_svdbasis_from_originalY(Y,N,P,Yout,Kmax,Xtmp);
+		}
+		F32PTR ptr=Yout;
+		F32PTR ptr1=bConst->SQR_CSUM;
+		for (I32 order=1; order <=Kmax; order++) {
+			*ptr1=0.f;
+			f32_copy(ptr,ptr1+1,N);         f32_cumsumsqr_inplace(ptr1+1,N);
+			ptr+=N;
+			ptr1+=N+1;
+		} 
+	}
 	return skipCurrentPixel;
 }
 #include "abc_000_warning.h"

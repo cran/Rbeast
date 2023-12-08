@@ -4,10 +4,10 @@
 #include "abc_datatype.h"
 #include "abc_vec.h"
 #include "abc_ide_util.h"
-void  (*i32_add_val_inplace)(const int C,const I32PTR X,const int N)=NULL;
-I32   (*i32_sum)(const I32PTR X,const int N)=NULL;
-void  (*f32_fill_val)(const F32 C,F32PTR X,int N);
-F32   (*f32_sum)(const F32PTR X,int N)=NULL;
+void (*i32_add_val_inplace)(const int C,const I32PTR X,const int N)=NULL;
+I32  (*i32_sum)(const I32PTR X,const int N)=NULL;
+void (*f32_fill_val)(const F32 C,F32PTR X,int N);
+F32  (*f32_sum)(const F32PTR X,int N)=NULL;
 void (*f32_add_vec)(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N);
 void (*f32_sub_vec)(const F32PTR SRC1,const F32PTR SRC2,F32PTR DST,int N);
 void (*f32_add_vec_inplace)(const F32PTR SRC,const F32PTR DST,const int N);
@@ -62,55 +62,55 @@ void  (*f32_step_pos)(const F32PTR X,const F32PTR Y,const F32PTR Z,const F32 kno
 void  (*f32_axpy_inplace)(const F32 a,const F32PTR x,F32PTR y,const int N);
 void print_funcs(void) {
 	r_printf("\n\n"  );
-	r_printf("%s:%05x\n","i32_add_val_inplace",i32_add_val_inplace);
-	r_printf("%s:%05x\n","i32_sum",i32_sum);
-	r_printf("%s:%05x\n","f32_fill_val",f32_fill_val);
-	r_printf("%s:%05x\n","f32_sum",f32_sum);
-	r_printf("%s:%05x\n","f32_add_vec",f32_add_vec);
-	r_printf("%s:%05x\n","f32_sub_vec",f32_sub_vec);
-	r_printf("%s:%05x\n","f32_add_vec_inplace",f32_add_vec_inplace);
-	r_printf("%s:%05x\n","f32_sub_vec_inplace",f32_sub_vec_inplace);
-	r_printf("%s:%05x\n","f32_subrev_val_inplace",f32_subrev_val_inplace);
-	r_printf("%s:%05x\n","f32_add_val_inplace",f32_add_val_inplace);
-	r_printf("%s:%05x\n","f32_mul_val_inplace",f32_mul_val_inplace);
-	r_printf("%s:%05x\n","f32_mul_vec_inplace",f32_mul_vec_inplace);
-	r_printf("%s:%05x\n","f32_mul_vec",f32_mul_vec);
-	r_printf("%s:%05x\n","f32_dot",f32_dot);
-	r_printf("%s:%05x\n","*f32_dot2x1",f32_dot2x1);
-	r_printf("%s:%05x\n","f32_dot2x2",f32_dot2x2);
-	r_printf("%s:%05x\n","f32_add_v_v2_vec_inplace",f32_add_v_v2_vec_inplace);
-	r_printf("%s:%05x\n","f32_cos_vec_inplace",f32_cos_vec_inplace);
-	r_printf("%s:%05x\n","f32_sin_vec_inplace",f32_sin_vec_inplace);
-	r_printf("%s:%05x\n","f32_sincos_vec_inplace",f32_sincos_vec_inplace);
-	r_printf("%s:%05x\n","f32_pow_vec_inplace",f32_pow_vec_inplace);
-	r_printf("%s:%05x\n","f32_log_vec_inplace",f32_log_vec_inplace);
-	r_printf("%s:%05x\n","f32_exp_vec_inplace",f32_exp_vec_inplace);
-	r_printf("%s:%05x\n","f32_sqrt_vec_inplace",f32_sqrt_vec_inplace);
-	r_printf("%s:%05x\n","f32_sqrt_vec",f32_sqrt_vec);
-	r_printf("%s:%05x\n","f32_avgstd",f32_avgstd);
-	r_printf("%s:%05x\n","f32_sx_sxx_to_avgstd_inplace",f32_sx_sxx_to_avgstd_inplace);
-	r_printf("%s:%05x\n","f32_maxidx_slow",f32_maxidx_slow);
-	r_printf("%s:%05x\n","f32_maxidx",f32_maxidx);
-	r_printf("%s:%05x\n","f32_minidx",f32_minidx);
-	r_printf("%s:%05x\n","f32_diff_back",f32_diff_back);
-	r_printf("%s:%05x\n","f32_seq",f32_seq);
-	r_printf("%s:%05x\n","f32_to_f64_inplace",f32_to_f64_inplace);
-	r_printf("%s:%05x\n","f64_to_f32_inplace",f64_to_f32_inplace);
-	r_printf("%s:%05x\n","i32_to_f32_scaleby_inplace",i32_to_f32_scaleby_inplace);
-	r_printf("%s:%05x\n","i32_increment_bycond_inplace",i32_increment_bycond_inplace);
-	r_printf("%s:%05x\n","i32_increment_vec2_bycond_inplace",i32_increment_vec2_bycond_inplace);
-	r_printf("%s:%05x\n","i08_sum_binvec",i08_sum_binvec);
-	r_printf("%s:%05x\n","f32_gemm_XtY2x1",f32_gemm_XtY2x1);
-	r_printf("%s:%05x\n","f32_gemm_XtY2x2",f32_gemm_XtY2x2);
-	r_printf("%s:%05x\n","f32_gemm_XY1x2",f32_gemm_XY1x2);
-	r_printf("%s:%05x\n","f32_gemm_XY2x2",f32_gemm_XY2x2);
-	r_printf("%s:%05x\n","f32_gemm_XtYt2x2",f32_gemm_XtYt2x2);
-	r_printf("%s:%05x\n","f32_gemm_XYt2x1",f32_gemm_XYt2x1);
-	r_printf("%s:%05x\n","f32_gemv_Xb",f32_gemv_Xb);
-	r_printf("%s:%05x\n","f32_findindex",f32_findindex);
-	r_printf("%s:%05x\n","f32_scatter_vec_byindex",f32_scatter_vec_byindex);
-	r_printf("%s:%05x\n","f32_gatherVec_scatterVal_byindex",f32_gatherVec_scatterVal_byindex);
-	r_printf("%s:%05x\n","f32_gather2Vec_scatterVal_byindex",f32_gather2Vec_scatterVal_byindex);
+	r_printf("%s:%8p\n","i32_add_val_inplace",(void *) i32_add_val_inplace);
+	r_printf("%s:%8p\n","i32_sum",(void*)i32_sum);
+	r_printf("%s:%8p\n","f32_fill_val",(void*)f32_fill_val);
+	r_printf("%s:%8p\n","f32_sum",(void*)f32_sum);
+	r_printf("%s:%8p\n","f32_add_vec",(void*)f32_add_vec);
+	r_printf("%s:%8p\n","f32_sub_vec",(void*)f32_sub_vec);
+	r_printf("%s:%8p\n","f32_add_vec_inplace",(void*)f32_add_vec_inplace);
+	r_printf("%s:%8p\n","f32_sub_vec_inplace",(void*)f32_sub_vec_inplace);
+	r_printf("%s:%8p\n","f32_subrev_val_inplace",(void*)f32_subrev_val_inplace);
+	r_printf("%s:%8p\n","f32_add_val_inplace",(void*)f32_add_val_inplace);
+	r_printf("%s:%8p\n","f32_mul_val_inplace",(void*)f32_mul_val_inplace);
+	r_printf("%s:%8p\n","f32_mul_vec_inplace",(void*)f32_mul_vec_inplace);
+	r_printf("%s:%8p\n","f32_mul_vec",(void*)f32_mul_vec);
+	r_printf("%s:%8p\n","f32_dot",(void*)f32_dot);
+	r_printf("%s:%8p\n","*f32_dot2x1",(void*)f32_dot2x1);
+	r_printf("%s:%8p\n","f32_dot2x2",(void*)f32_dot2x2);
+	r_printf("%s:%8p\n","f32_add_v_v2_vec_inplace",(void*)f32_add_v_v2_vec_inplace);
+	r_printf("%s:%8p\n","f32_cos_vec_inplace",(void*)f32_cos_vec_inplace);
+	r_printf("%s:%8p\n","f32_sin_vec_inplace",(void*)f32_sin_vec_inplace);
+	r_printf("%s:%8p\n","f32_sincos_vec_inplace",(void*)f32_sincos_vec_inplace);
+	r_printf("%s:%8p\n","f32_pow_vec_inplace",(void*)f32_pow_vec_inplace);
+	r_printf("%s:%8p\n","f32_log_vec_inplace",(void*)f32_log_vec_inplace);
+	r_printf("%s:%8p\n","f32_exp_vec_inplace",(void*)f32_exp_vec_inplace);
+	r_printf("%s:%8p\n","f32_sqrt_vec_inplace",(void*)f32_sqrt_vec_inplace);
+	r_printf("%s:%8p\n","f32_sqrt_vec",(void*)f32_sqrt_vec);
+	r_printf("%s:%8p\n","f32_avgstd",(void*)f32_avgstd);
+	r_printf("%s:%8p\n","f32_sx_sxx_to_avgstd_inplace",(void*)f32_sx_sxx_to_avgstd_inplace);
+	r_printf("%s:%8p\n","f32_maxidx_slow",(void*)f32_maxidx_slow);
+	r_printf("%s:%8p\n","f32_maxidx",(void*)f32_maxidx);
+	r_printf("%s:%8p\n","f32_minidx",(void*)f32_minidx);
+	r_printf("%s:%8p\n","f32_diff_back",(void*)f32_diff_back);
+	r_printf("%s:%8p\n","f32_seq",(void*)f32_seq);
+	r_printf("%s:%8p\n","f32_to_f64_inplace",(void*)f32_to_f64_inplace);
+	r_printf("%s:%8p\n","f64_to_f32_inplace",(void*)f64_to_f32_inplace);
+	r_printf("%s:%8p\n","i32_to_f32_scaleby_inplace",(void*)i32_to_f32_scaleby_inplace);
+	r_printf("%s:%8p\n","i32_increment_bycond_inplace",(void*)i32_increment_bycond_inplace);
+	r_printf("%s:%8p\n","i32_increment_vec2_bycond_inplace",(void*)i32_increment_vec2_bycond_inplace);
+	r_printf("%s:%8p\n","i08_sum_binvec",(void*)i08_sum_binvec);
+	r_printf("%s:%8p\n","f32_gemm_XtY2x1",(void*)f32_gemm_XtY2x1);
+	r_printf("%s:%8p\n","f32_gemm_XtY2x2",(void*)f32_gemm_XtY2x2);
+	r_printf("%s:%8p\n","f32_gemm_XY1x2",(void*)f32_gemm_XY1x2);
+	r_printf("%s:%8p\n","f32_gemm_XY2x2",(void*)f32_gemm_XY2x2);
+	r_printf("%s:%8p\n","f32_gemm_XtYt2x2",(void*)f32_gemm_XtYt2x2);
+	r_printf("%s:%8p\n","f32_gemm_XYt2x1",(void*)f32_gemm_XYt2x1);
+	r_printf("%s:%8p\n","f32_gemv_Xb",(void*)f32_gemv_Xb);
+	r_printf("%s:%8p\n","f32_findindex",(void*)f32_findindex);
+	r_printf("%s:%8p\n","f32_scatter_vec_byindex",(void*)f32_scatter_vec_byindex);
+	r_printf("%s:%8p\n","f32_gatherVec_scatterVal_byindex",(void*)f32_gatherVec_scatterVal_byindex);
+	r_printf("%s:%8p\n","f32_gather2Vec_scatterVal_byindex",(void*)f32_gather2Vec_scatterVal_byindex);
 }
 void f32_cumsum_inplace(const F32PTR X,int N) {
 	#define UNROLL_NUMBER  4
@@ -150,25 +150,30 @@ void f32_sumfilter(const F32PTR X,F32PTR Y,int N,int winSize) {
 	}
 	I32 wLeft=winSize/2;          
 	I32 wRight=(winSize - wLeft)-1;  
-	F32 csumLeftEnd=0;
-	for (int i=0; i< wLeft;++i){
-		csumLeftEnd+=X[i];
-		Y[i]=csumLeftEnd;
+	F32 csumRIghtSide=0;
+	I32 Nadj=min(wRight,N-1);
+	for (int i=1; i <=Nadj;++i) {
+		csumRIghtSide+=X[i];
 	}
-	I32 Nadj=min(winSize,N);
-	F32 csumAll=csumLeftEnd;
-	for (int i=wLeft; i < Nadj;++i) 
-		csumAll+=X[i];
-	for (int i=wLeft; i < N-wRight;++i) {
-		Y[i]=csumAll;
-		csumAll+=X[i+wRight+1] - X[i - wLeft]; 
+	F32 csumLeftSide_Mid=0;
+	for (int i=0; i<=wLeft;++i){
+		csumLeftSide_Mid+=X[i];
+		Y[i]=csumLeftSide_Mid+csumRIghtSide ;
+		F32  newRightPoint=(i+wRight+1) >=N ? 0 : X[i+wRight+1];
+		F32  oldRightPoint=(i+1)         >=N ? 0 : X[i+1];
+		csumRIghtSide+=newRightPoint - oldRightPoint;
 	}
-	F32 csumRightEnd=0;
-	for (int i=N - 1; i >=N - wRight; --i) {
-		Y[i]=X[i]+csumRightEnd;
-		csumRightEnd+=X[i];
+	 F32 csumAll=Y[wLeft]; 
+	for (int i=wLeft+1; i < N-wRight;++i) {
+		csumAll+=X[i+wRight] - X[i-1 -  wLeft]; 
+		Y[i]=csumAll;		
 	}
-		#undef UNROLL_NUMBER
+	csumAll=csumAll;
+	for (int i=N - wRight; i < N;++i) {
+		csumAll -=X[i-wLeft-1];
+		Y[i]=csumAll;		
+	}
+	#undef UNROLL_NUMBER
 }
 F32  f32_corr_rmse_nan(const F32PTR X,const F32PTR Y,int N,F32PTR rmse) {
 	#define UNROLL_NUMBER  4
@@ -561,27 +566,25 @@ void f32_to_strided_i16(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset) 
 	} 
 #undef UNROLL_NUMBER
 }
-void f32_from_strided_f64(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset)
-{ 
+void f32_from_strided_f64(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset) { 
 	src=(F64PTR)src+srcOffset;
 	#define UNROLL_NUMBER 4
 	const int regularPart=N & (-UNROLL_NUMBER); 
 	I32 i=0;
 	for (; i < regularPart; i+=UNROLL_NUMBER) {
-		dst[i]=*(F64PTR)src;
-		dst[i+1]=*((F64PTR)src+srcStride);
-		dst[i+2]=*((F64PTR)src+2 * srcStride);
-		dst[i+3]=*((F64PTR)src+3 * srcStride);
+		dst[i]=(F32) *(F64PTR)src;
+		dst[i+1]=(F32) *((F64PTR)src+srcStride);
+		dst[i+2]=(F32) *((F64PTR)src+2 * srcStride);
+		dst[i+3]=(F32) *((F64PTR)src+3 * srcStride);
 		src=(F64PTR)src+4 * srcStride;
 	}
 	for (; i < N;++i) {
-		dst[i]=*(F64PTR)src;
+		dst[i]=(F32) *(F64PTR)src;
 		src=(F64PTR)src+srcStride;
 	}
 #undef UNROLL_NUMBER		 
 }
-void f32_from_strided_i64(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset)
-{ 
+void f32_from_strided_i64(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOffset) { 
 	src=(I64PTR)src+srcOffset;
 	#define UNROLL_NUMBER 4
 	const int regularPart=N & (-UNROLL_NUMBER); 
@@ -694,7 +697,7 @@ void f32_from_strided_mem(F32PTR dst,VOID_PTR src,int N,int srcStride,int srcOff
 		#if R_INTERFACE==1
 		I32 INTMIN=0x80000001;
 		F32 NAinteger=(F32)(INTMIN);  
-		f32_set_nan_by_value(dst,N,NAinteger);
+		f32_set_value_to_nan(dst,N,NAinteger);
 		#endif
 	}
 	else if (srcDataType==DATA_INT16)	   f32_from_strided_i16(dst,src,N,srcStride,srcOffset);
@@ -706,7 +709,7 @@ void arr_from_strided_mem(VOID_PTR dst,VOID_PTR src,int N,int srcStride,int srcO
 		f64_from_strided_f64(dst,src,N,srcStride,srcOffset);
 	}
 }
-void f32_set_nan_by_value(F32PTR a,I32 N,F32 missingValue) {
+void f32_set_value_to_nan(F32PTR a,I32 N,F32 missingValue) {
 	if (missingValue !=missingValue)		
 		return;
 	F32 nan=getNaN();
@@ -715,16 +718,15 @@ void f32_set_nan_by_value(F32PTR a,I32 N,F32 missingValue) {
 	}
 }
 int f32_normalize_multicols_zeroout_nans(F32PTR Y,I32PTR BadRowIndices,I32 ldy,I32 N,I32 q,F32PTR mean,F32PTR sd) {
-	if (q==1) {
+	if (q==1) {		
 		I32     nMissing=0;
 		F64     sumY=0,sumYY=0;
 		for (I32 i=0; i < N; i++) {
-			if (Y[i] !=Y[i]) 
-				BadRowIndices[nMissing++]=i;			
-			else {
-				sumY+=Y[i];
-				sumYY+=Y[i] * Y[i];
-			}
+			BadRowIndices[nMissing]=i;
+			nMissing=nMissing+(Y[i] !=Y[i]||IsInf(Y[i])  );
+			F32  y=(Y[i] !=Y[i]||IsInf(Y[i]) ) ? 0.f : Y[i]; 
+ 			sumY+=y;
+			sumYY+=y*y;		 
 		}
 		I32 n=N - nMissing;
 		F32 MEAN32=sumY/n;
@@ -747,7 +749,7 @@ int f32_normalize_multicols_zeroout_nans(F32PTR Y,I32PTR BadRowIndices,I32 ldy,I
 	memset(isNANValue,0,sizeof(I32)* N);
 	for (I32 i=0; i < q; i++) {
 		for (I32 j=0; j < N; j++) { 	 
-			if ( Y[j]!=Y[j])	isNANValue[j]=1;			 
+			if ( Y[j]!=Y[j]||IsInf(Y[i]) ) 	isNANValue[j]=1;
 		}
 		Y+=ldy;
 	}
@@ -808,6 +810,122 @@ void f32_normalize_x_factor_inplace(F32PTR X,I32 N,F32 factor) {
 	F32 gain=factor/std;
 	F32 offset=-factor*avg/std;  
 	f32_scale_inplace(gain,offset,X,N);
+}
+void f32_interp1dvec_cycled_inplace(F32PTR Y,int P,I32PTR goodIndices,int Pgood) {
+	int lastIdx=goodIndices[Pgood - 1];
+	int lastGoodIdx=lastIdx - P;
+	for (int j=0; j < Pgood; j++) {
+		int curGoodIdx=goodIndices[j];
+		if ((lastGoodIdx+1) < curGoodIdx) {
+			F32 curv=Y[curGoodIdx];
+			F32 lastv=Y[lastGoodIdx >=0 ? lastGoodIdx : lastGoodIdx+P];
+			F32 full=curGoodIdx - lastGoodIdx;
+			for (int k=lastGoodIdx+1; k < curGoodIdx; k++) {
+				Y[k >=0 ? k : k+P]=lastv * (curGoodIdx - k)/full+curv * (k - lastGoodIdx)/full;
+			}
+		}
+		lastGoodIdx=curGoodIdx;
+	}
+}
+void f32_rep_vec1d_upto_inplace(F32PTR Y,int P,int N) {
+	int Ncylce_int=N/P;
+	for (int i=1; i < Ncylce_int;++i) {
+		memcpy(Y+i * P,Y,P * sizeof(F32));
+	}
+	int j=0;
+	for (int i=Ncylce_int * P; i < N; i++) {
+		Y[i]=Y[j++];
+	}
+}
+void f32_compute_seasonal_avg(F32PTR y,int N,int P,F32PTR mean,I32PTR NumGoodPtsPerTime) {
+	memset(NumGoodPtsPerTime,0,P * sizeof(I32));
+	if ( mean==NULL) {
+		int p=0;
+		for (int i=0; i < N; i++) {
+			NumGoodPtsPerTime[p]+=(y[i]==y[i]);
+			p++;
+			p=(p==P) ? 0 : p;
+		}
+	} else {
+		memset(mean,0,P * sizeof(F32));;
+		int p=0;
+		for (int i=0; i < N; i++) {
+			NumGoodPtsPerTime[p]+=(y[i]==y[i]);
+			mean[p]+=(y[i]==y[i])? y[i]:0.f;
+			p++;
+			p=(p==P) ? 0 : p;
+		}
+		for (int i=0; i < P; i++) {
+			mean[i]=(NumGoodPtsPerTime[i] > 0) ? mean[i]/NumGoodPtsPerTime[i] : getNaN();
+		}	
+	}
+}
+F32 f32_nansum(F32PTR x,int N) {
+	#define UNROLL_NUMBER  4
+	const int regularPart=N & (-UNROLL_NUMBER); 
+	F32  sum=0;
+	int  i=0;	
+	for (; i < regularPart; i+=UNROLL_NUMBER) {
+		sum+=x[i]==x[i] ? x[i] : 0;
+		sum+=x[i+1]==x[i+1] ? x[i+1] : 0;
+		sum+=x[i+2]==x[i+2] ? x[i+2] : 0;
+		sum+=x[i+3]==x[i+3] ? x[i+3] : 0;
+	}
+	for (; i < N;++i) {
+		sum+=x[i]==x[i] ? x[i] : 0;
+	}		 
+	return sum;
+   #undef UNROLL_NUMBER 
+}
+F32 f32_nanmean(F32PTR x,int N,int * Ngood) {
+#define UNROLL_NUMBER  4
+	const int regularPart=N & (-UNROLL_NUMBER); 
+	F32  sum=0;
+	int  NgoodNum=0;
+	int  i=0;
+	for (; i < regularPart; i+=UNROLL_NUMBER) {
+		sum+=x[i]==x[i] ? x[i] : 0;     
+		NgoodNum+=x[i]==x[i];
+		sum+=x[i+1]==x[i+1] ? x[i+1] : 0;
+		NgoodNum+=x[i+1]==x[i+1];
+		sum+=x[i+2]==x[i+2] ? x[i+2] : 0;
+		NgoodNum+=x[i+2]==x[i+2];
+		sum+=x[i+3]==x[i+3] ? x[i+3] : 0;
+		NgoodNum+=x[i+3]==x[i+3];
+	}
+	for (; i < N;++i) {
+		sum+=x[i]==x[i] ? x[i] : 0;
+		NgoodNum+=x[i]==x[i];
+	}
+	if (Ngood) Ngood[0]=NgoodNum;
+	return sum/NgoodNum;;
+#undef UNROLL_NUMBER 
+}
+F32 f32_absmax(F32PTR x,int N) {
+#define UNROLL_NUMBER  4
+	const int regularPart=N & (-UNROLL_NUMBER); 
+	F32  maxVal=0;
+	int  i=0;
+	for (; i < regularPart; i+=UNROLL_NUMBER) {
+		F32 a=max(fabsf(x[i]),fabsf(x[i+1]));
+		F32 b=max(fabsf(x[i+2]),fabsf(x[i+3]));
+		maxVal=max(maxVal,a);
+		maxVal=max(maxVal,b);
+	}
+	for (; i < N;++i) {
+		maxVal=max(maxVal,fabsf(x[i]));
+	}
+	return maxVal;;
+#undef UNROLL_NUMBER 
+}
+void f32_deseasonalize_inplace(F32PTR y,int N,int P,F32PTR mean_tmp,I32PTR NumGoodPtsPerTime_tmp) {
+	f32_compute_seasonal_avg(y,N,P,mean_tmp,NumGoodPtsPerTime_tmp);
+	int p=0;
+	for (int i=0; i < N; i++) {
+		y[i] -=mean_tmp[p];
+		p++;
+		p=(p==P) ? 0 : p;
+	}
 }
 I64  sub2ind(int *dims,int ndim,int * subs) {
 	if (ndim==1) {

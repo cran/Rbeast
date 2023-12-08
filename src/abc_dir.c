@@ -46,7 +46,7 @@ FILELIST_PTR GetFlist(const char *path,const char * ext)
 			{
 				if (stricmp(pEXT+1,ext)==0){
 					fNum++;
-					memSize+=strlen(dp->d_name)+1L;
+					memSize+=(int)strlen(dp->d_name)+1L;
 				}
 			}
 		}
@@ -66,7 +66,7 @@ FILELIST_PTR GetFlist(const char *path,const char * ext)
 			if (pEXT !=NULL && pEXT !=dp->d_name)
 			{
 				if (stricmp(pEXT+1,ext)==0){
-					int size=strlen(dp->d_name);
+					int size=(int)strlen(dp->d_name);
 					flist->offset[fNum]=ptr; 
 					memcpy(ptr,dp->d_name,size);
 					ptr[size]=0;
@@ -90,7 +90,7 @@ void FreeFlist(FILELIST_PTR flist) {
 void PrintFlist(FILELIST_PTR flist) {
 	if (flist==NULL) return;
 	for (int i=0; i < flist->num; i++){
-		r_printf("%s \n",flist->offset[i]);
+		r_printf("%s \n",(char*) flist->offset[i]);
 	}
 }
 #else

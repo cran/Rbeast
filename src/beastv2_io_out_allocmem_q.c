@@ -507,7 +507,13 @@ void* BEAST2_Output_AllocMEM(A(OPTIONS_PTR)  opt)  {
 	if (hasSeasonCmpnt && !hasDummyCmpnt) AddStringAttribute(out,"season_type","harmonic");
 	if (hasSeasonCmpnt &&  hasDummyCmpnt) AddStringAttribute(out,"season_type","dummy");
 	if (!hasSeasonCmpnt )                 AddStringAttribute(out,"season_type","none");
-     f32_seq(mat->time,io->meta.startTime,io->meta.deltaTime,N);
+	if (io->T.out.asDailyTS) {
+		for (int i=0; i < N; i++) {
+			mat->time[i]=FracYear_from_DateNum(io->meta.startTime+io->meta.deltaTime*i);
+		} 
+	}	else {
+		f32_seq(mat->time,io->meta.startTime,io->meta.deltaTime,N);
+	}    
 	if (dtype==DATA_DOUBLE)  f32_to_f64_inplace(mat->time,N);
 	UNPROTECT(nprt);
 	return out;

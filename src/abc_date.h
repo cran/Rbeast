@@ -1,7 +1,11 @@
+#pragma once 
 #include<stdio.h>
 #include<inttypes.h>
 int     isValidDate(int year,int mon,int day);
-float   fractional_civil_from_days(int days);
+typedef struct  __YmdHms_ {
+	int   y,m,d,hr,min;
+	double sec;
+} YmdHms;
 typedef struct {
 	int yearIdx,monIdx,dayIdx;
 } DateFmtPattern1;
@@ -13,15 +17,27 @@ typedef struct {
 	char sep1[20];
 	char sep2[20];
 } DateFmtPattern3;
-int    GetStrPattern_fmt1(char* strings,DateFmtPattern1* pattern);
-float  Str2F32time_fmt1(char* strings,DateFmtPattern1* pattern);
-int    GetStrPattern_fmt2(char* strings,DateFmtPattern2* pattern);
-float  Str2F32time_fmt2(char* strings,DateFmtPattern2* pattern);
-int    GetStrPattern_fmt3(char* strings,DateFmtPattern3* pattern);
-float  Str2F32time_fmt3(char* strings,DateFmtPattern3* pattern);
-float YDOYtoF32time(int year,int doy);
-float YMDtoF32time(int year,int mon,int day);
-int   F32time2DateNum(float fyear);
-int  F32time2YMD(float fyear,int* mon,int* day);
-double extract_fyear(char* s);
-float* strings_to_fyears(char* s,int* strstart,int n);
+int     GetStrPattern_fmt1(char* strings,DateFmtPattern1* pattern);
+double  Str2F32time_fmt1(char* strings,DateFmtPattern1* pattern);
+int     GetStrPattern_fmt2(char* strings,DateFmtPattern2* pattern);
+double  Str2F32time_fmt2(char* strings,DateFmtPattern2* pattern);
+int     GetStrPattern_fmt3(char* strings,DateFmtPattern3* pattern);
+double  Str2F32time_fmt3(char* strings,DateFmtPattern3* pattern);
+double extract_timeinterval_from_str(char* s,float* value,char* unit);
+int  JulianDayNum_from_civil_ag1(int y,int m,int d);
+int  JulianDayNum_to_Civil_ag1(int JDN,int* yr,int* mn,int* day);
+double FracYear_from_intYDOY(int year,int doy);
+int    FracYear_to_intYDOY(double fyear,int* yr);
+double FracYear_from_YDOY(int year,double doy);
+double FracYear_from_YMD(int year,int mon,int day);
+void   FracYear_to_YMD(double fyear,int* yr,int* mon,int* day);
+double FracYear_to_DateNum(double fyear);
+double FracYear_from_DateNum(double datenum);
+void   FracYear_to_YMDHMS(double fyear,YmdHms* date);
+double FracYear_from_YMDHMS(YmdHms* date);
+int    FracYear_from_Strings(double * out,char* s,int* strstart,int n);
+int WeekDay(int y,int m,int d);
+#define NULL_DATE_ORIGIN     0
+#define R_DATE_ORIGIN        2440588
+#define MATLAB_DATE_ORIGIN   1721059
+#define PYTHON_DATE_ORIGIN   1721425

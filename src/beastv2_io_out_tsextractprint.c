@@ -498,7 +498,7 @@ void* BEAST2_TsExtract(void *o, void * pindex ) {
 
 
 	char s1[] = "                                                ";
-	int  nChar = strlen(s1);
+	int  nChar = (int) strlen(s1);
 
 	#define cat r_printf
 

@@ -3,6 +3,7 @@
 #include "abc_rand_pcg_global.h"
 #include "abc_rand_pcg_local.h"
 #include "abc_mat.h"  
+ void (*local_pcg_print_state)(local_pcg32_random_t* rng);
  void (*local_pcg_set_seed)(local_pcg32_random_t* rng,U64 initstate,U64 initseq);
  void (*local_pcg_random)(local_pcg32_random_t* rng,U32PTR rnd,I32 N);
 #define INV_2p24  ((F64)1./(1LL<<24))

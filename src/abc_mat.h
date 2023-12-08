@@ -37,6 +37,7 @@ void chol_addCol_skipleadingzeros_prec_nostartprec_invdiag(F32PTR Au,F32PTR U,F3
 void chol_addCol_skipleadingzeros_prec_invdiag(F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1);
 void chol_addCol_skipleadingzeros_precVec_invdiag(   F32PTR Au,F32PTR U,F32PTR precPrior,I64 N,I64 K0,I64 K1);
 void linear_regression(F32PTR Y,F32PTR X,int ldx,int N,int K,F32PTR B,F32PTR Yfit,F32PTR Yerror,F32PTR TMP);
+void simple_linear_regression_nan(F32PTR Y,F32PTR X,int N,F32PTR Yfit,F32PTR Yerror);
 typedef struct {
    I32 N;
    I32 Nlda; 
@@ -66,7 +67,7 @@ typedef struct {
 	I16 K;       
 	I16 Knewterm;
 	I16 Knew;    
-	I16 Kchol;  
+	I16 Kchol;   
 	I16 isEqualSwap;
 } NEWCOLINFOv2,* _restrict NEWCOLINFOvs_PTR;
 extern void get_parts_for_newinfo(NEWCOLINFOv2* new);

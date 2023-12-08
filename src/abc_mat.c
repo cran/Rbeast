@@ -718,6 +718,60 @@ void linear_regression(F32PTR Y,F32PTR X,int ldx,int N,int K,F32PTR B,F32PTR Yfi
 	if (Yerror)
 		r_ippsSub_32f(Yfit,Y,Yerror,N); 
 }
+void simple_linear_regression_nan(F32PTR Y,F32PTR X,int N,F32PTR Yfit,F32PTR Yerror) {
+	F64 Xsum,Ysum,XY,XX;
+	F64 b0,b1;
+	int Ngood;
+	Xsum=Ysum=XX=XY=Ngood=0;
+	if (X) {
+		for (int i=0; i < N; i++) {
+			int isGoodPt=(X[i]==X[i]) && (Y[i]==Y[i]);
+			Xsum+=isGoodPt ? X[i] : 0;
+			Ysum+=isGoodPt ? Y[i] : 0;
+			XY+=isGoodPt ? X[i] * Y[i] : 0;
+			XX+=isGoodPt ? X[i] * X[i] : 0;
+			Ngood+=isGoodPt;
+		}
+	}
+	else {
+		for (int i=0; i < N; i++) {
+			int isGoodPt=(Y[i]==Y[i]);
+			F64 x=(double) i/(double)N;
+			Xsum+=isGoodPt ? x : 0;
+			Ysum+=isGoodPt ? Y[i] : 0;
+			XY+=isGoodPt ? x * Y[i] : 0;
+			XX+=isGoodPt ? x *x : 0;
+			Ngood+=isGoodPt;
+		}
+	}
+	F64 SXY=XY - Xsum * Ysum/Ngood;
+	F64 SXx=XX - Xsum * Xsum/Ngood;
+	b1=SXY/SXx;
+	b0=Ysum/Ngood - b1 * Xsum/Ngood;
+	if (Yfit) {
+		if (X) {
+			for (int i=0; i < N; i++) {	 
+				Yfit[i]=X[i] * b1+b0;
+			}
+		}else {
+			for (int i=0; i < N; i++) {
+				Yfit[i]=b1*i/N+b0;
+			}
+		}
+	}
+	if (Yerror) {
+		if (X) {
+			for (int i=0; i < N; i++) {
+				Yerror[i]=Y[i]-(X[i] * b1+b0);
+			}
+		}
+		else {
+			for (int i=0; i < N; i++) {
+				Yerror[i]=Y[i] - (b1 * i/N+b0);
+			}
+		}
+	}
+}
 void update_XtX_from_Xnewterm(F32PTR X,F32PTR Xnewterm,F32PTR XtX,F32PTR XtXnew,NEWCOLINFO * new ) {
 	I32 k1=new->k1;
 	I32 k2_old=new->k2_old;
@@ -801,7 +855,7 @@ void get_parts_for_newinfo(NEWCOLINFOv2* new) {
 	int Knewterm=0;
 	int Kbase_dst=1;
 	int jParts=0;
-	for (int i=0; i <  new->nbands; i++) {
+	for (int i=0; i <  new->nbands;++i) {
 		new->parts[jParts].X=new->X;
 		new->parts[jParts].ks_dst=Kbase_dst;
 		if (i==0) {
@@ -946,27 +1000,25 @@ void update_XtY_from_Xnewterm_v2(F32PTR XtY,F32PTR XtYnew,F32PTR Y,NEWCOLINFOv2*
 	} 
 }
 void shift_last_elems(void * X,I32 Kstart,I32 Kend,I32 Knewstart,I32 elemSize) {
-	if (Knewstart==Kstart) {
-		return;
-	}
 	I08PTR x=X;
-	int j=Knewstart - Kstart;
-	if (j < 0||Knewstart > Kend) {
+	if (Knewstart==Kstart) { 	
+		return;
+	}	else if (Knewstart < Kstart||Knewstart > Kend) {	
 		memcpy(x+(Knewstart - 1) * elemSize,x+(Kstart - 1) *elemSize,(Kend - Kstart+1) * elemSize);
-	}
-	else {
-		I32 segStartIdx=Kend+1;
+	}	else {	
+		I32 segStartIdx=Kend+1;	
+		int nElemsCopy=Knewstart-Kstart;  
 		while (_True_) {
-			segStartIdx=segStartIdx - j;
+			segStartIdx=segStartIdx - nElemsCopy;
 			if (segStartIdx > Kstart) {
-				memcpy(x+((segStartIdx+j) - 1) * elemSize,x+(segStartIdx - 1) * elemSize,j * elemSize) ;
+				memcpy(x+((segStartIdx+nElemsCopy) - 1) * elemSize,x+(segStartIdx - 1) * elemSize,nElemsCopy * elemSize) ;
 			} else {
-				j=(segStartIdx+j) - Kstart;
-				memcpy(x+(Knewstart - 1) * elemSize,x+(Kstart - 1) * elemSize,j * elemSize);
+				nElemsCopy=(segStartIdx+nElemsCopy) - Kstart;
+				memcpy(x+(Knewstart - 1) * elemSize,x+(Kstart - 1) * elemSize,nElemsCopy * elemSize);
 				break;
 			}
 		}
-	}
+	} 
 }
 void swap_elem_bands(NEWCOLINFOv2* new,void *x,void *xnew,I32 elemSize) {
 	U08PTR X=x;

@@ -7,11 +7,11 @@
 #include "abc_vec.h"
 #include "abc_rand_pcg_global.h"
 #include "abc_rand_pcg_local.h"
-#ifdef CLANG_COMPILER
+#if  defined(CLANG_COMPILER) && !defined(ARM64_OS) 
 	#pragma clang optimize on
 	#pragma clang attribute push (__attribute__((target("avx,avx2,avx512f,avx512dq,avx512bw,avx512vl"))),apply_to=function)
 #endif
-#ifdef  GCC_COMPILER
+#if  defined(GCC_COMPILER) && !defined(ARM64_OS) 
     #pragma optimization_level 3
 #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
 	 #pragma GCC target("avx,avx2,avx512f,avx512dq,avx512bw,avx512vl") 
@@ -22,6 +22,14 @@
 #define PCG_DEFAULT_INCREMENT_64   1442695040888963407ULL 
 #define PCG_DEFAULT_GLOBAL_STATE_64     0x853c49e6748fea9bULL
 #define PCG_DEFAULT_GLOBAL_INCREMENT_64 0xda3e39cb94b95bdbULL
+void avx512_pcg_print_state(local_pcg32_random_t* rng) {
+	r_printf("PCG State: \n");
+	r_printf("State: %"  PRIx64 " %" PRIx64 " %" PRIx64 " %" PRIx64 "\n",rng->state512[0],rng->state512[1],rng->state512[2],rng->state512[3]);
+	r_printf("State: %"  PRIx64 " %" PRIx64 " %" PRIx64 " %" PRIx64 "\n",rng->state512[4],rng->state512[5],rng->state512[6],rng->state512[7]);
+	r_printf("Increment: %"  PRIx64  "\n",rng->increment512);
+	r_printf("Mutiplier8: %"  PRIx64  "\n",rng->MULTIPLIER_8steps);
+	r_printf("INcrementr8: %"  PRIx64  "\n\n",rng->INCREMENT_8steps);
+}
 void avx512_pcg_set_seed(local_pcg32_random_t* rng,U64 initstate,U64 initseq)
 {
 	initstate=PCG_DEFAULT_GLOBAL_STATE_64 ^ initseq; 
@@ -82,9 +90,10 @@ void SetupPCG_AVX512(void) {
 	FillMaskTemplate();
 	local_pcg_set_seed=avx512_pcg_set_seed;
 	local_pcg_random=avx512_pcg_random;
+	local_pcg_print_state=avx512_pcg_print_state;
 }
 #endif
-#ifdef CLANG_COMPILER
+#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
 #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"
