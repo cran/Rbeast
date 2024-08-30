@@ -1,9 +1,9 @@
 #include "abc_000_warning.h"
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     #pragma clang optimize on
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))),apply_to=function)
 #endif
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64)  
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
     #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
@@ -28,11 +28,11 @@
 #define add         _mm256_add_ps
 #define sub         _mm256_sub_ps
 #define addi32      _mm256_add_epi32
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include <immintrin.h>
 #include "abc_vec.h"
 #include "abc_math_avx.h"
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     # define ALIGN32_BEG __declspec(align(32))
     # define ALIGN32_END 
 #else
@@ -83,7 +83,7 @@ _PS256_CONST(cephes_log_q2,0.693359375);
 #define avx2_mm256_cmpeq_epi32 _mm256_cmpeq_epi32
 #define avx2_mm256_sub_epi32 _mm256_sub_epi32
 #define avx2_mm256_add_epi32 _mm256_add_epi32
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 v8sf log256_ps(F32PTR px) {
     v8sf   x=_mm256_loadu_ps(px);
     v8si imm0;
@@ -683,7 +683,7 @@ void  pow256_ps_ptr(F32PTR px,float n,F32PTR out) {
 } 
 #endif
 #endif 
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

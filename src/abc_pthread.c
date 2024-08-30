@@ -1,23 +1,23 @@
 #include "abc_000_warning.h"
 #include "abc_000_macro.h"
 #include "abc_ide_util.h"  
-#if defined(_WIN32)||defined(WIN64_OS)
+#if defined(_WIN32)||defined(OS_WIN64)
     #include "abc_pthread.h"
-#elif defined(MAC_OS)
+#elif defined(OS_MAC)
 	#include <sys/param.h>
 	#include <sys/sysctl.h>
    #include "abc_pthread.h"  
-#elif defined(LINUX_OS)||defined(SOLARIS_OS)
+#elif defined(OS_LINUX)||defined(OS_SOLARIS)
 	#include <unistd.h> 
 #endif
-#if  defined(LINUX_OS) 
+#if  defined(OS_LINUX) 
     #ifndef _GNU_SOURCE
-        #define _GNU_SOURCE
+        #define _GNU_SOURCE  
     #endif
-    #include <sched.h>  
+    #include <sched.h>       
     #include <pthread.h>
-#elif defined(SOLARIS_OS)
-    #include <sched.h>  
+#elif defined(OS_SOLARIS)
+    #include <sched.h>       
     #include <pthread.h>
 #endif
 void PrintBits(size_t const size,void const* const ptr) {	
@@ -60,7 +60,7 @@ int GetNumCores(void)  {
     if (CORE_COUNT > 0) {
         return CORE_COUNT;
     }
-#if defined(_WIN32)||defined(WIN64_OS)    
+#if defined(_WIN32)||defined(OS_WIN64)    
     uint32_t count=GetCPUInfo(); 
 #elif defined(__MACH__)
     int nm[2];
@@ -80,7 +80,7 @@ int GetNumCores(void)  {
     CORE_COUNT=count >=1 ? count : 1L;
     return  CORE_COUNT;
 }
-#if defined(_WIN32)||defined(WIN64_OS)||defined(MAC_OS) 
+#if defined(_WIN32)||defined(OS_WIN64)||defined(OS_MAC) 
 void  CPU_ZERO(cpu_set_t* cs) {
     cs->core_count=GetNumCores();
     if (cs->core_count > 256) cs->core_count=256; 
@@ -118,7 +118,7 @@ int   CPU_get_first_bit_id(cpu_set_t* cs) {
     }
 }
 #endif
-#if defined(_WIN32)||defined(WIN64_OS)
+#if defined(_WIN32)||defined(OS_WIN64)
 typedef struct __CPUINFO {
     DWORD (WINAPI* GetActiveProcessorGroupCount)     (void);
     DWORD (WINAPI* GetActiveProcessorCount)          (WORD GroupNumber);
@@ -271,7 +271,7 @@ static int GetCoreNumbers_WINXP(void) {
     return cpuInfo.logicalProcessorCount;
 }
 static int GetCoreNumbers_WIN7V2(void) {
-    #ifdef WIN64_OS
+    #ifdef OS_WIN64
     cpuInfo=(CPUINFO){0,};
     InitCPUFuncs();
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX buffer=NULL;
@@ -352,7 +352,7 @@ static int GetCoreNumbers_WIN7V2(void) {
      return 0;
 }
 static void RankCPU(void) {
-   #ifdef WIN64_OS
+   #ifdef OS_WIN64
     PROCESSOR_NUMBER procNum;
     cpuFunc.GetCurrentProcessorNumberEx(&procNum);
     int curGrp=procNum.Group;
@@ -431,7 +431,7 @@ void PrintCPUInfo() {
  #include <stdlib.h>     
  int pthread_attr_setaffinity_np(pthread_attr_t* attr,size_t cpusetsize,const cpu_set_t* cpuset) {
      if (cpuset==NULL)   return 0; 
-#ifdef WIN64_OS
+#ifdef OS_WIN64
      if (attr->lpAttributeList !=NULL) {
          DeleteProcThreadAttributeList(attr->lpAttributeList);
          free(attr->lpAttributeList);
@@ -452,7 +452,7 @@ void PrintCPUInfo() {
 #endif
 }
 int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (void*),void* arg) {
-#ifdef WIN64_OS
+#ifdef OS_WIN64
     if (cpuFunc.CreateRemoteThreadEx==NULL||attr==NULL||attr->lpAttributeList==NULL ) {
         *tid=CreateThread(NULL,NULL,(LPTHREAD_START_ROUTINE) start,arg,0,0);
     }  else {
@@ -476,7 +476,7 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
     return  (tid==NULL);               
 }
 #endif
-#if defined(_WIN32)||defined(WIN64_OS)
+#if defined(_WIN32)||defined(OS_WIN64)
     #if _WIN32_WINNT >=0x0602
         int get_thread_stacksize(void) {
             ULONG_PTR lowLimit;
@@ -485,14 +485,14 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
             return (highLimit - lowLimit);
         }
     #else
-        #if defined(MSVC_COMPILER)
+        #if defined(COMPILER_MSVC)
         int get_thread_stacksize(void) {
              NT_TIB* tib=(NT_TIB*)NtCurrentTeb();
              LPVOID   StackLimit=tib->StackLimit;
              LPVOID   StackBase=tib->StackBase;
              return  StackLimit;
         }
-        #elif  defined(GCC_COMPILER)
+        #elif  defined(COMPILER_GCC)
             static INLINE unsigned __int64 readgsqword_bad(unsigned __int64 Offset) {
                 unsigned char ret;
                 __asm__( "mov{" "q" " %%" "gs" ":%[offset],%[ret]|%[ret],%%" "gs" ":%[offset]}" 
@@ -537,7 +537,7 @@ int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (v
         }       
         return 0;        
     }
-#elif defined(LINUX_OS) 
+#elif defined(OS_LINUX) 
 int get_thread_stacksize(void) {
     pthread_attr_t attr;
     size_t   stksize;

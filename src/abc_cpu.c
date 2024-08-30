@@ -1,11 +1,11 @@
-#include <stdio.h>
 #include <string.h>
 #include "abc_000_warning.h"
 #include "abc_common.h"
 #include "abc_ide_util.h" 
 #include "abc_cpu.h"
+#include <stdio.h>
 #if defined(__x86_64__)||defined(_M_X64)||defined(__i386)||defined(_M_IX86)
-    #if defined(MSVC_COMPILER) 
+    #if defined(COMPILER_MSVC) 
         #define WIN32_LEAN_AND_MEAN
         #include <Windows.h>
         #include <intrin.h>
@@ -47,7 +47,7 @@
         int detect_OS_x64(void) {
             return 1;
         }
-    #elif defined (SOLARIS_OS)
+    #elif defined (OS_SOLARIS)
         #define __cpuid(level,a,b,c,d)                                             \
           __asm__("cpuid\n\t" : "=a"(a),"=b"(b),"=c"(c),"=d"(d) : "0"(level))
         #define __cpuid_count(level,count,a,b,c,d)                                \
@@ -80,7 +80,7 @@
         }
         #warning "No cpuid intrinsic defined for compiler: a placeholder created!"
     #endif
-#elif defined(ARM64_OS)||defined (POWERPC_OS)
+#elif defined(cpu_ARM64)||defined (cpu_POWERPC64)
         #define _XCR_XFEATURE_ENABLED_MASK  0
         void cpuid(int32_t out[4],int32_t eax,int32_t ecx) {
             out[0]=out[1]=out[2]=out[3]=0;
@@ -94,10 +94,7 @@
 #else
 #   error "No cpuid intrinsic defined for processor architecture."
 #endif
-static void cpu_print(const char* label,uint8_t yes) {
-    r_printf("%s%s\n",label,(yes ? "Yes" : "No"));
-}
-uint8_t detect_OS_AVX(void){
+static Bool detect_OS_AVX(void){
     Bool avxSupported=_False_;
     int  cpuInfo[4];
     cpuid(cpuInfo,1,0);
@@ -109,13 +106,13 @@ uint8_t detect_OS_AVX(void){
     }
     return avxSupported;
 }
-Bool detect_OS_AVX512(void){
+static Bool detect_OS_AVX512(void){
     if (!detect_OS_AVX())
         return _False_;
     uint64_t xcrFeatureMask=xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xe6)==0xe6;
 }
-void get_vendor_string(char * name){
+static void get_vendor_string(char * name){
     int32_t CPUInfo[4];
     cpuid(CPUInfo,0,0);
     memcpy(name+0,&CPUInfo[1],4);
@@ -123,7 +120,10 @@ void get_vendor_string(char * name){
     memcpy(name+8,&CPUInfo[2],4);
     name[12]='\0';
 }
-void detect_host(struct cpu_x86 *cpu){
+static  void detect_host(struct cpu_x86* cpu) {
+     if (cpu==NULL) {
+         return;
+     }
     memset(cpu,0,sizeof(struct cpu_x86));
     cpu->OS_x64=detect_OS_x64();
     cpu->OS_AVX=detect_OS_AVX();
@@ -195,7 +195,13 @@ void detect_host(struct cpu_x86 *cpu){
         cpu->HW_XOP=(info[2] & ((int)1 << 11)) !=0;
     }
 }
-void print_cpuinfo(struct cpu_x86 *cpu) {
+static void cpu_print(const char* label,uint8_t yes) {
+    r_printf("%s%s\n",label,(yes ? "Yes" : "No"));
+}
+static void print_cpuinfo(struct cpu_x86 *cpu) {
+    if (cpu==NULL) {
+        return;
+    }
     r_printf("CPU Vendor:\n");
     cpu_print("    AMD=",cpu->Vendor_AMD);
     cpu_print("    Intel=",cpu->Vendor_Intel);
@@ -260,74 +266,93 @@ void print_cpuinfo(struct cpu_x86 *cpu) {
     cpu_print("    Safe to use AVX512:  ",cpu->HW_AVX512_F && cpu->OS_AVX512);
     r_printf("\n");
 }
-void detect_print_cpu(void) {
-    struct cpu_x86 cpuinfo;
-     detect_host(&cpuinfo);
-     print_cpuinfo(&cpuinfo);
-}
-void i386_cpuid_caches (Bool quiet) {
-    for (int i=0; i < 32; i++) {
-        uint32_t eax,ebx,ecx,edx; 
+static  void i386_cpuid_caches(struct cpu_cache* cpu) {
+    if (cpu==NULL) {
+        return;
+    }
+    for (int i=0; i < 8; i++) {
+        uint32_t eax,ebx,ecx,edx;
         eax=4; 
         ecx=i; 
-        #if !defined(MSVC_COMPILER) && !defined(ARM64_OS)
-            __asm__ (
-                "cpuid" 
-                : "+a" (eax) 
-                ,"=b" (ebx)
-                ,"+c" (ecx) 
-                ,"=d" (edx)
-            ); 
-        #else
-            int32_t out[4];
-            cpuid(out,eax,ecx);
-            eax=out[0];
-            ebx=out[1];
-            ecx=out[2];
-            edx=out[3];
-        #endif
-        int cache_type=eax & 0x1F; 
-        if (cache_type==0) 
+#if !defined(COMPILER_MSVC) && !defined(cpu_ARM64) && !defined (cpu_POWERPC64)
+        __asm__(
+            "cpuid" 
+            : "+a" (eax) 
+            ,"=b" (ebx)
+            ,"+c" (ecx) 
+            ,"=d" (edx)
+        ); 
+#else
+        int32_t out[4];
+        cpuid(out,eax,ecx);
+        eax=out[0];
+        ebx=out[1];
+        ecx=out[2];
+        edx=out[3];
+#endif
+        cpu[i].cache_type=eax & 0x1F;
+        if (cpu[i].cache_type==0) 
             break;
-        char * cache_type_string;
-        switch (cache_type) {
-            case 1: cache_type_string="Data Cache"; break;
-            case 2: cache_type_string="Instruction Cache"; break;
-            case 3: cache_type_string="Unified Cache"; break;
-            default: cache_type_string="Unknown Type Cache"; break;
-        }
-        int cache_level=(eax >>=5) & 0x7;
-        int cache_is_self_initializing=(eax >>=3) & 0x1; 
-        int cache_is_fully_associative=(eax >>=1) & 0x1;
+        cpu[i].cache_level=(eax >>=5) & 0x7;
+        cpu[i].cache_is_self_initializing=(eax >>=3) & 0x1; 
+        cpu[i].cache_is_fully_associative=(eax >>=1) & 0x1;
         unsigned int cache_sets=ecx+1;
         unsigned int cache_coherency_line_size=(ebx & 0xFFF)+1;
         unsigned int cache_physical_line_partitions=((ebx >>=12) & 0x3FF)+1;
         unsigned int cache_ways_of_associativity=((ebx >>=10) & 0x3FF)+1;
         size_t cache_total_size=cache_ways_of_associativity * cache_physical_line_partitions * cache_coherency_line_size * cache_sets;
-        if (!quiet)
-            r_printf(
-                "Cache ID %d:\n"
-                "- Level: %d\n"
-                "- Type: %s\n"
-                "- Sets: %d\n"
-                "- System Coherency Line Size: %d bytes\n"
-                "- Physical Line partitions: %d\n"
-                "- Ways of associativity: %d\n"
-                "- Total Size: %zu bytes (%zu kb)\n"
-                "- Is fully associative: %s\n"
-                "- Is Self Initializing: %s\n"
-                "\n"
-                ,i
-                ,cache_level
-                ,cache_type_string
-                ,cache_sets
-                ,cache_coherency_line_size
-                ,cache_physical_line_partitions
-                ,cache_ways_of_associativity
-                ,cache_total_size,cache_total_size >> 10
-                ,cache_is_fully_associative ? "true" : "false"
-                ,cache_is_self_initializing ? "true" : "false"
-            );
+        cpu[i].cache_sets=cache_sets;
+        cpu[i].cache_coherency_line_size=cache_coherency_line_size;
+        cpu[i].cache_physical_line_partitions=cache_physical_line_partitions;
+        cpu[i].cache_ways_of_associativity=cache_ways_of_associativity;
+        cpu[i].cache_total_size=cache_total_size;
     }
+}
+static void  print_cpucache(struct cpu_cache* cpu)  {
+    if (cpu==NULL) {
+        return;
+    }
+    for (int i=0; i < 8; i++) {
+        if (cpu[i].cache_type==0)
+            break;
+        char* cache_type_string;
+        switch (cpu[i].cache_type) {
+        case 1: cache_type_string="Data Cache"; break;
+        case 2: cache_type_string="Instruction Cache"; break;
+        case 3: cache_type_string="Unified Cache"; break;
+        default: cache_type_string="Unknown Type Cache"; break;
+        }
+        r_printf(
+            "Cache ID %d:\n"
+            "- Level: %d\n"
+            "- Type: %s\n"
+            "- Sets: %d\n"
+            "- System Coherency Line Size: %d bytes\n"
+            "- Physical Line partitions: %d\n"
+            "- Ways of associativity: %d\n"
+            "- Total Size: %zu bytes (%zu kb)\n"
+            "- Is fully associative: %s\n"
+            "- Is Self Initializing: %s\n"
+            "\n"
+            ,i
+            ,cpu[i].cache_level
+            ,cache_type_string
+            ,cpu[i].cache_sets
+            ,cpu[i].cache_coherency_line_size
+            ,cpu[i].cache_physical_line_partitions
+            ,cpu[i].cache_ways_of_associativity
+            ,(size_t) cpu[i].cache_total_size,(size_t)(cpu[i].cache_total_size >> 10)
+            ,cpu[i].cache_is_fully_associative ? "true" : "false"
+            ,cpu[i].cache_is_self_initializing ? "true" : "false"
+        );
+    }
+ }
+void cpuinfo_detect(struct cpu_x86* cpu,struct cpu_cache* caches) {
+    detect_host(cpu);
+    i386_cpuid_caches(caches);
+}
+void cpuinfo_print(struct cpu_x86* cpu,struct cpu_cache* caches) {
+    print_cpuinfo(cpu);
+    print_cpucache(caches);
 }
 #include "abc_000_warning.h"

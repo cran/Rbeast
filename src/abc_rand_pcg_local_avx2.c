@@ -8,19 +8,19 @@
 #include "abc_rand_pcg_global.h"
 #include "abc_rand_pcg_local.h"
 #include "assert.h"
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
 #define __attribute__(x)
 #endif
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64)  
     #pragma clang optimize on
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))),apply_to=function)
 #endif
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS)  
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64)  
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
      #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
 #endif
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include "abc_math_avx.h"
 #define PCG_DEFAULT_MULTIPLIER_64  6364136223846793005ULL 
 #define PCG_DEFAULT_INCREMENT_64   1442695040888963407ULL 
@@ -59,7 +59,7 @@ void avx_pcg_print_state(local_pcg32_random_t* rng) {
     __m256i maskmov=_mm256_cmpgt_epi32(nvec,maskNum);
     return maskmov;
 }
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
  static INLINE __m256i __attribute__((always_inline)) __mul64_haswell(__m256i a,__m256i b)
  {
 	 __m256i bswap=_mm256_shuffle_epi32(b,0xB1);           
@@ -205,7 +205,7 @@ void SetupPCG_AVX2(void){
 	 local_pcg_print_state=avx_pcg_print_state;
 }
 #endif
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

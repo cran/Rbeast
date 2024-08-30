@@ -6,7 +6,7 @@ typedef __m256  v8sf;
 typedef __m256i v8si; 
 typedef __m128i v4si; 
 typedef __m128  v4sf; 
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 extern v8sf log256_ps(F32PTR x);
 extern v8sf exp256_ps(F32PTR x);
 extern v8sf sin256_ps(F32PTR x);

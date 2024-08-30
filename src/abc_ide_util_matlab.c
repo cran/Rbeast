@@ -5,9 +5,27 @@
 #include "abc_ide_util.h"
 #include "abc_common.h"
 #include "abc_date.h"
+#include "inttypes.h"  
 #if M_INTERFACE==1  
 int  JDN_to_DateNum(int jdn) {
 	return jdn - 1721059;
+}
+void StdouFlush(void) {
+#if defined(OS_WIN32)||defined(OS_WIN64)
+ #if defined(COMPILER_MSVC)
+    #pragma comment(linker,"/alternatename:ioFlush=?ioFlush@@YA_NXZ")
+ #else
+    extern Bool ioFlush(void)  asm("?ioFlush@@YA_NXZ");
+ #endif
+#elif defined(OS_MAC)
+   extern Bool ioFlush(void)  asm("__Z7ioFlushv");
+#elif defined(OS_LINUX)   
+   extern Bool ioFlush(void)  asm("_Z7ioFlushv");
+#else
+#endif
+ #ifndef O_INTERFACE
+	ioFlush();
+ #endif
 }
 I32 GetConsoleWidth() {
 	mxArray *pOut[1],*pIn[2];

@@ -1,7 +1,7 @@
 #pragma once
 #include "abc_000_macro.h"
 #define QUOTE_IT(x) #x
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
 	#if R_INTERFACE==1
 		#define DllExport   __declspec( dllexport ) 
 	#elif P_INTERFACE==1
@@ -33,7 +33,7 @@
 		#pragma comment( lib,LIB_R(Rblas.lib)   )
 		#pragma comment( lib,LIB_R(Rlapack.lib) )
 	#endif
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)
+#elif defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS)
 	#define  DllExport   
 #endif
 #define PTHREAD_INOUT 0
@@ -51,7 +51,7 @@
 	#pragma comment(lib,LIB_IPP(ippvmmt.lib))  
 	#pragma comment(lib,LIB_IPP(ippsmt.lib))   
 #endif
-#if (MYMAT_LIBRARY==1) && defined(MSVC_COMPILER) && 0
+#if (MYMAT_LIBRARY==1) && defined(COMPILER_MSVC) && 0
 	#pragma comment(lib,LIB_MyLIB(blas_oneAPI.lib))
     #pragma comment(lib,LIB_FORTRAN(ifconsol.lib))
     #pragma comment(lib,LIB_FORTRAN(libifcoremt.lib))
@@ -83,6 +83,11 @@
    #ifdef ERROR 
        #undef ERROR  
    #endif
+#if defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS)
+	#ifndef _GNU_SOURCE
+		#define _GNU_SOURCE 1
+	#endif
+#endif
 	#include <R.h>
 	#include <Rinternals.h>
 	#include <Rdefines.h>
@@ -96,6 +101,8 @@
 #if P_INTERFACE==1
 	#include "Python.h"     
 	#include "structmember.h"
+#define  NPY_NO_DEPRECATED_API   NPY_1_7_API_VERSION  
+#ifdef  USE_STANDARD_METHOD_IMPORT_NUMPY
 	#ifdef  IMPORT_NUMPY
 	   #define PY_ARRAY_UNIQUE_SYMBOL NumpyAPIList
 	   #include "numpy/arrayobject.h"
@@ -104,6 +111,7 @@
 		#define PY_ARRAY_UNIQUE_SYMBOL NumpyAPIList
 		#include "numpy/arrayobject.h"
 	#endif
+#endif
 #endif
 #if R_INTERFACE==1||P_INTERFACE==1
 	#ifndef Bool
@@ -115,11 +123,11 @@
 		 #define  Bool  bool     
     #endif
 #endif
-#ifdef CLANG_COMPILER
+#ifdef COMPILER_CLANG
 	#undef sign    
 	#undef warning 
 #endif
-#if defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)
+#if defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS)
 	#ifndef _GNU_SOURCE
 		#define _GNU_SOURCE 1
 	#endif

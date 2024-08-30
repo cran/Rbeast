@@ -36,15 +36,16 @@ static void OO_AllocInitBasis(BEAST2_BASIS_PTR basis,I32 N,I32 K_MAX,MemPointers
 	I32 MAX_NUM_SEG=(MAX_KNOTNUM); 
 	I32 Npad16=16 * ((N+15)/16);
 	MemNode nodes[]={
-		{&basis->KNOT,sizeof(TKNOT) * MAX_KNOTNUM,.align=64 },
+		{&basis->KNOT,sizeof(TKNOT)  * (1+1+1+MAX_KNOTNUM+1),.align=64 },
 		{&basis->ORDER,sizeof(TORDER) * MAX_NUM_SEG*0,.align=2 },  
-		{&basis->ks,sizeof(I16) * (1+MAX_NUM_SEG),.align=2 },
-		{&basis->ke,sizeof(I16) * (1+MAX_NUM_SEG),.align=2 },
-		{&basis->goodvec,sizeof(U08) * Npad16,.align=8 }, 
-		{&basis->termType,sizeof(U08) * K_MAX*0,.align=1 },
+		{&basis->ks,sizeof(I16)    * (1+MAX_NUM_SEG),.align=2 },
+		{&basis->ke,sizeof(I16)    * (1+MAX_NUM_SEG),.align=2 },
+		{&basis->goodvec,sizeof(U08)    * Npad16,.align=8 }, 
+		{&basis->termType,sizeof(U08)   * K_MAX*0,. align=1 },
 		{NULL,}
 	};
 	MEM->alloclist(MEM,nodes,AggregatedMemAlloc,NULL);
+	basis->KNOT+=3L;  
 	*basis->ks++=1;	
 	*basis->ke++=0; 
 	memset(basis->goodvec+N,0L,Npad16 - N); 	

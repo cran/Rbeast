@@ -162,7 +162,7 @@ F32 DeterminePeriod(F32PTR Y,I32 N)
 	}
 	U08PTR isPeak=isNA;
 	I32PTR INDEX=(I32PTR)(TMP+M); 
-	memset(isNA,0,(size_t) M);
+	memset(isNA,0,(size_t)(uint32_t)M);
 	I32  numPeaks=0;
 	for ( I32 i=2; i <=(M - 1); i++)	{
 		if (ans[(i)-1] > ans[(i - 1) - 1] && ans[(i)-1] > ans[(i+1) - 1]) {
@@ -276,7 +276,7 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		}		
 	}
 	if (numCpt==0) { return numCpt; }
-	f32_QuickSortD(cpfromProb_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32d_introSort_index(cpfromProb_Val,0,numCpt - 1,cpfromProb_Pos);
 	numCpt=min(numCpt,maxCptNumber);
 	r_cblas_scopy(numCpt,(F32PTR)cpfromProb_Pos,1,(F32PTR) cpt,1);
 	I32PTR INDEX=(I32PTR) mem;
@@ -288,7 +288,7 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 	}
 	INDEX=INDEX - numCpt;
 	CPT_float=CPT_float - numCpt;	
-	f32_QuickSortA(CPT_float,INDEX,0,numCpt - 1);
+	f32a_introSort_index(CPT_float,0,numCpt - 1,INDEX);
 	for (I32 i=0; i < numCpt; i++)
 	{
 		cptCI[i]=-9999.f;
@@ -397,7 +397,7 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		}
 	}
 	if (numCpt==0) { return numCpt; }
-	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32d_introSort_index(cpfromSumP_Val,0,numCpt - 1,cpfromProb_Pos);
 	numCpt=min(numCpt,maxCptNumber);
 	f32_copy( (F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);	
 	I32PTR INDEX_timeToProbAmp=(I32 *)mem ;
@@ -406,10 +406,9 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		cpt_f32[i]=(F32)cpt[i];
 		INDEX_timeToProbAmp[i]=i;
 	}
-	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32a_introSort_index(cpt_f32,0,numCpt - 1,INDEX_timeToProbAmp);
 	f32_fill_val(-9999.f,cptCI,2*numCpt);
 	F32PTR tmpSeg=(F32*) mem+3 * N;
-	I32PTR nullSeg=(I32*) mem+4 * N;  
 	for (I32 i=0; i < numCpt; i++)
 	{
 		I32 startIdx,endIdx,len;
@@ -418,14 +417,14 @@ static I32 find_changepoint_v0(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F
 		startIdx=(startIdx+endIdx)/2;
 		len=endIdx-startIdx+1;		
 		f32_copy(prob+startIdx,tmpSeg,len);		
-		f32_QuickSortA(tmpSeg,nullSeg,0,len - 1); 
+		f32a_introSort(tmpSeg,0,len - 1);  
 		cptCI[i]=confidenceInterval(tmpSeg,len,'L');
 		startIdx=(I32)cpt_f32[i];
 		endIdx=i==(numCpt - 1) ? (N - 1) : (I32)cpt_f32[i+1];
 		endIdx=(startIdx+endIdx)/2;
 	    len=endIdx - startIdx+1;
 		f32_copy(prob+startIdx,tmpSeg,len);		
-		f32_QuickSortD(tmpSeg,nullSeg,0,len - 1); 
+		f32d_introSort(tmpSeg,0,len - 1); 
 		cptCI[numCpt+i]=confidenceInterval(tmpSeg,len,'R');
  	}
 	F32PTR cptCI_backup=mem+3*N;
@@ -467,7 +466,7 @@ static I32 FindChangepoint_minseg_is_1(F32PTR prob,F32PTR mem,F32 threshold,I32P
 		cpfromProb_Val[i]=prob[cpt];
 	}
 	if (numCpt==0) { return numCpt; }
-	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32d_introSort_index(cpfromSumP_Val,0,numCpt - 1,cpfromProb_Pos);
 	numCpt=min(numCpt,maxCptNumber);
 	f32_copy((F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);
 	I32PTR INDEX_timeToProbAmp=(I32*)mem;
@@ -476,7 +475,7 @@ static I32 FindChangepoint_minseg_is_1(F32PTR prob,F32PTR mem,F32 threshold,I32P
 		cpt_f32[i]=(F32)cpt[i];
 		INDEX_timeToProbAmp[i]=i;
 	}
-	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32a_introSort_index(cpt_f32,0,numCpt - 1,INDEX_timeToProbAmp);
 	F32PTR cpt_summedProb=mem;
 	for (I32 i=0; i < numCpt; i++) {
 		I32 idx=INDEX_timeToProbAmp[i];
@@ -583,7 +582,7 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 				cpfromProb_Val[i]=topTenPeaksPrb[0];
 			}
 			else {
-				f32_QuickSortD(topTenPeaksPrb,topTenPeaksLoc,0,numTopTenCpt - 1);
+				f32d_introSort_index(topTenPeaksPrb,0,numTopTenCpt - 1,topTenPeaksLoc);
 				if (topTenPeaksPrb[0] > 1.5 * topTenPeaksPrb[1]) {
 					cpfromProb_Pos[i]=topTenPeaksLoc[0];
 					cpfromProb_Val[i]=topTenPeaksPrb[0];
@@ -606,7 +605,7 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 		}
 	}
 	if (numCpt==0) { return numCpt; }
-	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32d_introSort_index(cpfromSumP_Val,0,numCpt - 1,cpfromProb_Pos);
 	numCpt=min(numCpt,maxCptNumber);
 	f32_copy((F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);
 	I32PTR INDEX_timeToProbAmp=(I32*)mem;
@@ -615,25 +614,24 @@ I32 FindChangepoint(F32PTR prob,F32PTR mem,F32 threshold,I32PTR cpt,F32PTR cptCI
 		cpt_f32[i]=(F32)cpt[i];
 		INDEX_timeToProbAmp[i]=i;
 	}
-	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32a_introSort_index(cpt_f32,0,numCpt - 1,INDEX_timeToProbAmp);
 	f32_fill_val(-9999.f,cptCI,2 * numCpt);
 	F32PTR tmpSeg=(F32*)mem+3 * N;
-	I32PTR nullSeg=(I32*)mem+4 * N;
 	for (I32 i=0; i < numCpt; i++) 	{
 		I32 startIdx,endIdx,len;
 		endIdx=(I32)cpt_f32[i];
 		startIdx=i==0 ? 0 : (I32)cpt_f32[i - 1];
 		startIdx=(startIdx+endIdx)/2;
 		len=endIdx - startIdx+1;
-		f32_copy(prob+startIdx,tmpSeg,len);
-		f32_QuickSortA(tmpSeg,nullSeg,0,len - 1); 
+		f32_copy(prob+startIdx,tmpSeg,len);		
+		f32a_introSort(tmpSeg,0,len - 1);             
 		cptCI[i]=confidenceInterval(tmpSeg,len,'L');		
 		startIdx=(I32)cpt_f32[i];
 		endIdx=i==(numCpt - 1) ? (N - 1) : (I32)cpt_f32[i+1];
 		endIdx=(startIdx+endIdx)/2;
 		len=endIdx - startIdx+1;
 		f32_copy(prob+startIdx,tmpSeg,len);
-		f32_QuickSortD(tmpSeg,nullSeg,0,len - 1); 
+		f32d_introSort(tmpSeg,0,len - 1);       
 		cptCI[numCpt+i]=confidenceInterval(tmpSeg,len,'R');
 	}
 	F32PTR cptCI_backup=mem+3 * N;
@@ -746,7 +744,7 @@ I32 FindChangepoint_LeftRightMargins(F32PTR prob,F32PTR mem,F32 threshold,I32PTR
 				cpfromProb_Pos[i]=topTenPeaksLoc[0];
 				cpfromProb_Val[i]=topTenPeaksPrb[0];
 			} else {
-				f32_QuickSortD(topTenPeaksPrb,topTenPeaksLoc,0,numTopTenCpt - 1);
+				f32d_introSort_index(topTenPeaksPrb,0,numTopTenCpt - 1,topTenPeaksLoc);
 				if (topTenPeaksPrb[0] > 1.5 * topTenPeaksPrb[1]) {
 					cpfromProb_Pos[i]=topTenPeaksLoc[0];
 					cpfromProb_Val[i]=topTenPeaksPrb[0];
@@ -768,7 +766,7 @@ I32 FindChangepoint_LeftRightMargins(F32PTR prob,F32PTR mem,F32 threshold,I32PTR
 		}
 	}
 	if (numCpt==0) { return numCpt; }
-	f32_QuickSortD(cpfromSumP_Val,cpfromProb_Pos,0,numCpt - 1);
+	f32d_introSort_index(cpfromSumP_Val,0,numCpt - 1,cpfromProb_Pos);
 	numCpt=min(numCpt,maxCptNumber);
 	f32_copy((F32PTR)cpfromProb_Pos,(F32PTR)cpt,numCpt);
 	I32PTR INDEX_timeToProbAmp=(I32*)mem;
@@ -777,10 +775,9 @@ I32 FindChangepoint_LeftRightMargins(F32PTR prob,F32PTR mem,F32 threshold,I32PTR
 		cpt_f32[i]=(F32)cpt[i];
 		INDEX_timeToProbAmp[i]=i;
 	}
-	f32_QuickSortA(cpt_f32,INDEX_timeToProbAmp,0,numCpt - 1);
+	f32a_introSort_index(cpt_f32,0,numCpt - 1,INDEX_timeToProbAmp);
 	f32_fill_val(-9999.f,cptCI,2 * numCpt);
 	F32PTR tmpSeg=(F32*)mem+3 * N;
-	I32PTR nullSeg=(I32*)mem+4 * N;
 	for (I32 i=0; i < numCpt; i++) {
 		I32 startIdx,endIdx,len;
 		endIdx=(I32)cpt_f32[i];
@@ -788,14 +785,14 @@ I32 FindChangepoint_LeftRightMargins(F32PTR prob,F32PTR mem,F32 threshold,I32PTR
 		startIdx=(startIdx+endIdx)/2;
 		len=endIdx - startIdx+1;
 		f32_copy(prob+startIdx,tmpSeg,len);
-		f32_QuickSortA(tmpSeg,nullSeg,0,len - 1); 
+		f32a_introSort(tmpSeg,0,len - 1);     
 		cptCI[i]=confidenceInterval(tmpSeg,len,'L');
 		startIdx=(I32)cpt_f32[i];
 		endIdx=i==(numCpt - 1) ? (N - 1) : (I32)cpt_f32[i+1];
 		endIdx=(startIdx+endIdx)/2;
 		len=endIdx - startIdx+1;
 		f32_copy(prob+startIdx,tmpSeg,len);
-		f32_QuickSortD(tmpSeg,nullSeg,0,len - 1); 
+		f32d_introSort(tmpSeg,0,len - 1);  
 		cptCI[numCpt+i]=confidenceInterval(tmpSeg,len,'R');
 	}
 	F32PTR cptCI_backup=mem+3 * N;
@@ -809,14 +806,14 @@ I32 FindChangepoint_LeftRightMargins(F32PTR prob,F32PTR mem,F32 threshold,I32PTR
 	}
 	return numCpt;
 }
-#if defined(WIN64_OS)||defined(WIN32_OS) 
+#if defined(OS_WIN64)||defined(OS_WIN32) 
 	#include "float.h"
-	#if defined(MSVC_COMPILER)
+	#if defined(COMPILER_MSVC)
 	void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err=_controlfp_s(&_oldState,EM_OVERFLOW|EM_UNDERFLOW|EM_ZERODIVIDE|EM_DENORMAL|EM_INVALID,MCW_EM);
 	}
-	#elif defined(GCC_COMPILER)
+	#elif defined(COMPILER_GCC)
 void EnableFloatExcetion(void) {
 		unsigned int _oldState;
 		errno_t err=_controlfp_s(&_oldState,_EM_OVERFLOW|_EM_UNDERFLOW|_EM_ZERODIVIDE|_EM_DENORMAL|_EM_INVALID,_MCW_EM);
@@ -825,61 +822,45 @@ void EnableFloatExcetion(void) {
 #else
 	#include "fenv.h" 
 void EnableFloatExcetion(void) {
-	#if defined(LINUX_OS) 
+	#if defined(OS_LINUX) 
 	#endif
 }
 #endif
 #include "abc_cpu.h"
 #include "abc_ide_util.h"
-void SetupRoutines_AutoByCPU(Bool quite) {
-	static int IS_CPU_INSTRUCTON_CHECKED=0;
-	if (IS_CPU_INSTRUCTON_CHECKED) {
-		return;
+int GetNativeCPUType(void) {
+	static int GLOBAL_CPU_NATIVE=0;
+	if (GLOBAL_CPU_NATIVE) {
+		return GLOBAL_CPU_NATIVE;
 	}
-	if (!quite)	r_printf("\nOn the first run,check the CPU instruction set ... \n");
-	 struct cpu_x86 cpuinfo;
-	 detect_host(&cpuinfo);
-	 if (!quite) print_cpuinfo(&cpuinfo);
-	 i386_cpuid_caches(quite);
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+	 struct cpu_x86   cpuinfo;
+	 struct cpu_cache caches[8];
+	 cpuinfo_detect(&cpuinfo,NULL);
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 	if (cpuinfo.HW_AVX512_F  && cpuinfo.HW_AVX512_BW && cpuinfo.HW_AVX512_DQ && cpuinfo.HW_AVX512_VL) {
-		 SetupVectorFunction_AVX512();
-		 SetupPCG_AVX512();
-		 if (!quite)	  r_printf("CPU checking result: The AVX512-enabled library is used ... \n\n");
-	}
-	else if (cpuinfo.HW_AVX &&cpuinfo.HW_AVX2 && cpuinfo.HW_FMA3) {
-		 SetupVectorFunction_AVX2();
-		 SetupPCG_AVX2();
-		 if (!quite)	 r_printf("CPU checking result: The AVX2-enabled library is used ...\n\n");
-	}
-	else {
-		 SetupVectorFunction_Generic();
-		 SetupPCG_GENERIC();
-		 if (!quite)	 r_printf("CPU checking result: No AVX2/AVX512 is supported and the default library is used ...\n\n");
+		GLOBAL_CPU_NATIVE=3;
+	}	else if (cpuinfo.HW_AVX &&cpuinfo.HW_AVX2 && cpuinfo.HW_FMA3) {
+		GLOBAL_CPU_NATIVE=2;
+	}	else {
+		GLOBAL_CPU_NATIVE=1;
 	}
 #else
-	 SetupVectorFunction_Generic();
-	 SetupPCG_GENERIC();
-	 if (!quite) r_printf("CPU checking result: No AVX2 is supported and the default library is used ...");
+	 GLOBAL_CPU_NATIVE=1;
 #endif
-	 IS_CPU_INSTRUCTON_CHECKED=1;
+	 return GLOBAL_CPU_NATIVE;
 }
-void SetupRoutines_UserChoice(int avxOption) {
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
-	if (avxOption==0) {
-		SetupVectorFunction_Generic();
-		SetupPCG_GENERIC();
-	}
-	else if (avxOption==2) {
+void SetupRoutines_ByCPU(int cputype) {
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
+	if (cputype==2) {
 		SetupVectorFunction_AVX2();
 		SetupPCG_AVX2();
 	}
-	else if (avxOption==512) {
+	else if (cputype==3) {
 		SetupVectorFunction_AVX512();
 		SetupPCG_AVX512();
-	}
-	else {
-		SetupRoutines_AutoByCPU(1L); 
+	} else {
+		SetupVectorFunction_Generic();
+		SetupPCG_GENERIC();	 
 	} 
 #else
 	SetupVectorFunction_Generic();

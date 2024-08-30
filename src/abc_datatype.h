@@ -87,7 +87,7 @@
 		DATA_UNKNOWN
 	} DATA_TYPE;
 enum { _False_=0,_True_=1 };
-#if defined (MSVC_COMPILER)
+#if defined (COMPILER_MSVC)
 	static INLINE float  getNaN(void) { return (float)1e38f * (float)1e38f * (float)0.f; }
 #else
 	static INLINE float  getNaN(void) { return (float)(0.0/0.0); }

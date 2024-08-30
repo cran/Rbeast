@@ -1,7 +1,6 @@
 #include "abc_000_warning.h"
 #include "abc_001_config.h"
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include "abc_datatype.h"
@@ -10,8 +9,10 @@
 #include "abc_common.h"    
 #include "abc_ts_func.h"
 #include "abc_date.h"
+#include "globalvars.h"
 #include "beastv2_func.h"    
 #include "beastv2_io.h"
+#include <stdio.h>	          
 #define CondErrMsgRet0(cond,...)   if(cond) { r_error(__VA_ARGS__); return 0;}
 #define CondErrActionRet0(cond,Action,...)   if(cond) { (Action) ;r_error(__VA_ARGS__); return 0;}
 #define ifelse(cond,a,b)  ((cond)?(a):(b))
@@ -242,7 +243,7 @@ static int  GetArg_1st_MetaData(VOIDPTR prhs[],int nrhs,BEAST2_IO_PTR _OUT_ io) 
 	}
 	CondErrMsgRet0(meta->hasSeasonCmpnt==UnknownStatus,"ERROR: Cnnot determine whether the input time series has a seasonal/periodic componnet or net.\n");
 	if (meta->hasSeasonCmpnt==0) PERIOD=0;        
-	if (DT  < 0.)      DT=getNaN(); 
+	if (DT  < 0.)                  DT=getNaN(); 
 	TimeVecInfo tvec={ 0 };
 	TimeVec_init(&tvec);
      if (TIMEobj) { 
@@ -505,7 +506,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	struct PRIOR_MISSING {	
 		U08   seasonMinOrder,seasonMaxOrder,trendMinOrder,trendMaxOrder;
 		U08   trendMinSepDist,seasonMinSepDist;
-		U08   trendMinKnotNum,seasonMinKnotNum;
+		U08   trendMinKnotNum,seasonMinKnotNum,outlierMinKnotNum;
 		U08   trendMaxKnotNum,seasonMaxKnotNum,outlierMaxKnotNum;
 		U08   trendLeftMargin,trendRightMargin;
 		U08   seasonLeftMargin,seasonRightMargin;
@@ -547,6 +548,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 			o.trendLeftMargin=(tmp=GetField123Check(S,"trendLeftMargin",10)) ? GetScalar(tmp) : (m.trendLeftMargin=1);
 			o.trendRightMargin=(tmp=GetField123Check(S,"trendRightMargin",10)) ? GetScalar(tmp) : (m.trendRightMargin=1);
 			if (io->meta.hasOutlierCmpnt) {
+				o.outlierMinKnotNum=(tmp=GetField123Check(S,"outlierMinKnotNum",10)) ? GetScalar(tmp) : (m.outlierMinKnotNum=1);
 				o.outlierMaxKnotNum=(tmp=GetField123Check(S,"outlierMaxKnotNum",10)) ? GetScalar(tmp) : (m.outlierMaxKnotNum=1);
 				o.outlierSigFactor=(tmp=GetFieldCheck(S,"outlierSigFactor")) ? GetScalar(tmp) : (m.outlierSigFactor=1);
 			}
@@ -650,13 +652,13 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 		o.trendMaxKnotNum=min(o.trendMaxKnotNum,MaxChangePointPossible);
 		o.trendMaxKnotNum=max(o.trendMaxKnotNum,o.trendMinKnotNum);	 
 	}
+	if (m.outlierMinKnotNum) o.outlierMinKnotNum=0;
 	if (m.outlierMaxKnotNum) o.outlierMaxKnotNum=o.trendMaxKnotNum;    
-	o.outlierMaxKnotNum=max(o.outlierMaxKnotNum,1L); 
-	if (m.K_MAX )            o.K_MAX=550;                  
+	if (m.K_MAX )            o.K_MAX=0;    
 	if (m.sigFactor)         o.sigFactor=1.8;            o.sigFactor=max(o.sigFactor,1.02);
 	if (m.outlierSigFactor)  o.outlierSigFactor=2.5;            o.outlierSigFactor=max(o.outlierSigFactor,1.5);
 	if (m.sig2 )             o.sig2=0.2f;				  o.sig2=max(o.sig2,0.01);
-	if (m.precValue)         o.precValue=1.5f;				  o.precValue=max(o.precValue,0.01);
+	if (m.precValue)         o.precValue=1.5f;				  o.precValue=max(o.precValue,1e-32);
 	if (m.alpha1)		     o.alpha1=0.00000001f;
 	if (m.alpha2)		     o.alpha2=0.00000001f;
 	if (m.delta1)		     o.delta1=0.00000001f;
@@ -671,7 +673,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	if (m.trendBasisFuncType) {
 		if      (o.precPriorType==UniformPrec)		o.trendBasisFuncType=0;
 		else if (o.precPriorType==ConstPrec)          o.trendBasisFuncType=0;
-		else if (o.precPriorType==ComponentWise)      o.seasonBasisFuncType=1;
+		else if (o.precPriorType==ComponentWise)      o.trendBasisFuncType=1;
 		else if (o.precPriorType==OrderWise)          o.trendBasisFuncType=1;
 	}	 
 	if (m.outlierBasisFuncType) {
@@ -742,9 +744,8 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 		I08   whichOutputDimIsTime;
 		I08   removeSingletonDims;
 		I08   dumpInputData;
-		I08   ncpStatMethod;
 		I08  smoothCpOccPrCurve;
-		I08  useMeanOrRndBeta;
+		I08  useRndBeta;
 		I08  computeCredible;
 		I08  fastCIComputation;
 		I08  computeSeasonOrder;
@@ -758,8 +759,7 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 		I08 tallyPosNegTrendJump;
 		I08 tallyIncDecTrendJump;
 		I08 tallyPosNegOutliers;
-		I08  printOptions;
-		I08  printProgressBar;
+		I08 dumpMCMCSamples;
 	} m={0,};
 	if (nrhs < 6) 
 		memset(&m,1L,sizeof(struct OUTFLAGS_MISSING));	
@@ -771,25 +771,25 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 		}
 		else {
 			VOIDPTR tmp;
-			o.whichOutputDimIsTime=(tmp=GetField123Check(S,"whichOutputDimIsTime",2)) ?	GetScalar(tmp) : (m.whichOutputDimIsTime=1);
+			o.whichOutputDimIsTime=(tmp=GetField123Check(S,"whichOutputDimIsTime",2)) ? GetScalar(tmp) : (m.whichOutputDimIsTime=1);
 			o.removeSingletonDims=(tmp=GetField123Check(S,"removeSingletonDims",8)) ? GetScalar(tmp) : (m.removeSingletonDims=1);			
-			o.numThreadsPerCPU=(tmp=GetField123Check(S,"numThreadsPerCPU",4)) ? GetScalar(tmp) : (m.numThreadsPerCPU=1);
-			o.numParThreads=(tmp=GetField123Check(S,"numParThreads",4)) ?			GetScalar(tmp) : (m.numParThreads=1);
-			o.numCPUCoresToUse=(tmp=GetField123Check(S,"numCPUCoresToUse",4)) ?		GetScalar(tmp) : (m.numCPUCoresToUse=1);
-			o.consoleWidth=(tmp=GetField123Check(S,"consoleWidth",2)) ?			GetScalar(tmp) : (m.consoleWidth=1);
-			o.dumpInputData=(tmp=GetField123Check(S,"dumpInputData",2)) ? GetScalar(tmp) : (m.dumpInputData=1);
-			o.smoothCpOccPrCurve=(tmp=GetField123Check(S,"smoothCpOccPrCurve",2)) ? GetScalar(tmp) : (m.smoothCpOccPrCurve=1);
+			o.numThreadsPerCPU=(tmp=GetField123Check(S,"numThreadsPerCPU",4))    ? GetScalar(tmp) : (m.numThreadsPerCPU=1);
+			o.numParThreads=(tmp=GetField123Check(S,"numParThreads",4))       ? GetScalar(tmp) : (m.numParThreads=1);
+			o.numCPUCoresToUse=(tmp=GetField123Check(S,"numCPUCoresToUse",4))    ? GetScalar(tmp) : (m.numCPUCoresToUse=1);
+			o.consoleWidth=(tmp=GetField123Check(S,"consoleWidth",2))         ? GetScalar(tmp) : (m.consoleWidth=1);
+			o.dumpInputData=(tmp=GetField123Check(S,"dumpInputData",5))        ? GetScalar(tmp) : (m.dumpInputData=1);
+			o.smoothCpOccPrCurve=(tmp=GetField123Check(S,"smoothCpOccPrCurve",2))   ? GetScalar(tmp) : (m.smoothCpOccPrCurve=1);
+			o.dumpMCMCSamples=(tmp=GetField123Check(S,"dumpMCMCSamples",7))     ? GetScalar(tmp) : (m.dumpMCMCSamples=1);
 			#define _1(x)       o.x=(tmp=GetFieldCheck(S,#x))? GetScalar(tmp): (m.x=1)
 			#define _2(x,y)     _1(x);_1(y)
 			#define _3(x,y,z)   _1(x);_2(y,z)
 			#define _4(x,y,z,w) _2(x,y);_2(z,w)
-			_2(printProgressBar,printOptions);
 			_2(computeCredible,fastCIComputation);
 			_2(computeSeasonOrder,computeTrendOrder);
 			_3(computeSeasonChngpt,computeTrendChngpt,computeOutlierChngpt);
 			_2(computeSeasonAmp,computeTrendSlope);
 			_4(tallyPosNegSeasonJump,tallyPosNegTrendJump,tallyIncDecTrendJump,tallyPosNegOutliers);
-			_1(useMeanOrRndBeta);
+			_1(useRndBeta);
 		} 
 	} 
 	if (m.whichOutputDimIsTime)		o.whichOutputDimIsTime=whichDimIsTime;
@@ -801,8 +801,6 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 	if (m.numParThreads)         o.numParThreads=0;
 	if (m.numCPUCoresToUse)      o.numCPUCoresToUse=0;	
 	if (m.consoleWidth||o.consoleWidth<=0)  o.consoleWidth=GetConsoleWidth(); 	o.consoleWidth=max(o.consoleWidth,40);
-	if (m.printProgressBar)      o.printProgressBar=1;
-	if (m.printOptions)          o.printOptions=1;
 	if (m.computeCredible)       o.computeCredible=0L;
 	if (m.fastCIComputation)     o.fastCIComputation=1L;
 	if (m.computeSeasonOrder)    o.computeSeasonOrder=0L;
@@ -820,7 +818,8 @@ static int  GetArg_4th_EXTRA__(VOIDPTR prhs[],int nrhs,BEAST2_EXTRA_PTR extra,I3
 	if (o.tallyPosNegTrendJump)  o.computeTrendChngpt=1,o.computeTrendSlope=1;
 	if (o.tallyIncDecTrendJump)  o.computeTrendChngpt=1,o.computeTrendSlope=1;
 	if (o.tallyPosNegOutliers)   o.computeOutlierChngpt=1;
-	if (m.useMeanOrRndBeta)      o.useMeanOrRndBeta=0;
+	if (m.useRndBeta)      o.useRndBeta=0;
+	if (m.dumpMCMCSamples) o.dumpMCMCSamples=0;
 	return 1;
 #undef o
 }
@@ -832,6 +831,16 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	I08 hasOutlierCmpnt=opt->prior.basisType[opt->prior.numBasis - 1]==OUTLIERID;
 	I08 hasTrendCmpnt=1;
 	I08 hasAlways=1;
+	if (hasOutlierCmpnt ) {
+		if (opt->prior.outlierMinKnotNum > opt->io.N/2) {
+			opt->prior.outlierMinKnotNum=opt->io.N/2;
+		}
+		if (opt->prior.outlierMaxKnotNum <=0||opt->prior.outlierMaxKnotNum < opt->prior.outlierMinKnotNum) {
+			hasOutlierCmpnt=0;			
+			opt->io.meta.hasOutlierCmpnt=0;
+			opt->prior.numBasis--;
+		}		
+	}
 	if (hasDummyCmpnt) opt->io.meta.period=ceil(opt->io.meta.period);
 	if (opt->prior.trendMaxOrder==opt->prior.trendMinOrder)	opt->mcmc.trendResamplingOrderProb=0;
 	if (opt->prior.seasonMaxOrder==opt->prior.seasonMinOrder)	opt->mcmc.seasonResamplingOrderProb=0;
@@ -856,6 +865,7 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	}
 	if (hasSVDCmpnt) { 
 		opt->extra.computeSeasonAmp=0; 
+		opt->extra.tallyPosNegSeasonJump=0;
 	}
 	if (!hasOutlierCmpnt) {
 		opt->extra.computeOutlierChngpt=0;
@@ -900,7 +910,21 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 		if (type==TRENDID)			KMAX+=(PRIOR->trendMaxOrder+1) * (PRIOR->trendMaxKnotNum+1);
 		if (type==OUTLIERID)			KMAX+=PRIOR->outlierMaxKnotNum;
 	}
-	PRIOR->K_MAX=min(PRIOR->K_MAX,KMAX);
+	if (PRIOR->K_MAX <=0) {  
+		PRIOR->K_MAX=KMAX;
+	} else {
+		PRIOR->K_MAX=min(PRIOR->K_MAX,KMAX);
+	}
+	if (opt->io.N < 5000)
+		PRIOR->K_MAX=min(PRIOR->K_MAX,opt->io.N);
+	else if (opt->io.N < 15000) {
+		int KMAX=min(5000,opt->io.N/2);
+		PRIOR->K_MAX=min(PRIOR->K_MAX,KMAX);
+	}
+	else  {
+		int KMAX=7500;
+		PRIOR->K_MAX=min(PRIOR->K_MAX,KMAX);
+	}
 	I32 K_INITIAL_MODEL=0;
 	for (I32 i=0; i < PRIOR->numBasis; i++) {
 		I08 type=PRIOR->basisType[i];
@@ -934,6 +958,13 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 	if (opt->prior.precPriorType==ComponentWise && opt->prior.numBasis==1) {
 		opt->prior.precPriorType=UniformPrec;
 	}
+	if (opt->io.numOfPixels > 1) {
+		opt->extra.dumpMCMCSamples=0;
+	}
+	if (opt->prior.numBasis==1 && opt->prior.precPriorType==ComponentWise) {	
+		opt->prior.precPriorType=UniformPrec;
+	}
+	opt->extra.printProgress=GLOBAL_PRNT_PROGRESS;
 	return 1;
 }
 int BEAST2_GetArgs(VOIDPTR prhs[],int nrhs,A(OPTIONS_PTR) opt) {
@@ -943,8 +974,10 @@ int BEAST2_GetArgs(VOIDPTR prhs[],int nrhs,A(OPTIONS_PTR) opt) {
 			      !GetArg_3rd_MCMC___(prhs,nrhs,&opt->mcmc,opt)||
 			      !GetArg_4th_EXTRA__(prhs,nrhs,&opt->extra,opt->io.meta.whichDimIsTime,opt->io.ndim) ;
 	int success=!failed;	
-	if (success) 	success=PostCheckArgs(opt); 	
-	if (success) 	BEAST2_print_options(opt);	
+	if (success)  success=PostCheckArgs(opt); 	
+	if (success && GLOBAL_PRNT_PARAMETER) {
+		BEAST2_print_options(opt);
+	}	
 	return success;
 }
 void BEAST2_DeallocateTimeSeriesIO(BEAST2_IO_PTR  o) {

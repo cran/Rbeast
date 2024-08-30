@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>          
 #elif defined( __MACH__)
@@ -40,14 +40,14 @@ extern F64  GetElapsedSecondsSinceStart(void);
 extern void SetBreakPointForStartedTimer(void);
 extern F64  GetElaspedTimeFromBreakPoint(void);
 extern U64  TimerGetTickCount(void);
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     #include <intrin.h>    
-#elif defined(SOLARIS_COMPILER)
+#elif defined(COMPILER_SOLARIS)
    #include <sys/time.h>
     static INLINE   unsigned long long __rdtsc(void) {
         return  gethrtime();
     }
-#elif defined(ARM64_OS)
+#elif defined(cpu_ARM64)
   static INLINE  U64 __rdtsc(void)   {  return  __builtin_readcyclecounter();  }
     static INLINE U64 rdtsc(void)     {
         U64 val;

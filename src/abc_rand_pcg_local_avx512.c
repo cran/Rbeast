@@ -7,16 +7,16 @@
 #include "abc_vec.h"
 #include "abc_rand_pcg_global.h"
 #include "abc_rand_pcg_local.h"
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64) 
 	#pragma clang optimize on
 	#pragma clang attribute push (__attribute__((target("avx,avx2,avx512f,avx512dq,avx512bw,avx512vl"))),apply_to=function)
 #endif
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64) 
     #pragma optimization_level 3
 #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
 	 #pragma GCC target("avx,avx2,avx512f,avx512dq,avx512bw,avx512vl") 
 #endif
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include "abc_math_avx.h"
 #define PCG_DEFAULT_MULTIPLIER_64  6364136223846793005ULL 
 #define PCG_DEFAULT_INCREMENT_64   1442695040888963407ULL 
@@ -93,7 +93,7 @@ void SetupPCG_AVX512(void) {
 	local_pcg_print_state=avx512_pcg_print_state;
 }
 #endif
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
 #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

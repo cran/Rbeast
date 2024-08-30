@@ -2,7 +2,7 @@
 #include "abc_000_macro.h"
 #include <inttypes.h>
 extern int GetNumCores(void);
-#if defined(_WIN32)||defined(WIN64_OS)||defined(MAC_OS)   
+#if defined(_WIN32)||defined(OS_WIN64)||defined(OS_MAC)   
 typedef struct cpu_set { 
         int        core_count; 
         uint64_t   core_mask[4]; 
@@ -12,7 +12,7 @@ extern void  CPU_SET(int num,cpu_set_t* cs);
 extern int   CPU_ISSET(int num,cpu_set_t* cs);
 extern int   CPU_get_first_bit_id(cpu_set_t* cs);
 #endif
-#if defined(WIN64_OS)||defined(WIN32_OS)
+#if defined(OS_WIN64)||defined(OS_WIN32)
 #include "stdlib.h"  
  #define WIN32_LEAN_AND_MEAN
  #include <windows.h> 
@@ -47,7 +47,7 @@ extern int   CPU_get_first_bit_id(cpu_set_t* cs);
     #define PROC_THREAD_ATTRIBUTE_IDEAL_PROCESSOR \
         ProcThreadAttributeValue (ProcThreadAttributeIdealProcessor,TRUE,TRUE,FALSE)
 #endif
-#ifdef WIN64_OS
+#ifdef OS_WIN64
     #include "Processthreadsapi.h"   
 #endif
 typedef HANDLE    pthread_t;
@@ -55,7 +55,7 @@ typedef struct {
          SIZE_T                       sizeAttributeList;
          PPROC_THREAD_ATTRIBUTE_LIST  lpAttributeList;
 	     SIZE_T                       dwStackSize;    
-    #ifdef WIN64_OS
+    #ifdef OS_WIN64
 	    PROCESSOR_NUMBER ProcNumber;
     #else
          void * ProcNumber;
@@ -70,7 +70,7 @@ static INLINE int pthread_attr_init(pthread_attr_t * attr) {
     attr->dwStackSize=0;
     attr->lpAttributeList=NULL;
     attr->sizeAttributeList=0;
-    #ifdef WIN64_OS    
+    #ifdef OS_WIN64    
         DWORD  attributeCounts=1L;
         SIZE_T size;
         if ( InitializeProcThreadAttributeList(NULL,attributeCounts,0,&size)||GetLastError()==ERROR_INSUFFICIENT_BUFFER) 
@@ -81,7 +81,7 @@ static INLINE int pthread_attr_init(pthread_attr_t * attr) {
     return 0;
 }
 static INLINE  int pthread_attr_destroy(pthread_attr_t* attr) {
-#ifdef WIN64_OS
+#ifdef OS_WIN64
     if (attr->lpAttributeList !=NULL) {
         DeleteProcThreadAttributeList(attr->lpAttributeList);
         free(attr->lpAttributeList);
@@ -100,6 +100,7 @@ static INLINE int pthread_mutex_unlock(pthread_mutex_t* mutex)  {     LeaveCriti
 static INLINE int pthread_cond_init(pthread_cond_t * cond,const pthread_condattr_t * attr) {     InitializeConditionVariable(cond);  return 0;}
 static INLINE int pthread_cond_wait(pthread_cond_t * cond,pthread_mutex_t * mutex) {   SleepConditionVariableCS(cond,mutex,INFINITE);  return 0;}
 static INLINE int pthread_cond_signal(pthread_cond_t * cond)    {   WakeConditionVariable(cond);    return 0;}
+static INLINE int pthread_cond_broadcast(pthread_cond_t* cond)  {   WakeAllConditionVariable(cond);    return 0; }
 static INLINE int pthread_cond_destroy(pthread_cond_t * cond)   {
     return 0;
 }
@@ -123,13 +124,13 @@ extern int  pthread_create0(pthread_t* tid,const pthread_attr_t* attr,void* (*st
 static INLINE int  pthread_create(pthread_t* tid,const pthread_attr_t* attr,void* (*start) (void*),void* arg) {
     return  pthread_create0(tid,attr,start,arg);
 }
-#elif   defined(LINUX_OS)
+#elif   defined(OS_LINUX)
 	    #ifndef _GNU_SOURCE
-		    #define _GNU_SOURCE
+		    #define _GNU_SOURCE  
 	    #endif
-        #include <sched.h>  
+        #include <sched.h>       
 	    #include <pthread.h>
-#elif    defined(MAC_OS) 
+#elif    defined(OS_MAC) 
     #include <mach/thread_policy.h> 
     #include <mach/thread_act.h> 
     #include <sys/sysctl.h> 
@@ -177,15 +178,15 @@ static INLINE int  pthread_create(pthread_t* tid,const pthread_attr_t* attr,void
             thread_policy_set(mach_thread,THREAD_AFFINITY_POLICY,(thread_policy_t)&policy,1);
             return 0;
         }
-#elif  defined(SOLARIS_OS)
-    #include <sched.h>  
+#elif  defined(OS_SOLARIS)
+    #include <sched.h>   
     #include <pthread.h>
     #include <sys/types.h> 
     #include <sys/processor.h>
     #include <sys/procset.h>
     typedef  int cpu_set_t;
     static inline void   CPU_ZERO(cpu_set_t* cs) { *cs=0; }
-   static inline void   CPU_SET(int num,cpu_set_t* cs) { num=num%GetNumCores(); *cs=num; }
+    static inline void   CPU_SET(int num,cpu_set_t* cs) { num=num%GetNumCores(); *cs=num; }
     static int sched_getaffinity(pthread_t pid,size_t cpu_size,cpu_set_t* cpu_set) {
         processorid_t obind;
 		int cpu=CPU_get_first_bit_id(cpu_set);

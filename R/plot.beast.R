@@ -158,7 +158,7 @@ plot.beast<-function(
   Prob   = 0; 
   Order  = 0
   Slp    =0
-  SlpSD  =0
+  SlpCI  =0
   SlpSignPos =0
   SlpSignZero=0
   
@@ -203,7 +203,10 @@ plot.beast<-function(
     else                        CI <<-SD
     
     Slp         <<- x$trend$slp
-    SlpSD       <<- c(Slp-x$trend$slpSD,  rev(Slp+x$trend$slpSD));         
+	
+	if ( !is.null(x$trend$CI) )	SlpCI <<-  c(x$trend$slpCI[,1], rev(x$trend$slpCI[,2])) 
+    else                        SlpCI <<- c(Slp-x$trend$slpSD,  rev(Slp+x$trend$slpSD));    
+          
     SlpSignPos  <<- x$trend$slpSgnPosPr
 	SlpSignZero <<- x$trend$slpSgnZeroPr
     Order       <<- x$trend$order;
@@ -361,8 +364,8 @@ plot.beast<-function(
   
   plot.slp =function(col=c(0,1,0), ylabel){
     alpha=0.5
-    plot(   t2t, SlpSD,   type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
-    polygon(t2t, SlpSD,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    plot(   t2t, SlpCI,   type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
+    polygon(t2t, SlpCI,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
     points( t,   Slp,    type = 'l',col=rgb(0,0,0,0.8 ));
     axis(1,     labels = FALSE, padj = padj,                        tcl = tcl);
     axis(YSIDE, labels = TRUE,  padj = ifelse(YSIDE==2,-padj,padj), tcl = tcl)
@@ -372,7 +375,7 @@ plot.beast<-function(
     alpha=0.5
 	SlpSignNeg = 1-SlpSignPos-SlpSignZero
     plot( c(t[1],t[length(t)]), c(0,1),   type = 'n',ann = FALSE, xaxt = 'n', yaxt = 'n');
-    #polygon(t2t, SlpSD,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
+    #polygon(t2t, SlpCI,   col  = rgb(col[1],col[2],col[3],alpha), border = NA);
     y2y   = c(t-t, rev(SlpSignNeg));           polygon(t2t, y2y, col=rgb(0,0,1,alpha),border=NA)
     y2y   = c(SlpSignNeg,   rev(1-SlpSignPos)); polygon(t2t, y2y, col=rgb(0,1,0,alpha),border=NA) 
     y2y   = c(1-SlpSignPos, t-t+1);            polygon(t2t, y2y, col=rgb(1,0,0,alpha),border=NA) 

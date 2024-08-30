@@ -2,9 +2,9 @@
 #pragma once
 #include "abc_000_macro.h"
 #include "abc_datatype.h"
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 	#define F77__CALL(x)  x
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER)  
+#elif defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS)  
 	#define PRIMITIVE_CAT(a,...) a##__VA_ARGS__
 	#define F77__CALL(x)		PRIMITIVE_CAT(x,_)
 	#define RSGEMV 			rsgemv 
@@ -107,8 +107,8 @@ static  INLINE void  F77__sgemm(int transa,int transb,int m,int n,int k,F32 alph
 #define r_cblas_sgemm(CBLAS_LAYOUT,CBLAS_TRANSPOSE_A,CBLAS_TRANSPOSE_B,M,N,K,alpha,A,\
 	                  lda,B,ldb,beta,C,ldc)  \
 	F77__sgemm(CBLAS_TRANSPOSE_A,CBLAS_TRANSPOSE_B,M,N,K,alpha,A,lda,B,ldb,beta,C,ldc)
-#if defined(MSVC_COMPILER)
-#elif defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) 
+#if defined(COMPILER_MSVC)
+#elif defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) 
 	#define RSSUMLOG 		rssumlog
 	#define RSPOWVEC 		rspowvec
 	#define RSLOGVEC 		rslogvec

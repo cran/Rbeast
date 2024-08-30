@@ -1,13 +1,16 @@
 #include <string.h>
-#include <stdio.h>
 #include "assert.h"
 #include "abc_000_warning.h"
 #include "abc_ide_util.h"
 #include "abc_common.h"
 #include "abc_date.h"
+#include<stdio.h>  
 #if R_INTERFACE==1
 int  JDN_to_DateNum(int jdn) {
 	return jdn - 2440588;
+}
+void StdouFlush(void) {
+	R_FlushConsole();
 }
 SEXP getListElement(SEXP list,const char* str) {
 	SEXP elmt=NULL; 
@@ -298,7 +301,7 @@ void RemoveAttribute(VOID_PTR listVar,const char* field) {
 static void __chkIntFn(void *dummy) {R_CheckUserInterrupt();}
 I32  CheckInterrupt()         {	return (R_ToplevelExec(__chkIntFn,NULL)==FALSE);}
 void ConsumeInterruptSignal() { return ; }
-#if defined(WIN64_OS)  && 0
+#if defined(OS_WIN64)  && 0
 	#define WIN32_LEAN_AND_MEAN
 	#include "windows.h"
 	#include "Rembedded.h" 

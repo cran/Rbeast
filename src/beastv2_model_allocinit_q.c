@@ -21,17 +21,17 @@ extern void* Get_CvtKnotsToBinVec(I08 id);
 extern void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32 minSep,F64PTR TNUM,F64PTR totalNum);
 #define MODEL (*model)
 void  ReInit_PrecValues(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt) {
-	I32 hasNaNs=0;
-	for (int i=0; i < MODEL.nPrec; i++) {
-			if (IsNaN(MODEL.precVec[i])) {
-				hasNaNs=1L;
+	I32 hasNaNsInfs=0;
+	for (int i=0; i < MODEL.precState.nPrecGrp; i++) {
+			if (IsNaN(MODEL.precState.precVec[i])||IsInf(MODEL.precState.precVec[i])) {
+				hasNaNsInfs=1L;
 				break;
 			}				
 	}
-	if (hasNaNs) {
+	if (hasNaNsInfs) {
 			F32 precValue=opt->prior.precValue;
-			r_ippsSet_32f(precValue,MODEL.precVec,MODEL.nPrec);
-			r_ippsSet_32f(logf(precValue),MODEL.logPrecVec,MODEL.nPrec);
+			r_ippsSet_32f(precValue,MODEL.precState.precVec,MODEL.precState.nPrecGrp);
+			r_ippsSet_32f(logf(precValue),MODEL.precState.logPrecVec,MODEL.precState.nPrecGrp);
 	}
 }
 static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers * MEM) {
@@ -48,7 +48,7 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR o
 	I32 nPrecGrp,nPrecXtXDiag;
 	I08 precType=opt->prior.precPriorType;
 	if (precType==ConstPrec||precType==UniformPrec) {
-		MODEL.nPrec=1L;    
+		MODEL.precState.nPrecGrp=1L;    
 		nPrecGrp=0;
 		nPrecXtXDiag=0;
 		for (int i=0; i < MODEL.NUMBASIS; i++) {
@@ -57,7 +57,7 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR o
 		}			
 	}
 	else if (precType==ComponentWise) {
-		MODEL.nPrec=MODEL.NUMBASIS;     
+		MODEL.precState.nPrecGrp=MODEL.NUMBASIS;     
 		nPrecGrp=MODEL.NUMBASIS;
 		nPrecXtXDiag=opt->prior.K_MAX;
 		for (int i=0; i < MODEL.NUMBASIS; i++) {
@@ -77,12 +77,12 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR o
 			b->offsetPrec=cumsum;
 			cumsum+=b->nPrec;
 		}
-		MODEL.nPrec=cumsum;
-		nPrecGrp=MODEL.nPrec;
+		MODEL.precState.nPrecGrp=cumsum;
+		nPrecGrp=MODEL.precState.nPrecGrp;
 		nPrecXtXDiag=opt->prior.K_MAX;		
 	}
-	nodes[nid++]=(MemNode){ &MODEL.precVec,sizeof(F32) * MODEL.nPrec,.align=4 };
-	nodes[nid++]=(MemNode){ &MODEL.logPrecVec,sizeof(F32) * MODEL.nPrec,.align=4 };
+	nodes[nid++]=(MemNode){ &MODEL.precState.precVec,sizeof(F32) * MODEL.precState.nPrecGrp,.align=4 };
+	nodes[nid++]=(MemNode){ &MODEL.precState.logPrecVec,sizeof(F32) * MODEL.precState.nPrecGrp,.align=4 };
 	nodes[nid++]=(MemNode){ &MODEL.curr.precXtXDiag,sizeof(F32) * nPrecXtXDiag,.align=4 }; 
 	nodes[nid++]=(MemNode){ &MODEL.prop.precXtXDiag,sizeof(F32) * nPrecXtXDiag,.align=4 }; 
 	nodes[nid++]=(MemNode){ &MODEL.curr.nTermsPerPrecGrp,sizeof(I16) * nPrecGrp,.align=4 }; 
@@ -90,12 +90,12 @@ static void Alloc_Init_Sig2PrecPrior(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR o
 	nodes[nid++]=(MemNode){ NULL,};
 	MEM->alloclist(MEM,nodes,AggregatedMemAlloc,NULL);
 	if (nPrecXtXDiag==0) {
-		MODEL.curr.precXtXDiag=MODEL.precVec;
-		MODEL.prop.precXtXDiag=MODEL.precVec;
+		MODEL.curr.precXtXDiag=MODEL.precState.precVec;
+		MODEL.prop.precXtXDiag=MODEL.precState.precVec;
 	}
 	F32 precValue=opt->prior.precValue;
-	r_ippsSet_32f(precValue,MODEL.precVec,MODEL.nPrec);
-	r_ippsSet_32f(logf(precValue),MODEL.logPrecVec,MODEL.nPrec);
+	r_ippsSet_32f(precValue,MODEL.precState.precVec,MODEL.precState.nPrecGrp);
+	r_ippsSet_32f(logf(precValue),MODEL.precState.logPrecVec,MODEL.precState.nPrecGrp);
 	f32_fill_val_matrixdiag(MODEL.sig2,opt->prior.sig2,q);
 }
 void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers* MEM)
@@ -235,8 +235,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.minKnotNum=opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum=opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
-			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
 			basis->prior.leftMargin=opt->prior.seasonLeftMargin;
+			basis->prior.rightMargin=opt->prior.seasonRightMargin;
 			basis->prior.minOrder=-1;
 			basis->prior.maxOrder=-1;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
@@ -289,8 +289,8 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.minKnotNum=opt->prior.seasonMinKnotNum;
 			basis->prior.maxKnotNum=opt->prior.seasonMaxKnotNum;
 			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
-			basis->prior.minSepDist=opt->prior.seasonMinSepDist;
 			basis->prior.leftMargin=opt->prior.seasonLeftMargin;
+			basis->prior.rightMargin=opt->prior.seasonRightMargin;
 			basis->prior.minOrder=opt->prior.seasonMinOrder;
 			basis->prior.maxOrder=opt->prior.seasonMaxOrder;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
@@ -340,6 +340,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 		}
 		else if (type==OUTLIERID) {
 			MODEL.oid=i;
+			basis->prior.minKnotNum=opt->prior.outlierMinKnotNum;
 			basis->prior.maxKnotNum=opt->prior.outlierMaxKnotNum;
 			isComponentFixed[i]=0;
 			AllocInitBasisMEM(basis,N,K_MAX,MEM);

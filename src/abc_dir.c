@@ -6,7 +6,7 @@
 		#define _CRT_NONSTDC_NO_DEPRECATE
 	#endif
 #endif
-#if defined(WIN64_OS)||defined (WIN32_OS)
+#if defined(OS_WIN64)||defined (OS_WIN32)
 #include "abc_dir.h"
 #include "abc_ide_util.h" 
 void listFiles(const char *path,const char * ext)

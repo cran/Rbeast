@@ -1,9 +1,9 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
 #include "abc_001_config.h"
+#include <math.h>
+#include <string.h>
+#include <stdio.h>
 #include "abc_rand.h"
 #include "abc_mat.h"
 #include "beastv2_func.h"
@@ -20,7 +20,7 @@ static I32 __GetNumElem_of_XnewTerm(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR op
 	for (int i=0; i < MODEL.NUMBASIS; i++) { 
 		MAX_TOTAL_SEGNUM+=(MODEL.b[i].prior.maxKnotNum+1);
 	}
-	I32 MAX_NUMELEM_SEGINFO=MAX_TOTAL_SEGNUM * (sizeof(BEAST2_BASESEG)/4);
+	I32 MAX_NUMELEM_SEGINFO=(MAX_TOTAL_SEGNUM * sizeof(BEAST2_BASESEG)+3)/4;
 	I32 MAX_MEM_FOR_CHANGEPOINTS=6 * opt->io.N;
 	I32 Nraw=opt->io.dims[ opt->io.meta.whichDimIsTime-1L];
 	I32 MAX_COLS_YPRED=opt->io.q * MODEL.NUMBASIS;

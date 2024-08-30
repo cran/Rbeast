@@ -6,6 +6,7 @@
 #include "abc_date.h"  
 #include "abc_ide_util.h"  
 #include "abc_common.h" 
+#include "abc_sort.h"
 #include "abc_blas_lapack_lib.h"
 #if defined(PI)
 	#undef PI	
@@ -130,7 +131,7 @@ I32  tsAggegrationPrepare_Old(F32PTR oldTime,I32 Nold,F32 dT,I32PTR *SortedTimeI
 {	 
 	I32PTR  SORTED_IDX=malloc(sizeof(I32)*Nold);	
 	for (I32 i=0; i < Nold; i++) SORTED_IDX[i]=i;
-	f32_QuickSortA(oldTime,SORTED_IDX,0,Nold - 1);	
+	f32a_introSort_index(oldTime,0,Nold - 1,SORTED_IDX);
 	*SortedTimeIdx=SORTED_IDX;
 	F32PTR	SortedTimes=oldTime;
 	F32 T0=SortedTimes[0],T1=SortedTimes[Nold-1];
@@ -160,7 +161,7 @@ I32  tsAggegrationPrepare_Old(F32PTR oldTime,I32 Nold,F32 dT,I32PTR *SortedTimeI
 }
 I32  tsAggegrationPrepare(TimeVecInfo* tvec) {
    if (tvec->isStartDeltaOnly==1 && tvec->isConvertedFromStartDeltaOnly==1) {
-		r_printf("Error: there must be someting wrong in TsAggegrationPrepare\n ");
+		r_printf("Error: there must be something wrong in TsAggegrationPrepare\n ");
 		return 0;
 	}
 	F32 dT=tvec->out.dT;

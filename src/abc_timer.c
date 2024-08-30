@@ -1,10 +1,18 @@
 #include "abc_000_warning.h"
+#if ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
+	#ifndef  _GNU_SOURCE
+		#define _GNU_SOURCE
+	#endif
+	#ifndef  _POSIX_C_SOURCE
+       #define _POSIX_C_SOURCE 199309L
+	#endif
+#endif
 #include "abc_timer.h"
 static F64 conversionFactor;
 static F64 elapsedTimeAtBreakpoint;
-#if defined(MSVC_COMPILER)	
+#if defined(COMPILER_MSVC)	
 	static LARGE_INTEGER T0;
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 	static struct timespec T0;
 	#include "time.h" 
 #elif defined(__MACH__)
@@ -12,7 +20,7 @@ static F64 elapsedTimeAtBreakpoint;
 #endif
 void InitTimerFunc()
 {
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 	LARGE_INTEGER Frequency;
 	QueryPerformanceFrequency(&Frequency); 
 	conversionFactor=1./(double)Frequency.QuadPart;
@@ -26,9 +34,9 @@ void InitTimerFunc()
 }
 void StartTimer()
 {
-#if defined(MSVC_COMPILER)  
+#if defined(COMPILER_MSVC)  
 	QueryPerformanceCounter(&T0);	
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 	clock_gettime(CLOCK_MONOTONIC,&T0);	
 #elif defined(__MACH__) 
 	T0=mach_absolute_time();	
@@ -37,11 +45,11 @@ void StartTimer()
 F64 GetElapsedSecondsSinceStart()
 {	
 	F64 elapsedTime;
-#if defined(MSVC_COMPILER)  
+#if defined(COMPILER_MSVC)  
 	LARGE_INTEGER T;
 	QueryPerformanceCounter(&T);	
 	elapsedTime=(double)(T.QuadPart-T0.QuadPart)* conversionFactor;
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 	struct timespec T;
 	clock_gettime(CLOCK_MONOTONIC,&T);
 	elapsedTime=(double) (T.tv_sec - T0.tv_sec)+(double)(T.tv_nsec-T0.tv_nsec)/1000000000LL;
@@ -59,9 +67,9 @@ F64 GetElaspedTimeFromBreakPoint() {
 }
 U64 TimerGetTickCount() {
 	U64 tick;
-#if	defined(MSVC_COMPILER) 
+#if	defined(COMPILER_MSVC) 
 	tick=GetTickCount64();
-#elif ( defined(CLANG_COMPILER)||defined(GCC_COMPILER)||defined(SOLARIS_COMPILER) ) && !(defined(__APPLE__)||defined(__MACH__))
+#elif ( defined(COMPILER_CLANG)||defined(COMPILER_GCC)||defined(COMPILER_SOLARIS) ) && !(defined(__APPLE__)||defined(__MACH__))
 	struct timespec T;
 	clock_gettime(CLOCK_REALTIME,&T);
 	tick=T.tv_sec * 1000000000LL+T.tv_nsec;

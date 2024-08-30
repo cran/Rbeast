@@ -255,7 +255,7 @@ void mem_init(MemPointers* self) {
 }
 void dynbuf_init(DynMemBufPtr buf,int init_max_len) {
 	buf->cur_len=0;
-	if (init_max_len > buf->max_len) {		
+	if ( (size_t) init_max_len > buf->max_len) {		
 		if (buf->raw) {
 			free(buf->raw);			
 			buf->raw=NULL;
@@ -274,7 +274,7 @@ void dynbuf_kill(DynMemBufPtr buf) {
 	memset(buf,0,sizeof(DynMemBuf));
 }
 void dynbuf_requestmore(DynMemBufPtr buf,int moreBytes) {
-	int newLength=(int) (buf->cur_len+moreBytes) ;
+	size_t newLength=(size_t) (buf->cur_len+moreBytes) ;
 	if (newLength <=buf->max_len) {
 		if (buf->raw==NULL) {
 			buf->raw=malloc(buf->max_len);
@@ -335,7 +335,7 @@ void dynbuf_alloc_list(DynMemBufPtr buf,MemNode* list) {
 		 r_printf("ERROR: elem_size and algin should not be zeros (in abynbuf_nit).\n");
 		 return;
 	 }
-	 if (init_max_len > buf->max_len) {
+	 if ((size_t)init_max_len > buf->max_len) {
 		 buf->max_len=init_max_len;
 		 if (buf->p.raw) {
 			 free(buf->p.raw - buf->offset);
@@ -357,7 +357,7 @@ void dynbuf_alloc_list(DynMemBufPtr buf,MemNode* list) {
 	 memset(buf,0,sizeof(DynAlignedBuf));
  }
  void adynbuf_requestmore(DynAlignedBufPtr buf,int moreElements) {
-	 int newLength=moreElements+buf->cur_len;
+	 size_t newLength=moreElements+buf->cur_len;
 	 if (newLength <=buf->max_len) {
 		 return;
 	 }

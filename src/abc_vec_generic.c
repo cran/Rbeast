@@ -4,7 +4,7 @@
 #include "abc_000_warning.h"
 #include "abc_datatype.h"
 #include "abc_vec.h"
-#if defined(WIN64_OS)||defined(WIN32_OS)
+#if defined(OS_WIN64)||defined(OS_WIN32)
     #include <malloc.h> 
 #else
     #include <alloca.h> 

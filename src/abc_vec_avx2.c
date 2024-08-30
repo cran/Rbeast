@@ -6,19 +6,19 @@
 #include "abc_000_warning.h"
 #include "abc_vec.h"
 #define STATIC static
-#if defined (WIN64_OS)||defined(WIN32_OS)
+#if defined (OS_WIN64)||defined(OS_WIN32)
     #include <malloc.h> 
 #else
     #include <alloca.h> 
 #endif
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     #define __attribute__(x)
 #endif
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64) 
     #pragma clang optimize on
     #pragma clang attribute push (__attribute__((target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,fma,avx2"))),apply_to=function)
 #endif
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64) 
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
      #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,avx,avx2,fma,tune=haswell")
@@ -43,10 +43,10 @@
 #define add         _mm256_add_ps
 #define sub         _mm256_sub_ps
 #define addi32      _mm256_add_epi32
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include <immintrin.h>
 #include "abc_math_avx.h"
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 static INLINE __m256i GetMoveMask(int n) {
     __m128i maskIdx=_mm_cvtsi64_si128(0x0706050403020100);
     __m256i maskNum=_mm256_cvtepu8_epi32(maskIdx);
@@ -491,7 +491,7 @@ STATIC void avx2_f32_sqrt_vec(const F32PTR x,const F32PTR y,const int N)
     }    
     _mm256_zeroupper();
 }
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
 STATIC void avx2_f32_sin_vec_inplace_MSVC(const F32PTR x,const int N)
 {
     int i=0;
@@ -727,7 +727,7 @@ STATIC void avx2_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample,F
         maskstore(SX+i,mask,avg);
     }
 }
-#ifdef WIN64_OS 
+#ifdef OS_WIN64 
     #define WIN32_LEAN_AND_MEAN
     #include "windows.h"
 STATIC I32 avx2_f32_maxidx1(const F32PTR x,const int N,F32PTR val) {
@@ -1857,7 +1857,7 @@ STATIC  void avx2_f32_step_neg(const F32PTR X,const F32PTR Y,const F32PTR Z,cons
 #else
 static char a='a';
 #endif
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

@@ -1,4 +1,3 @@
-#include<stdio.h>
 #include<inttypes.h>
 #include <stdlib.h> 
 #include <string.h> 
@@ -9,6 +8,7 @@
 #include "abc_ide_util.h"  
 #include "abc_vec.h"       
 #include "abc_sort.h"     
+#include<stdio.h>  
 static const int DAYS_CUMSUM[2][13]={ 
 	                                    { 0,0,31,59,90,120,151,181,212,243,273,304,334 },
 										{ 0,0,31,60,91,121,152,182,213,244,274,305,335 }  
@@ -390,7 +390,30 @@ int    GetStrPattern_fmt3(char* fmtstr,DateFmtPattern3* pattern) {
 	pattern->order[1]='M';
 	pattern->order[2]='D';
 	char* pts[]={ yearPt,monPt,dayPt };
-	VOIDPTR_InsertionSort(pts,pattern->order,3);
+	if (pts[0] > pts[1]) {
+		char* tmp=pts[1];
+		char tmpval=pattern->order[1];
+		pts[1]=pts[0];
+		pts[0]=tmp;		
+		pattern->order[1]=pattern->order[0];
+		pattern->order[0]=tmpval;
+	}
+	if (pts[1] > pts[2]) {
+		char* tmp=pts[2];
+		char  tmpval=pattern->order[2];
+		pts[2]=pts[1];
+		pts[1]=tmp;		
+		pattern->order[2]=pattern->order[1];
+		pattern->order[1]=tmpval;
+		if (pts[0] > pts[1]) {
+			char* tmp=pts[1];
+			char tmpval=pattern->order[1];
+			pts[1]=pts[0];
+			pts[0]=tmp;			
+			pattern->order[1]=pattern->order[0];
+			pattern->order[0]=tmpval;
+		}
+	}
 	int64_t len;
 	len=(pts[1] - 1) - (pts[0]+1)+1;
 	if (len <=0) return 0;
@@ -954,18 +977,18 @@ int  FracYear_from_Strings(F64PTR out,char *s,int * strstart,int n) {
 	if (DONE) {
 		Nout=n;
 		if (DONE==1) {
-			r_printf("INFO: '%s' interpreted as %04d-%02d-%02d (Y-M-D)\n",s,year[0],month[0],day[0]);
+			q_printf("INFO: '%s' interpreted as %04d-%02d-%02d (Y-M-D)\n",s,year[0],month[0],day[0]);
 			for (int i=0; i < n; i++) {
 				out[i]=FracYear_from_YMD(year[i],month[i],day[i]);
 			}
 		} else if (DONE==2)	 {
-			r_printf("INFO: '%s' interpreted as %04d-%03d (Year-DOY)\n",s,year[0],day[0]);
+			q_printf("INFO: '%s' interpreted as %04d-%03d (Year-DOY)\n",s,year[0],day[0]);
 			for (int i=0; i < n; i++) {
 				out[i]=FracYear_from_intYDOY(year[i],day[i]);
 			}
 		}
 		else if (DONE==3) {
-			r_printf("INFO: '%s' interpreted as %04d-%02d (Year-Month)\n",s,year[0],month[0]);
+			q_printf("INFO: '%s' interpreted as %04d-%02d (Year-Month)\n",s,year[0],month[0]);
 			for (int i=0; i < n; i++) {
 				out[i]=year[i]+month[i]/12.0-1.0/24.0;
 			}

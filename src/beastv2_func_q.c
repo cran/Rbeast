@@ -1,7 +1,6 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
 #include "abc_001_config.h"
 #include "abc_rand.h"
@@ -9,6 +8,8 @@
 #include "abc_math.h"  
 #include "abc_vec.h"  
 #include "beastv2_func.h"
+#include "beastv2_prior_precfunc.h"
+#include <stdio.h>	       
 F32  GetPercentileNcp(F32PTR prob,I32 N,F32 pctile) {
 	F32 cumProb=0.f;
 	for (int i=0; i < N; i++) {
@@ -44,10 +45,7 @@ void SetupPointersForCoreResults(CORESULT* coreResults,BEAST2_BASIS_PTR b,I32 Nu
 		}
 	}
 }
-void BEAST2_EvaluateModel(
-	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
-	BEAST2_YINFO_PTR  yInfo,BEAST2_HyperPar *hyperPar,F32PTR precVec,VOID_PTR stream )
-{
+int BEAST2_Basis_To_XmarsXtX_XtY(BEAST2_BASIS_PTR b,I32 NUMBASIS,F32PTR Xt_mars,I32 N,F32PTR XtX,F32PTR XtY,BEAST2_YINFO_PTR  yInfo) {
 	I32 Npad=(I32)ceil((F32)N/8.0f) * 8; Npad=N;
 	I32 K=0;	 
 	for (I32 basisID=0; basisID < NUMBASIS; basisID++) {
@@ -78,30 +76,37 @@ void BEAST2_EvaluateModel(
 			}
 		}
 	}
-	curmodel->K=K;
 	F32PTR	GlobalMEMBuf=Xt_mars+K * Npad;
 	F32PTR	Xt_zeroBackup=GlobalMEMBuf;
 	if (yInfo->nMissing > 0) {
 		F32 fillvalue=0.f;
 		f32_mat_multirows_extract_set_by_scalar(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing,fillvalue);
 	}
-	F32PTR XtX=curmodel->XtX;
 	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,K,K,N,1.f,Xt_mars,Npad,Xt_mars,Npad,0.f,XtX,K);
-	F32PTR XtY=curmodel->XtY;
-	r_cblas_sgemv(CblasColMajor,CblasTrans,Npad,K,1,Xt_mars,Npad,yInfo->Y,1,0,XtY,1);
+	if (yInfo->q==1) {	
+		r_cblas_sgemv(CblasColMajor,CblasTrans,Npad,K,1,Xt_mars,Npad,yInfo->Y,1,0,XtY,1);
+	}	else {
+		r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,K,yInfo->q,N,1.f,Xt_mars,Npad,yInfo->Y,N,0.f,XtY,K);
+	}
 	if (yInfo->nMissing > 0) {
 		f32_mat_multirows_set_by_submat(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing);
 	}
+	return K;
+}
+void BEAST2_EvaluateModel(	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
+	      BEAST2_YINFO_PTR  yInfo,BEAST2_HyperPar *hyperPar,PRECSTATE_PTR precState,PREC_FUNCS * precFunc )
+{
+	curmodel->K=BEAST2_Basis_To_XmarsXtX_XtY(b,NUMBASIS,Xt_mars,N,curmodel->XtX,curmodel->XtY,yInfo);
+	I32 Npad=N;
+	I32 K=curmodel->K;
+	F32PTR XtX=curmodel->XtX;
+	F32PTR XtY=curmodel->XtY;
 	F32PTR cholXtX=curmodel->cholXtX;
 	F32PTR beta_mean=curmodel->beta_mean;	
-	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,precVec,K,1,K);
-	solve_U_as_LU_invdiag_sqrmat(cholXtX,XtY,beta_mean,K);
-	F32 alpha2_star=(yInfo->YtY_plus_alpha2Q[0] - DOT(K,XtY,beta_mean)) * 0.5;
-	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
-	F32 half_log_det_prior=-.5f * K*logf(precVec[0]);
-	F32 marg_lik=half_log_det_post - half_log_det_prior - yInfo->alpha1_star * logf(alpha2_star);
-	curmodel->alpha2Q_star[0]=alpha2_star;
-	curmodel->marg_lik=marg_lik;
+	precFunc->SetPrecXtXDiag(curmodel->precXtXDiag,b,NUMBASIS,precState);    
+	precFunc->chol_addCol(XtX,cholXtX,curmodel->precXtXDiag,K,1,K);
+	precFunc->SetNtermsPerPrecGrp(curmodel->nTermsPerPrecGrp,b,NUMBASIS,precState);
+	precFunc->ComputeMargLik(curmodel,precState,yInfo,hyperPar);
 	return;
 }
 void MatxVec(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR Y,F32PTR XtY,I32 N)
@@ -136,9 +141,9 @@ I32  GetInfoBandList(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Klastcol) {
 					info->K=min(Kbase+b->ke[j],Klastcol) - (Kbase+b->ks[j])+1;
 					info++;
 					numBands++;
-				}
-				else {
-					QUITFLAG=1;	break;
+				} else {
+					QUITFLAG=1;	
+					break;
 				}
 			}
 		} 
@@ -152,9 +157,9 @@ I32  GetInfoBandList(BEAST2_BASESEG* info,BEAST2_MODEL_PTR model,I32 Klastcol) {
 					info->K=min(Kbase+b->ke[j],Klastcol) - (Kbase+b->ks[j])+1;
 					info++;
 					numBands++;
-				}
-				else {
-					QUITFLAG=1;	break;
+				}	else {
+					QUITFLAG=1;	
+					break;
 				}
 			}
 		}
@@ -211,10 +216,10 @@ void MatxMat(BEAST2_BASESEG*infoX,I32 numBandsX,F32PTR X,BEAST2_BASESEG*infoY,I3
 			if (r2>=r1) {
 				I32 Nseg=r2 - r1+1;				
 				r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,\
-					Kband,Kseg,Nseg,1.0f,\
-					X+r1 - 1L,Npad,
-					Y+r1 - 1L,Npad,0.f,\
-					XtY+Kbandcsum,Knew); 
+					          Kband,Kseg,Nseg,1.0f,\
+					          X+r1 - 1L,Npad,
+					          Y+r1 - 1L,Npad,0.f,\
+					          XtY+Kbandcsum,Knew); 
 			}
 			Kbandcsum+=Kband;
 			X+=Kband * Npad;
@@ -253,67 +258,151 @@ void XtX_ByGroup(BEAST2_BASESEG* SEG,I32 numSeg,F32PTR X,F32PTR XtX,I32 N,I32 Kn
 		XtX+=Ksegcol*Knew;
 	}
 }
-void MR_EvaluateModel(
-	BEAST2_MODELDATA *curmodel,BEAST2_BASIS_PTR b,F32PTR Xt_mars,I32 N,I32 NUMBASIS,
-	BEAST2_YINFO_PTR yInfo,BEAST2_HyperPar *hyperPar,F32PTR precVec,VOID_PTR stream )
-{
-	I32 Npad=(I32)ceil((F32)N/8.0f) * 8; Npad=N;
-	I32 K=0;	 
-	for (I32 basisID=0; basisID < NUMBASIS; basisID++) {
-		BEAST2_BASIS_PTR basis=b+basisID;
-		if (basis->type !=OUTLIERID) {
-			int         NUM_SEG=basis->nKnot+1;
-			TKNOT_PTR   KNOT=basis->KNOT;
-			TORDER_PTR  ORDER=basis->ORDER;
-			BEAST2_BASESEG seg;
-			seg.ORDER1=basis->type==TRENDID ? 0 : 1;
-			for (int i=1; i <=NUM_SEG; i++) {
-				seg.R1=KNOT[(i - 1) - 1L];
-				seg.R2=KNOT[i - 1L] - 1L;
-				seg.ORDER2=basis->type==DUMMYID? 0 :  ORDER[i - 1L];
-				I32 k=basis->GenTerms(Xt_mars+Npad * K,N,&seg,&(basis->bConst));
-				K+=k;
+void Update_XtX_from_Xnewterm_ByGroup(F32PTR X,F32PTR Xnewterm,F32PTR XtX,F32PTR XtXnew,NEWTERM* NEW,BEAST2_MODEL_PTR model) {
+    const I32 k1=NEW->newcols.k1;
+	const I32 k2_old=NEW->newcols.k2_old;
+	const I32 k2_new=NEW->newcols.k2_new;
+	const I32 N=NEW->newcols.N;
+	const I32 Nlda=NEW->newcols.Nlda;
+	const I32 Knewterm=NEW->newcols.Knewterm;
+	const I32 KOLD=NEW->newcols.KOLD;
+	const I32 KNEW=NEW->newcols.KNEW;
+	const I32  Npad=N;
+	for (I32 i=1; i < k1; i++) SCPY(i,XtX+(i - 1L) * KOLD,XtXnew+(i - 1L) * KNEW);
+	if (Knewterm !=0) {
+		FILL0(XtXnew+(k1 - 1) * KNEW,(KNEW - k1+1) * KNEW); 
+		if (k1 > 1) {
+			BEAST2_BASESEG*  OLD_SEG=(BEAST2_BASESEG*)(Xnewterm+Knewterm * Npad);
+			I32              OLD_numSeg=GetInfoBandList(OLD_SEG,model,k1 - 1);
+			MatxMat( OLD_SEG,OLD_numSeg,X,
+				     NEW->SEG,NEW->numSeg,Xnewterm,
+				     XtXnew+(k1 - 1L) * KNEW,N,KNEW);
+		}
+		XtX_ByGroup(NEW->SEG,NEW->numSeg,Xnewterm,XtXnew+(k1 - 1) * KNEW+k1 - 1,N,KNEW);
+	}
+	if (k2_old !=KOLD) {
+		for (I32 kold=k2_old+1,knew=k2_new+1; kold <=KOLD; kold++,knew++) {
+			F32PTR ColStart_old=XtX+(kold - 1) * KOLD;
+			F32PTR ColStart_new=XtXnew+(knew - 1) * KNEW;
+			SCPY(k1 - 1,ColStart_old,ColStart_new                   ); 
+			SCPY(kold - k2_old,ColStart_old+(k2_old+1) - 1,ColStart_new+(k2_new+1) - 1); 
+		}
+		if (Knewterm !=0) {
+			BEAST2_BASESEG* OLD_SEG=(BEAST2_BASESEG*)(Xnewterm+Knewterm * Npad);
+			I32             OLD_numSeg=GetInfoBandList_post(OLD_SEG,model,k2_old+1);
+			MatxMat(NEW->SEG,NEW->numSeg,Xnewterm,
+				    OLD_SEG,OLD_numSeg,X+k2_old * Npad,
+				    XtXnew+(k2_new+1 - 1) * KNEW+k1 - 1,N,KNEW);
+		}
+	}
+}
+void Update_XtY_from_Xnewterm_ByGroup(F32PTR Y,F32PTR Xnewterm,F32PTR XtY,F32PTR XtYnew,NEWTERM* NEW,int q) {
+    const I32 k1=NEW->newcols.k1;
+	const I32 k2_old=NEW->newcols.k2_old;
+	const I32 k2_new=NEW->newcols.k2_new;
+	const I32 N=NEW->newcols.N;
+	const I32 Nlda=NEW->newcols.Nlda;
+	const I32 Knewterm=NEW->newcols.Knewterm;
+	const I32 KOLD=NEW->newcols.KOLD;
+	const I32 KNEW=NEW->newcols.KNEW;
+	const I32  Npad=N;
+	if (q==1) {
+		if (k1 > 1)          SCPY(k1 - 1,XtY,XtYnew);
+		if (Knewterm > 0)  	 MatxVec(NEW->SEG,NEW->numSeg,Xnewterm,Y,XtYnew+k1 - 1,N);
+		if (k2_old !=KOLD)  SCPY(KNEW - k2_new,XtY+(k2_old+1L) - 1L,XtYnew+(k2_new+1) - 1);
+	} else {
+		if (k1 > 1) {
+			for (I32 c=0; c < q;++c) {
+				SCPY(k1 - 1,XtY+KOLD * c,XtYnew+KNEW * c);
 			}
-		} 	else	{
-			int         numOfSeg=basis->nKnot;
-			TKNOT_PTR   knotList=basis->KNOT;
-			BEAST2_BASESEG seg;
-			seg.ORDER1=seg.ORDER2=0; 
-			for (int i=1; i <=numOfSeg; i++) {
-				seg.R1=knotList[(i)-1L];
-				seg.R2=knotList[(i)-1L];
-				I32 k=basis->GenTerms(Xt_mars+Npad * K,N,&seg,&(basis->bConst));
-				K+=k;
+		}
+		if (Knewterm > 0) {
+			r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,Knewterm,q,N,1.f,Xnewterm,Npad,Y,N,0.f,XtYnew+k1 - 1,KNEW);
+		}
+		if (k2_old !=KOLD) {
+			for (I32 c=0; c < q;++c) {
+				SCPY(KNEW -k2_new,XtY+(k2_old+1L) - 1L+KOLD * c,XtYnew+(k2_new+1) - 1+KNEW * c);
+			}
+		}
+	} 
+}
+void Update_XtX_from_Xnewterm_NoGroup(F32PTR X,F32PTR Xnewterm,F32PTR XtX,F32PTR XtXnew,NEWTERM* NEW,BEAST2_MODEL* MODEL_not_used) {
+    const I32 k1=NEW->newcols.k1;
+	const I32 k2_old=NEW->newcols.k2_old;
+	const I32 k2_new=NEW->newcols.k2_new;
+	const I32 N=NEW->newcols.N;
+	const I32 Nlda=NEW->newcols.Nlda;
+	const I32 Knewterm=NEW->newcols.Knewterm; 
+	const I32 KOLD=NEW->newcols.KOLD;
+	const I32 KNEW=NEW->newcols.KNEW;
+	for (I32 i=1; i < k1; i++) SCPY(i,XtX+(i - 1L) * KOLD,XtXnew+(i - 1L) * KNEW);
+	if (Knewterm !=0) {
+		FILL0(XtXnew+(k1 - 1) * KNEW,(KNEW - k1+1) * KNEW); 
+		if (k1 > 1) {
+			r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,k1 - 1,Knewterm,N,1.0f,
+				X,Nlda,
+				Xnewterm,Nlda,0.f,
+				XtXnew+(k1 - 1L) * KNEW,KNEW);
+		}
+		r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,
+			Knewterm,Knewterm,N,1.0,
+			Xnewterm,Nlda,
+			Xnewterm,Nlda,0.f,
+			XtXnew+(k1 - 1) * KNEW+k1 - 1,KNEW);
+	}
+	if (k2_old !=KOLD) {
+		for (I32 kold=k2_old+1,knew=k2_new+1; kold <=KOLD; kold++,knew++) {
+			F32PTR ColStart_old=XtX+(kold - 1) * KOLD;
+			F32PTR ColStart_new=XtXnew+(knew - 1) * KNEW;
+			SCPY(k1 - 1,ColStart_old,ColStart_new); 
+			SCPY(kold - k2_old,ColStart_old+(k2_old+1) - 1,ColStart_new+(k2_new+1) - 1); 
+		}
+		if (Knewterm !=0) {
+			r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,
+				Knewterm,(KOLD - k2_old),N,1.0,
+				Xnewterm,Nlda,
+				X+(k2_old+1 - 1) * Nlda,Nlda,0.0,
+				XtXnew+(k2_new+1 - 1) * KNEW+k1 - 1,KNEW);
+		}
+	}
+}
+void Update_XtY_from_Xnewterm_NoGroup(F32PTR Y,F32PTR Xnewterm,F32PTR XtY,F32PTR XtYnew,NEWTERM* NEW,I32 q) {
+    const I32 k1=NEW->newcols.k1;
+	const I32 k2_old=NEW->newcols.k2_old;
+	const I32 k2_new=NEW->newcols.k2_new;
+	const I32 N=NEW->newcols.N;
+	const I32 Nlda=NEW->newcols.Nlda;
+	const I32 Knewterm=NEW->newcols.Knewterm; 
+	const I32 KOLD=NEW->newcols.KOLD;
+	const I32 KNEW=NEW->newcols.KNEW;
+	if (q==1) {
+		if (k1 > 1)       SCPY(k1 - 1,XtY,XtYnew);
+		if (Knewterm > 0) { 
+				r_cblas_sgemv(CblasColMajor,CblasTrans,N,Knewterm,1.f,
+						Xnewterm,Nlda,
+						Y,1L,0.f,
+					    XtYnew+k1 - 1,1L);
+		}
+		if (k2_old !=KOLD) SCPY(KNEW - k2_new,XtY+(k2_old+1L) - 1L,XtYnew+(k2_new+1) - 1);
+	}
+	else {
+		if (k1 > 1) {
+			for (I32 c=0; c < q;++c) {
+				SCPY(k1 - 1,XtY+KOLD * c,XtYnew+KNEW * c);
+			}
+		}
+		if (Knewterm > 0) {
+			r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans, 
+				Knewterm,q,N,1.f, 
+				Xnewterm,Nlda,
+				Y,N,0.f,
+				XtYnew+k1 -1,KNEW);
+		}
+		if (k2_old !=KOLD) {
+			for (I32 c=0; c < q;++c) {
+				SCPY(KNEW - k2_new,XtY+(k2_old+1L) - 1L+KOLD * c,XtYnew+(k2_new+1) - 1+KNEW * c);
 			}
 		}
 	}
-	curmodel->K=K;
-	F32PTR	GlobalMEMBuf=Xt_mars+K * Npad;
-	F32PTR	Xt_zeroBackup=GlobalMEMBuf;
-	if (yInfo->nMissing > 0) {
-		F32 fillvalue=0.f;
-		f32_mat_multirows_extract_set_by_scalar(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing,fillvalue);
-	}
-	F32PTR XtX=curmodel->XtX;
-	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,K,K,N,1.f,Xt_mars,Npad,Xt_mars,Npad,0.f,XtX,K);
-    I32 q=yInfo->q;
-	F32PTR XtY=curmodel->XtY;
-	r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,K,q,N,1.f,Xt_mars,Npad,yInfo->Y,N,0.f,XtY,K);
-	if (yInfo->nMissing > 0) {
-		f32_mat_multirows_set_by_submat(Xt_mars,Npad,K,Xt_zeroBackup,yInfo->rowsMissing,yInfo->nMissing);
-	}
-	F32PTR cholXtX=curmodel->cholXtX;
-	F32PTR beta_mean=curmodel->beta_mean;	
-	chol_addCol_skipleadingzeros_prec_invdiag(XtX,cholXtX,precVec,K,1,K);
-	solve_U_as_LU_invdiag_sqrmat_multicols(cholXtX,XtY,beta_mean,K,q);
-    r_cblas_sgemm(CblasColMajor,CblasTrans,CblasNoTrans,q,q,K,1.f,beta_mean,K,XtY,K,0.f,curmodel->alpha2Q_star,q);
-	r_ippsSub_32f(curmodel->alpha2Q_star,yInfo->YtY_plus_alpha2Q,curmodel->alpha2Q_star,q * q);
-	r_LAPACKE_spotrf(LAPACK_COL_MAJOR,'U',q,curmodel->alpha2Q_star,q); 
-	F32 log_det_alphaQ=sum_log_diagv2(curmodel->alpha2Q_star,q);
-	F32 half_log_det_post=sum_log_diagv2(cholXtX,K);
-	F32 half_log_det_prior=-.5f * K*logf(precVec[0]);
-	F32 marg_lik=q*(half_log_det_post - half_log_det_prior) - yInfo->alpha1_star * log_det_alphaQ*2.0f;
-    curmodel->marg_lik=marg_lik;
- 	return;
 }
 #include "abc_000_warning.h"

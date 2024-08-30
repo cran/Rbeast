@@ -44,15 +44,13 @@ static void DSVT_UpdateGoodVecForNewTerm(BEAST2_BASIS_PTR basis,NEWTERM_PTR new,
 	if (flag !=ChORDER) {
 		basis->goodNum=i08_sum_binvec(goodVec,Npad16);
 	}
-#define InsertNewElem(dst,n,newIdx,newValue,T)                       \
-         for(rI32 i=(n); i>=(newIdx);i--) *((T*)dst+i)=*((T*)dst+i-1); \
-           *((T*)dst+newIdx-1)=newValue;
-#define RepeatElem(dst,n,newIdx,T)                 for(I32 i=(n); i>=(newIdx); i--) *((T*)dst+i)=*((T*)dst+i-1); 
-#define ReplaceElem(dst,n,newIdx,newValue,T)      *((T*)dst+newIdx-1)=newValue;
-#define DeleteElem(dst,n,newIdx,T)                 memcpy((T*)dst+newIdx-1,(T*)dst+newIdx+1-1,sizeof(T)*(n-(newIdx)));
-#define MergeTwoElemWithNewValue(dst,n,newIdx,newValue,T)  \
-            *((T*)dst+newIdx-1)=newValue;\
-			memcpy((T*)dst+(newIdx+1) - 1,(T*)dst+(newIdx+2) - 1,sizeof(T)* (n - (newIdx+2L)+1L));
+#define InsertNewElem(dst,n,newIdx,newValue,T)            for(I32 i=(n); i>=(newIdx);i--) *((T*)dst+i)=*((T*)dst+i-1); \
+                                                                 *((T*)dst+newIdx-1)=newValue;
+#define RepeatElem(dst,n,newIdx,T)                        for(I32 i=(n); i>=(newIdx); i--) *((T*)dst+i)=*((T*)dst+i-1); 
+#define ReplaceElem(dst,n,newIdx,newValue,T)              *((T*)dst+newIdx-1)=newValue;
+#define DeleteElem(dst,n,newIdx,T)                          memmove((T*)dst+newIdx-1,(T*)dst+newIdx+1-1,sizeof(T)*(n-(newIdx)));
+#define MergeTwoElemWithNewValue(dst,n,newIdx,newValue,T)   *((T*)dst+newIdx-1)=newValue;\
+			                                                      memmove((T*)dst+(newIdx+1) - 1,(T*)dst+(newIdx+2) - 1,sizeof(T)* (n - (newIdx+2L)+1L));
 #define DoNothing(dst,n,T) ;
 	TORDER_PTR orderList=basis->ORDER; 	
     I32        nKnot=basis->nKnot;

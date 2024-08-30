@@ -6,8 +6,307 @@
 #include "abc_common.h"
 #include "abc_date.h"
 #if P_INTERFACE==1  
+#include "limits.h"
+void** PyArray_API=NULL;
+typedef unsigned char npy_bool;
+#define NPY_SIZEOF_SHORT SIZEOF_SHORT
+#define NPY_SIZEOF_INT   SIZEOF_INT
+#define NPY_SIZEOF_LONG SIZEOF_LONG
+#define NPY_SIZEOF_FLOAT 4
+#define NPY_SIZEOF_COMPLEX_FLOAT 8
+#define NPY_SIZEOF_DOUBLE 8
+#define NPY_SIZEOF_COMPLEX_DOUBLE 16
+#define NPY_SIZEOF_LONGDOUBLE 8
+#define NPY_SIZEOF_COMPLEX_LONGDOUBLE 16
+#define NPY_SIZEOF_PY_INTPTR_T 8
+#define NPY_SIZEOF_OFF_T 4
+#define NPY_SIZEOF_PY_LONG_LONG 8
+#define NPY_SIZEOF_LONGLONG 8
+#define NPY_SIZEOF_CHAR 1
+#define NPY_SIZEOF_BYTE 1
+#define NPY_SIZEOF_DATETIME 8
+#define NPY_SIZEOF_TIMEDELTA 8
+#define NPY_SIZEOF_INTP  NPY_SIZEOF_PY_INTPTR_T
+#define NPY_SIZEOF_UINTP NPY_SIZEOF_PY_INTPTR_T
+#define NPY_SIZEOF_HALF 2
+#define NPY_BITSOF_BOOL (sizeof(npy_bool) * CHAR_BIT)
+#define NPY_BITSOF_CHAR CHAR_BIT
+#define NPY_BITSOF_BYTE (NPY_SIZEOF_BYTE * CHAR_BIT)
+#define NPY_BITSOF_SHORT (NPY_SIZEOF_SHORT * CHAR_BIT)
+#define NPY_BITSOF_INT (NPY_SIZEOF_INT * CHAR_BIT)
+#define NPY_BITSOF_LONG (NPY_SIZEOF_LONG * CHAR_BIT)
+#define NPY_BITSOF_LONGLONG (NPY_SIZEOF_LONGLONG * CHAR_BIT)
+#define NPY_BITSOF_INTP (NPY_SIZEOF_INTP * CHAR_BIT)
+#define NPY_BITSOF_HALF (NPY_SIZEOF_HALF * CHAR_BIT)
+#define NPY_BITSOF_FLOAT (NPY_SIZEOF_FLOAT * CHAR_BIT)
+#define NPY_BITSOF_DOUBLE (NPY_SIZEOF_DOUBLE * CHAR_BIT)
+#define NPY_BITSOF_LONGDOUBLE (NPY_SIZEOF_LONGDOUBLE * CHAR_BIT)
+#if NPY_BITSOF_LONG==8
+#define NPY_INT8 NPY_LONG
+#define NPY_UINT8 NPY_ULONG
+#elif NPY_BITSOF_LONG==16
+#define NPY_INT16 NPY_LONG
+#define NPY_UINT16 NPY_ULONG
+#elif NPY_BITSOF_LONG==32
+#define NPY_INT32 NPY_LONG
+#define NPY_UINT32 NPY_ULONG 
+#elif NPY_BITSOF_LONG==64
+#define NPY_INT64 NPY_LONG
+#define NPY_UINT64 NPY_ULONG
+#elif NPY_BITSOF_LONG==128
+#define NPY_INT128 NPY_LONG
+#define NPY_UINT128 NPY_ULONG
+#endif
+#if NPY_BITSOF_LONGLONG==8
+#  ifndef NPY_INT8
+#    define NPY_INT8 NPY_LONGLONG
+#    define NPY_UINT8 NPY_ULONGLONG
+#  endif
+#elif NPY_BITSOF_LONGLONG==16
+#  ifndef NPY_INT16
+#    define NPY_INT16 NPY_LONGLONG
+#    define NPY_UINT16 NPY_ULONGLONG
+#  endif
+#elif NPY_BITSOF_LONGLONG==32
+#  ifndef NPY_INT32
+#    define NPY_INT32 NPY_LONGLONG
+#    define NPY_UINT32 NPY_ULONGLONG
+#  endif
+#elif NPY_BITSOF_LONGLONG==64
+#  ifndef NPY_INT64
+#    define NPY_INT64 NPY_LONGLONG
+#    define NPY_UINT64 NPY_ULONGLONG
+#  endif
+#elif NPY_BITSOF_LONGLONG==128
+#  ifndef NPY_INT128
+#    define NPY_INT128 NPY_LONGLONG
+#    define NPY_UINT128 NPY_ULONGLONG
+#  endif
+#elif NPY_BITSOF_LONGLONG==256
+#  define NPY_INT256 NPY_LONGLONG
+#  define NPY_UINT256 NPY_ULONGLONG
+#endif
+#if NPY_BITSOF_INT==8
+#ifndef NPY_INT8
+#define NPY_INT8 NPY_INT
+#define NPY_UINT8 NPY_UINT
+#endif
+#elif NPY_BITSOF_INT==16
+#ifndef NPY_INT16
+#define NPY_INT16 NPY_INT
+#define NPY_UINT16 NPY_UINT
+#endif
+#elif NPY_BITSOF_INT==32
+#ifndef NPY_INT32
+#define NPY_INT32 NPY_INT
+#define NPY_UINT32 NPY_UINT 
+#endif
+#elif NPY_BITSOF_INT==64
+#ifndef NPY_INT64
+#define NPY_INT64 NPY_INT
+#define NPY_UINT64 NPY_UINT
+#endif
+#elif NPY_BITSOF_INT==128
+#ifndef NPY_INT128
+#define NPY_INT128 NPY_INT
+#define NPY_UINT128 NPY_UINT
+#endif
+#endif
+#if NPY_BITSOF_SHORT==8
+#ifndef NPY_INT8
+#define NPY_INT8 NPY_SHORT
+#define NPY_UINT8 NPY_USHORT
+#endif
+#elif NPY_BITSOF_SHORT==16
+#ifndef NPY_INT16
+#define NPY_INT16 NPY_SHORT
+#define NPY_UINT16 NPY_USHORT
+#endif
+#elif NPY_BITSOF_SHORT==32
+#ifndef NPY_INT32
+#define NPY_INT32 NPY_SHORT
+#define NPY_UINT32 NPY_USHORT
+#endif
+#elif NPY_BITSOF_SHORT==64
+#ifndef NPY_INT64
+#define NPY_INT64 NPY_SHORT
+#define NPY_UINT64 NPY_USHORT
+#endif
+#elif NPY_BITSOF_SHORT==128
+#ifndef NPY_INT128
+#define NPY_INT128 NPY_SHORT
+#define NPY_UINT128 NPY_USHORT
+#endif
+#endif
+#if NPY_BITSOF_CHAR==8
+#ifndef NPY_INT8
+#define NPY_INT8 NPY_BYTE
+#define NPY_UINT8 NPY_UBYTE 
+#endif
+#elif NPY_BITSOF_CHAR==16
+#ifndef NPY_INT16
+#define NPY_INT16 NPY_BYTE
+#define NPY_UINT16 NPY_UBYTE
+#endif
+#elif NPY_BITSOF_CHAR==32
+#ifndef NPY_INT32
+#define NPY_INT32 NPY_BYTE
+#define NPY_UINT32 NPY_UBYTE
+#endif
+#elif NPY_BITSOF_CHAR==64
+#ifndef NPY_INT64
+#define NPY_INT64 NPY_BYTE
+#define NPY_UINT64 NPY_UBYTE
+#endif
+#elif NPY_BITSOF_CHAR==128
+#ifndef NPY_INT128
+#define NPY_INT128 NPY_BYTE
+#define NPY_UINT128 NPY_UBYTE
+#endif
+#endif
+#if NPY_BITSOF_DOUBLE==32
+#ifndef NPY_FLOAT32
+#define NPY_FLOAT32 NPY_DOUBLE
+#define NPY_COMPLEX64 NPY_CDOUBLE
+#endif
+#elif NPY_BITSOF_DOUBLE==64
+#ifndef NPY_FLOAT64
+#define NPY_FLOAT64 NPY_DOUBLE
+#define NPY_COMPLEX128 NPY_CDOUBLE
+#endif
+#elif NPY_BITSOF_DOUBLE==80
+#ifndef NPY_FLOAT80
+#define NPY_FLOAT80 NPY_DOUBLE
+#define NPY_COMPLEX160 NPY_CDOUBLE
+#endif
+#elif NPY_BITSOF_DOUBLE==96
+#ifndef NPY_FLOAT96
+#define NPY_FLOAT96 NPY_DOUBLE
+#define NPY_COMPLEX192 NPY_CDOUBLE
+#endif
+#elif NPY_BITSOF_DOUBLE==128
+#ifndef NPY_FLOAT128
+#define NPY_FLOAT128 NPY_DOUBLE
+#define NPY_COMPLEX256 NPY_CDOUBLE
+#endif
+#endif
+#if NPY_BITSOF_FLOAT==32
+#ifndef NPY_FLOAT32
+#define NPY_FLOAT32 NPY_FLOAT
+#define NPY_COMPLEX64 NPY_CFLOAT
+#endif
+#elif NPY_BITSOF_FLOAT==64
+#ifndef NPY_FLOAT64
+#define NPY_FLOAT64 NPY_FLOAT
+#define NPY_COMPLEX128 NPY_CFLOAT
+#endif
+#elif NPY_BITSOF_FLOAT==80
+#ifndef NPY_FLOAT80
+#define NPY_FLOAT80 NPY_FLOAT
+#define NPY_COMPLEX160 NPY_CFLOAT
+#endif
+#elif NPY_BITSOF_FLOAT==96
+#ifndef NPY_FLOAT96
+#define NPY_FLOAT96 NPY_FLOAT
+#define NPY_COMPLEX192 NPY_CFLOAT
+#endif
+#elif NPY_BITSOF_FLOAT==128
+#ifndef NPY_FLOAT128
+#define NPY_FLOAT128 NPY_FLOAT
+#define NPY_COMPLEX256 NPY_CFLOAT
+#endif
+#endif
+typedef Py_intptr_t  npy_intp;
+typedef Py_uintptr_t npy_uintp;
+typedef enum {
+    NPY_ANYORDER=-1,  
+    NPY_CORDER=0,     
+    NPY_FORTRANORDER=1,        
+    NPY_KEEPORDER=2            
+} NPY_ORDER;
+typedef struct {
+    npy_intp* ptr;
+    int len;
+} PyArray_Dims;
+#define NPY_ARRAY_F_CONTIGUOUS    0x0002
+#define NPY_ARRAY_ALIGNED         0x0100
+#define NPY_ARRAY_WRITEABLE       0x0400
+#define NPY_ARRAY_BEHAVED         (NPY_ARRAY_ALIGNED|NPY_ARRAY_WRITEABLE)
+#define NPY_ARRAY_FARRAY          (NPY_ARRAY_F_CONTIGUOUS|NPY_ARRAY_BEHAVED)
+#define PyArray_Type           (*(PyTypeObject *)             PyArray_API[2])
+#define PyArray_DescrFromType  (*(PyArray_Descr * (*)(int))   PyArray_API[45])
+#define PyArray_Size           (*(npy_intp (*)(PyObject *))   PyArray_API[59])
+#define PyArray_NewFromDescr   (*(PyObject * (*)(PyTypeObject *,PyArray_Descr *,int,npy_intp const *,npy_intp const *,void *,int,PyObject *)) \
+                              PyArray_API[94])		 
+#define PyArray_FromArray      (*(PyObject * (*)(PyArrayObject *,PyArray_Descr *,int))                   PyArray_API[109])		 
+#define PyArray_CheckFromAny   (*(PyObject * (*)(PyObject *,PyArray_Descr *,int,int,int,PyObject *))  PyArray_API[108])	
+#define PyArray_Newshape       (*(PyObject * (*)(PyArrayObject *,PyArray_Dims *,NPY_ORDER))              PyArray_API[135])		 
+#define PyArray_GetPtr         (*(void * (*)(PyArrayObject *,npy_intp const*))                            PyArray_API[160])
+#define PyArray_MultiplyList   (*(npy_intp (*)(npy_intp const *,int))                                     PyArray_API[158])
+#define PyArray_DIMS(obj)       (((PyArrayObject_fields *)(obj))->dimensions)
+#define PyArray_FROM_OF(m,flags) PyArray_CheckFromAny(m,NULL,0,0,flags,NULL)		 
+#define PyArray_Check(op)        PyObject_TypeCheck(op,&PyArray_Type)		 
+#define PyArray_SIZE(m)          PyArray_MultiplyList(PyArray_DIMS(m),PyArray_NDIM(m))
+#define NPY_ATTR_DEPRECATE(text)
+enum NPY_TYPES {
+    NPY_BOOL=0,NPY_BYTE,NPY_UBYTE,NPY_SHORT,NPY_USHORT,
+    NPY_INT,NPY_UINT,NPY_LONG,NPY_ULONG,NPY_LONGLONG,NPY_ULONGLONG,
+    NPY_FLOAT,NPY_DOUBLE,NPY_LONGDOUBLE,NPY_CFLOAT,NPY_CDOUBLE,NPY_CLONGDOUBLE,
+    NPY_OBJECT=17,NPY_STRING,NPY_UNICODE,NPY_VOID,
+    NPY_DATETIME,NPY_TIMEDELTA,NPY_HALF,NPY_NTYPES,NPY_NOTYPE,
+    NPY_CHAR NPY_ATTR_DEPRECATE("Use NPY_STRING"),
+    NPY_USERDEF=256,  
+    NPY_NTYPES_ABI_COMPATIBLE=21 
+};
+typedef Py_hash_t npy_hash_t;
+typedef struct  PyArrayObject PyArrayObject;
+typedef struct  PyArray_ArrFuncs PyArray_ArrFuncs;
+typedef struct  NpyAuxData  NpyAuxData;
+typedef struct  NpyAuxData  NpyAuxData;
+typedef struct _PyArray_Descr {
+    PyObject_HEAD
+        PyTypeObject* typeobj;
+    char kind;  
+    char type; 
+    char byteorder; 
+    char flags;    
+    int type_num;  
+    int elsize;    
+    int alignment; 
+    struct _arr_descr* subarray;   
+    PyObject* fields; 
+    PyObject* names; 
+    PyArray_ArrFuncs* f;  
+    PyObject* metadata;          
+    NpyAuxData* c_metadata; 
+    npy_hash_t hash; 
+} PyArray_Descr;
+typedef struct tagPyArrayObject_fields {
+    PyObject_HEAD
+        char* data;  
+    int nd;      
+    npy_intp* dimensions; 
+    npy_intp* strides;     
+    PyObject* base;
+    PyArray_Descr* descr;     
+    int flags;                
+    PyObject* weakreflist;    
+    void* _buffer_info;       
+} PyArrayObject_fields;
+static int       PyArray_TYPE(const PyArrayObject* arr) { return ((PyArrayObject_fields*)arr)->descr->type_num; }
+static void* PyArray_DATA(PyArrayObject* arr) { return ((PyArrayObject_fields*)arr)->data; }
+static npy_intp  PyArray_ITEMSIZE(const PyArrayObject* arr) { return ((PyArrayObject_fields*)arr)->descr->elsize; }
+static int       PyArray_NDIM(const PyArrayObject* arr) { return ((PyArrayObject_fields*)arr)->nd; }
 int  JDN_to_DateNum(int jdn) {
     return jdn - JulianDayNum_from_civil_ag1(1,1,1);
+}
+void StdouFlush(void) {
+    PyObject* sysout=PySys_GetObject("__stdout__");           
+    PyObject* pfflush=PyObject_GetAttrString(sysout,"flush");  
+    int       ok=PyCallable_Check(pfflush); 
+    PyObject* out=PyObject_CallObject(pfflush,NULL);		 
+    Py_XDECREF(pfflush);
+    Py_XDECREF(out);
 }
 PyObject* currentModule;
 PyObject* classOutput=NULL;
@@ -356,8 +655,7 @@ I32   GetConsoleWidth() {
         return 80;
     }
     PyObject* get_console_size=PyObject_GetAttrString(osModule,"get_terminal_size"); 
-    Pob result; 
-    result=PyObject_CallMethod(osModule,"get_terminal_size",NULL);
+    Pob result=PyObject_CallMethod(osModule,"get_terminal_size",NULL);                    
     Pob col=PyObject_GetAttrString(result,"columns");  
     int width=PyLong_AsLong(col);
     Py_XDECREF(get_console_size);
@@ -694,13 +992,13 @@ static PyObject * BarObject_new(PyTypeObject* type,PyObject* args,PyObject* kwds
         self->weakreflist=Py_None;
        Py_INCREF(Py_None);
     }   
-    r_printf("New called...%#x  inst_dict %#x \n",self,self->inst_dict);
+    r_printf("New called...%p  inst_dict %p \n",self,self->inst_dict);
     return self;
 }
 static int BarObject_init(BarObject* self,PyObject* args,PyObject* kwds) {
     static char* kwlist[]={ "first","last","number",NULL };
     PyObject* first=NULL,* last=NULL,* tmp;
-    r_printf("Init called... %#x\n",self);
+    r_printf("Init called... %p\n",self);
     return 0;
 }
 static void  BarObject_dealloc(BarObject* self) {

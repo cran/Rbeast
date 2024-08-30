@@ -1,6 +1,6 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
-#if defined(WIN64_OS) 
+#if defined(OS_WIN64) 
 #include "abc_timer.h"
 #include "abc_win32_demo.h"
 GlobalStruct gData;
@@ -264,7 +264,7 @@ HWND GetConsoleHwnd(void)
 	SetConsoleTitle(pszOldWindowTitle);
 	return(hwndFound);
 }
-#if defined(MSVC_COMPILER)
+#if defined(COMPILER_MSVC)
 #include <io.h> 
 void SetupConsole()
 {

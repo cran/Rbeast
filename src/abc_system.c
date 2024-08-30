@@ -1,7 +1,7 @@
 #include "abc_000_warning.h"
 #include "abc_000_macro.h"
 volatile char ctrl_C_Pressed=0;
-#if ( defined(WIN64_OS)||defined (WIN32_OS)) && defined (MSVC_COMPILER)
+#if ( defined(OS_WIN64)||defined (OS_WIN32)) && defined (COMPILER_MSVC)
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
 #include <signal.h>

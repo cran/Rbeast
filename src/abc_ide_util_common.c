@@ -7,7 +7,6 @@
 #include "abc_date.h"
 #include "abc_vec.h"
 #include "abc_sort.h"
-extern void matlab_IOflush(void);
 I08 IDE_USER_INTERRUPT;
 void* CreateNumVector(DATA_TYPE dtype,int length,VOIDPTR* data_ptr) {	
 	return CreateNumVar( dtype,&length,1,data_ptr);
@@ -37,12 +36,12 @@ void* CreateI32NumMatrix(int Nrow,int Ncol,VOIDPTR* data_ptr) {
 	int dims[]={ Nrow,Ncol };
 	return CreateNumVar(DATA_INT32,dims,2,data_ptr);
 }
-void printProgress(F32 pct,I32 width,char * buf,I32 firstTimeRun) {
+void printProgress1(F32 pct,I32 width,char * buf,I32 firstTimeRun) {
  	static char spinnerChar[]="|/-\\";
 	static I32  cnt=1;
 	cnt++;
 	cnt=(cnt==4) ? 0 : cnt;
-	width=max(width,35); 
+	width=max(width,35);  
 	memset(buf,'*',width); 
 	I32  len=0;
 	buf[len++]=spinnerChar[cnt];
@@ -60,25 +59,21 @@ void printProgress(F32 pct,I32 width,char * buf,I32 firstTimeRun) {
 	buf[width - 1]=']';
 	buf[width]=0;
 #if R_INTERFACE==1
-	Rprintf("\r%s",buf); 
+	r_printf("\r%s",buf);
 #elif P_INTERFACE==1
 	r_printf("\r%s",buf);
 #elif M_INTERFACE==1
-	if (firstTimeRun==1)
-	{
+	if (firstTimeRun==1) 	{
 		r_printf("\r\n");
-		r_printf("%s",buf);		
-		matlab_IOflush();
-	}
-	else
-	{
+		r_printf("%s",buf);
+	} else {
 		char * back=buf+width+5;
 		memset(back,'\b',width+2);
 		back[width+2]=0;
 		r_printf(back);
 		r_printf("%s\r\n",buf);
-		matlab_IOflush();
 	}
+	StdouFlush();
 #endif	
 }
 void printProgress2(F32 pct,F64 time,I32 width,char * buf,I32 firstTimeRun)
@@ -122,20 +117,17 @@ void printProgress2(F32 pct,F64 time,I32 width,char * buf,I32 firstTimeRun)
 #elif P_INTERFACE==1
 	r_printf("\r%s",buf);
 #elif M_INTERFACE==1
-	if (firstTimeRun==1)
-	{
+	if (firstTimeRun==1)	{
 		r_printf("\r\n");
 		r_printf("%s",buf);
-		matlab_IOflush();
-	}
-	else {
+	} else {
 		char * back=buf+width+5;
 		memset(back,'\b',width+2);
 		back[width+2]=0;
 		r_printf(back);
-		r_printf("%s\r\n",buf);
-		matlab_IOflush();
+		r_printf("%s\r\n",buf); 
 	}
+	StdouFlush();
 #endif	
 }
 void RemoveField(FIELD_ITEM *fieldList,int nfields,char * fieldName)
@@ -836,7 +828,7 @@ static int IsRegularTS(F64PTR t,int N,F32* dt) {
 	  t.Nbad=Nbadvalues;
 	  t.sorted_time_indices=quick_timevec_allocator_sortidx(tv,Nold);
 	  i32_seq(t.sorted_time_indices,0,1,Nold); 
-	  f64_QuickSortA(oldTime,t.sorted_time_indices,0,Nold - 1);
+	  f64a_introSort_index(oldTime,0,Nold - 1,t.sorted_time_indices);
 	  Nold=Nold - Nbadvalues;
 	 t.IsOrdered=1L;
 	if (tv->isConvertedFromStartDeltaOnly==0) {		  

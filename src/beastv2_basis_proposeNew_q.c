@@ -2,12 +2,13 @@
 #include <math.h>
 #include "abc_000_warning.h"
 #include "abc_mcmc.h"  
+#include "abc_ide_util.h"  
 #include "beastv2_header.h"
 #include "abc_vec.h"   
-static INLINE void  __CalcAbsDeviation(F32PTR  deviation,F32PTR avgDeviation,PROP_DATA_PTR info,I32 NumBasis) {
-	F32 invsample=1.f/info->samples[0];
-	I32 N=info->N;
-	I32 q=info->yInfo->q; 
+static  void  __CalcAbsDeviation(F32PTR  deviation,F32PTR avgDeviation,PROP_DATA_PTR info,I32 NumBasis) {
+	F32     invsample=1.f/info->samples[0];
+	I32     N=info->N;
+	I32     q=info->yInfo->q; 
 	F32PTR  Y=info->yInfo->Y;
 	I32PTR  rowsMissing=info->yInfo->rowsMissing;
 	I32     nMissing=info->yInfo->nMissing;		
@@ -30,7 +31,7 @@ static INLINE void  __CalcAbsDeviation(F32PTR  deviation,F32PTR avgDeviation,PRO
 				avgDeviation[col]=sumError/info->yInfo->n;
 				Y+=N;  
 				Ypred1+=N;
-				deviation+=N;
+				deviation+=N;			
 		}
 ;
 	} 
@@ -83,17 +84,17 @@ static INLINE void  __CalcAbsDeviation(F32PTR  deviation,F32PTR avgDeviation,PRO
 	if (q > 1) {
 		deviation=deviation - N * q;
 		for (int i=0; i < q;++i) {
-			f32_mul_val_inplace(1./avgDeviation[i],(deviation+i * N),N);
+			f32_mul_val_inplace(1./avgDeviation[i],(deviation+i * N),N); 	
 		}
 		for (int i=1; i < q;++i) {
-			F32PTR deviation2=deviation+i * N;
+			F32PTR relDeviation2=deviation+i * N;
 			for (int j=0; j < N;++j) {
-				deviation[j]=max(deviation[j],deviation2[j]);
+				deviation[j]=max(deviation[j],relDeviation2[j]);
 			}
 		}
 	}
 }
-static INLINE void __CalcExtremKnotPos_ST_BirthOnly(I08PTR extremePosVec,F32PTR deviation,I32 N,F32 threshold) {
+static INLINE void __CalcExtremKnotPos(I08PTR extremePosVec,F32PTR deviation,I32 N,F32 threshold) {
 	int i=0;
 	for (; i < N - 3; i+=4) {
 		extremePosVec[i]=deviation[i]   > threshold;
@@ -104,16 +105,7 @@ static INLINE void __CalcExtremKnotPos_ST_BirthOnly(I08PTR extremePosVec,F32PTR 
 	for (; i < N ;++i) 
 		extremePosVec[i]=deviation[i] > threshold;
 }
-static INLINE void _CalcDevExtremPos(PROP_DATA_PTR info ) {
-	BEAST2_MODEL_PTR model=info->model;
-	I32              NumBasis=model->NUMBASIS;
-	__CalcAbsDeviation( model->deviation,model->avgDeviation,info,NumBasis);
-	F32 threshold=info->yInfo->q==1
-		? (model->avgDeviation[0] * info->sigFactor)  
-		: ( info->sigFactor);                         
-	__CalcExtremKnotPos_ST_BirthOnly(model->extremePosVec,model->deviation,info->N,threshold);
-}
-static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR newcol,PROP_DATA_PTR info)
+static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR info)
 {	
 	I32					goodNum=basis->goodNum;
 	I16					nKnot=basis->nKnot;
@@ -171,15 +163,24 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 	{
 	case BIRTH:
 	{
-		I32    Npad16=info->Npad16;		
+		I32    Npad16=info ->Npad16;		
 		U64PTR goodVec=basis->goodvec; 
 		U64PTR tmpGoodVec;
 		I32    tmpGoodNum;
-		if ( *(PRND->rnd08)++< 255* PROB_SAMPLE_EXTREME_VECTOR ) {				             
+		if ( *(PRND->rnd08)++< 255 * PROB_SAMPLE_EXTREME_VECTOR ) {				             
 			I32 samples=info->samples[0];
-			if ( samples >=info->nSample_ExtremVecNeedUpdate) {				
-				_CalcDevExtremPos(info);  
-				info->nSample_ExtremVecNeedUpdate=samples+100;
+			if ( samples >=info->nSample_DeviationNeedUpdate) {
+				BEAST2_MODEL_PTR model=info->model;		
+				__CalcAbsDeviation(model->deviation,model->avgDeviation,info,info->numBasisWithoutOutlier);
+				I32  extraSamples=min( (10+samples/8),200);
+				info->nSample_DeviationNeedUpdate=samples+extraSamples;
+				info->shallUpdateExtremVec=1L;
+			}
+			if (info->shallUpdateExtremVec) {
+				BEAST2_MODEL_PTR model=info->model;
+				F32 threshold=(info->yInfo->q==1) ? (model->avgDeviation[0] * info->sigFactor) : info->sigFactor;
+				__CalcExtremKnotPos(model->extremePosVec,model->deviation,info->N,threshold);
+				info->shallUpdateExtremVec=0L;
 			}
 			U64PTR extremeVec=info->model->extremePosVec;
 			tmpGoodVec=info->mem;   
@@ -188,7 +189,9 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 				tmpGoodVec[i+1]=extremeVec[i+1] & goodVec[i+1];
 			}
 			tmpGoodNum=i08_sum_binvec(tmpGoodVec,Npad16);
-			if (tmpGoodNum==0) { tmpGoodVec=goodVec,tmpGoodNum=goodNum; }
+			if (tmpGoodNum==0) { 
+				tmpGoodVec=goodVec,tmpGoodNum=goodNum; 
+			}
 		}	else {
 			tmpGoodVec=basis->goodvec;
 			tmpGoodNum=goodNum;
@@ -209,7 +212,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 	}
 	case DEATH:
 	{
-		newIdx=RANDINT(1,(U16)nKnot,*(PRND->rnd16)++);       
+		newIdx=RANDINT(1,nKnot,*(PRND->rnd16)++);       
 		new->numSeg=1;
 		new->SEG[0].R1=knotList[(newIdx - 1) - 1];
 		new->SEG[0].R2=knotList[(newIdx+1) - 1] - 1L;
@@ -221,14 +224,13 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 	}
 	case MERGE:
 	{
-		newIdx=RANDINT(1,(U16)nKnot - 1,*(PRND->rnd16)++);  
+		newIdx=RANDINT(1,nKnot - 1,*(PRND->rnd16)++);  
 		I32  r1=knotList[(newIdx)-1];
 		I32  r2=knotList[(newIdx+1) - 1];
 		I32  count=(r2 - r1)+1L - 2L;
 		if (count==0L) {
 			new->newKnot=*(*(I08**)&(PRND->rnd08))++> 0 ? r1 : r2;
-		}
-		else {
+		}	else {
 			new->newKnot=RANDINT(r1+1,r2 - 1,*(PRND->rnd32)++);  
 		}
 		new->numSeg=2;
@@ -245,7 +247,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 	}
 	case MOVE: 
 	{
-		newIdx=RANDINT(1,(U16)nKnot,*(PRND->rnd16)++);  
+		newIdx=RANDINT(1,nKnot,*(PRND->rnd16)++);  
 		I32 oldKnot=knotList[newIdx - 1];
 		I32 r1=newIdx==1     ?  knotList[INDEX_FakeStart]: knotList[(newIdx - 1) - 1];
 		I32 r2=newIdx==nKnot ?  knotList[INDEX_FakeEnd]  : knotList[(newIdx+1) - 1];
@@ -258,7 +260,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 		} else if (r2 > r1) {
 			RANDINT_SKIPONE(new->newKnot,r1,oldKnot,r2,*(PRND->rnd32)++);
 		} else {
-			r_error("ERROR: r1 < r2; there must be something wrong!\n");
+			r_error("ERROR: r1 < r2; this should never happen and there must be something wrong!\n");			
 			return ;
 		}
 		new->numSeg=2;
@@ -275,7 +277,7 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 	}
 	case ChORDER:
 	{
-		newIdx=RANDINT(1,(U16)nKnot+1,*(PRND->rnd16)++);  
+		newIdx=RANDINT(1,nKnot+1,*(PRND->rnd16)++);  
 		I32 newOrder;
 		I32 oldOrder=orderList[newIdx - 1];
 		{
@@ -320,82 +322,24 @@ static void DSVT_Propose( BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR 
 	I16PTR  KE_old=basis->ke;
 	if (flag !=ChORDER) {
 		if (flag==NoChangeFixGlobal) {
-			newcol->k1=basis->K+1;
-			newcol->k2_old=basis->K;
+			new->newcols.k1=basis->K+1;
+			new->newcols.k2_old=basis->K;
 		}	else {
-			newcol->k1=KS_old[(newIdx)-1];
-			newcol->k2_old=KE_old[(endIdx)-1];
+			new->newcols.k1=KS_old[(newIdx)-1];
+			new->newcols.k2_old=KE_old[(endIdx)-1];
 		}
 	}
 	else { 
 		if (new->newOrder <=new->oldOrder) { 
-			newcol->k2_old=KE_old[newIdx - 1];
-			newcol->k1=basis->type==SEASONID ? (newcol->k2_old - 1) : newcol->k2_old;
+			new->newcols.k2_old=KE_old[newIdx - 1];
+			new->newcols.k1=basis->type==SEASONID ? (new->newcols.k2_old - 1) :  new->newcols.k2_old;
 		}
 		else {
-			newcol->k2_old=KE_old[newIdx - 1];    
-			newcol->k1=newcol->k2_old+1;       
+			new->newcols.k2_old=KE_old[newIdx - 1];          
+			new->newcols.k1=new->newcols.k2_old+1;     
 		} 
 	} 
 	new->jumpType=flag;
-}
-static int __OO_NewKnot_BirthMove_old(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
-	I32 N=info->N;
-	I32 Npad16=info->Npad16;
-	BEAST2_MODEL_PTR model=info->model;
-	BEAST2_RANDSEEDPTR PRND=info->pRND;
-	I08PTR goodvec=(I08PTR) basis->goodvec; 
-	memset(goodvec,1,N);
-	for (int J=0; J < model->NUMBASIS; J++) {
-		TKNOT_PTR KNOT=model->b[J].KNOT;
-		I32       nKnot=model->b[J].nKnot;
-		if (model->b[J].type==OUTLIERID) {
-			for (int i=0; i < nKnot;++i) goodvec[KNOT[i] - 1]=0;		
-		} else {
-			if ((*(PRND->rnd08)++) > 100) {  
-				for (I32 i=0; i < nKnot; i++) {
-					I32 idx=KNOT[i] - 1;
-					goodvec[idx]=2L;
-					goodvec[max(idx - 1,0)]=2L;
-					goodvec[min(idx+1,N - 1)]=2L;
-				}
-			}
-		}		 
-	} 
-	I32PTR IndicesLargeDeviation=info->mem;   
-	I32    numLargeDev=0;
-	F32PTR deviation=model->deviation;
-	F32    threshold=info->yInfo->q==1
-							   ? model->avgDeviation[0]* info->outlierSigFactor
-							   : info->outlierSigFactor;
-	F32 maxValue=0;
-	I32 maxIdx=-1;	
-	for (I32 i=0; i < N; i++) {
-		F32 value=deviation[i];
-		if ( !goodvec[i]||IsNaN (value) ) {
-			continue;
-		}
-		value=fabsf(value);
-		if ( value > maxValue) {
-			maxValue=value;
-			maxIdx=i;
-		}
-		if (value > threshold||goodvec[i]==2) {
-			IndicesLargeDeviation[numLargeDev++]=i;
-		}
-	}
-	if (numLargeDev > 1) {	
-		if ((*(PRND->rnd08)++) > 50) {
-			I32 rndIdx=RANDINT(1,(U16)numLargeDev,*(PRND->rnd16)++);
-			maxIdx=IndicesLargeDeviation[rndIdx - 1];
-		} else { 
-			maxIdx=maxIdx;			
-		}
-	}
-	if (maxIdx < 0) {
-		r_printf("__OO_NewKnot_BirthMove: maxIdx=-1,and there must be something wrong!");
-	}
-	return maxIdx+1;
 }
 static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info,I32PTR maxIndex) {
 	I32 N=info->N;
@@ -404,13 +348,9 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info,I32P
 	BEAST2_RANDSEEDPTR PRND=info->pRND;
 	I08PTR goodvec=(I08PTR) basis->goodvec; 
 	memset(goodvec,1,N);
-	for (int J=0; J < model->NUMBASIS; J++) {
-		TKNOT_PTR KNOT=model->b[J].KNOT;
-		I32       nKnot=model->b[J].nKnot;
-		if (model->b[J].type==OUTLIERID) {
-			for (int i=0; i < nKnot;++i) goodvec[KNOT[i] - 1]=0;		
-		}  
-	} 
+	TKNOT_PTR KNOT=basis->KNOT;
+	I32       nKnot=basis->nKnot; 
+	for (int i=0; i < nKnot;++i) goodvec[KNOT[i] - 1]=0;
 	I32PTR IndicesLargeDeviation=info->mem;   
 	I32    numLargeDev=0;
 	F32PTR deviation=model->deviation;
@@ -420,18 +360,16 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info,I32P
 	F32 maxValue=0;
 	I32 maxIdx=-1;	
 	for (I32 i=0; i < N; i++) {
-		F32 value=deviation[i];
+		F32 value=deviation[i];  
 		if ( !goodvec[i]||IsNaN (value) ) {
 			continue;
 		}
-		value=fabsf(value);
-		if ( value > maxValue) {
+		if ( value > maxValue) {						
 			maxValue=value;
 			maxIdx=i;
 		}
-		if (value > threshold) {
-			IndicesLargeDeviation[numLargeDev++]=i;
-		}
+		IndicesLargeDeviation[numLargeDev]=i;
+		numLargeDev+=(value > threshold);
 	}
 	int newKnot=-1L;
 	if (numLargeDev > 1) {	
@@ -441,34 +379,30 @@ static int __OO_NewKnot_BirthMove(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info,I32P
 		newKnot=IndicesLargeDeviation[0];
 	}
 	if (maxIdx < 0) {
-		r_printf("__OO_NewKnot_BirthMove: maxIdx=-1,and there must be something wrong!");
+		r_printf("ERROR: __OO_NewKnot_BirthMove: maxIdx=-1,and there must be something wrong!");
 	}
 	*maxIndex=maxIdx+1L;
 	return newKnot+1L;
 }
 static int __OO_NewIdx_MoveDeath(BEAST2_BASIS_PTR basis,PROP_DATA_PTR info) {
-	I32 N=info->N;
-	I32 Npad16=info->Npad16;
-	BEAST2_MODEL_PTR model=info->model;
-	F32PTR deviation=model->deviation;
+	F32PTR deviation=info->model->deviation; 
 	F32    minValue=1e34;
 	I32    minIdx=-1;
 	I32       nKnot=basis->nKnot;
 	TKNOT_PTR KNOT=basis->KNOT;
 	for (int i=0; i < nKnot; i++) {
-		I32 idx=KNOT[i] - 1;
-		F32 value=fabsf(deviation[idx]);
-		if (minValue > value) {
+		F32 value=deviation[KNOT[i] - 1]; 	 
+		if (value < minValue ) {
 			minValue=value;
 			minIdx=i;
 		}
 	}
 	if (minIdx < 0) {
-		r_printf("__OO_NewKnot_BirthMove: maxIdx=-1,and there must be something wrong!");
+		r_printf("__OO_NewIdx_MoveDeath: maxIdx=-1,and there must be something wrong!");
 	}
 	return minIdx+1;
 }
-static void OO_Propose_01_old(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR newcol,PROP_DATA_PTR info)
+static void OO_Propose_01(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,PROP_DATA_PTR info)
 {	
 	I32  goodNum=basis->goodNum; 
 	I16  nKnot=basis->nKnot;
@@ -476,109 +410,37 @@ static void OO_Propose_01_old(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO
 	MOVETYPE flag;
 	{
 		I32  Ktotal=info->model->curr.K;
+		I32  MINKNOTNUM=basis->prior.minKnotNum;
 		I32  MAXKNOTNUM=basis->prior.maxKnotNum;
 		I32  MAX_K_StopAddingNewTerms=basis->mcmc_Kstopping;
-		U08  rnd=*(PRND->rnd08)++;
-		if (rnd < basis->propprob.birth) { 
-			flag=BIRTH;
-			if (nKnot >=MAXKNOTNUM )	           flag=MOVE;			
-			if (Ktotal > MAX_K_StopAddingNewTerms) flag=(nKnot==0) ? BIRTH : MOVE;			
-		} else if (rnd < basis->propprob.move)   
-			flag=nKnot==0 ? BIRTH : MOVE;		
-		else 
-			flag=nKnot==0 ? BIRTH : DEATH;
+		if (MINKNOTNUM !=MAXKNOTNUM) {
+			U08  rnd=*(PRND->rnd08)++;
+			if (rnd < basis->propprob.birth) { 
+				flag=BIRTH;
+				if (nKnot >=MAXKNOTNUM )	           flag=MOVE;			
+				if (Ktotal > MAX_K_StopAddingNewTerms) flag=(nKnot==0) ? BIRTH : MOVE;			
+			} else if (rnd < basis->propprob.move)   
+				flag=nKnot==0 ? BIRTH : MOVE;		
+			else 
+				flag=nKnot==0 ? BIRTH : DEATH;
+		} else {
+			flag=MOVE;
+		}
 	}  
-	I32              samples=info->samples[0];	
-	if (samples > 0) { 
-		_CalcDevExtremPos(info);
-		info->nSample_ExtremVecNeedUpdate=samples+40L;
+	I32  samples=info->samples[0];	
+	if (samples >=info->nSample_DeviationNeedUpdate) { 
+	 	BEAST2_MODEL_PTR model=info->model;
+		__CalcAbsDeviation(model->deviation,model->avgDeviation,info,info->numBasisWithoutOutlier);
+		I32  extraSamples=min((10+samples/8),200);
+		info->nSample_DeviationNeedUpdate=samples+extraSamples;
+		info->shallUpdateExtremVec=1L;
 	}
 	TKNOT_PTR  knotList=basis->KNOT;
-	I32 newIdx;      
 	switch (flag)
 	{
 	case BIRTH:
-	{
-		new->newKnot=__OO_NewKnot_BirthMove_old(basis,info);
-		new->numSeg=1;
-		new->SEG[0].R1=new->newKnot;
-		new->SEG[0].R2=new->newKnot;
-		new->SEG[0].outlierKnot=new->newKnot; 
-		new->newIdx=-9999;            
-		new->nKnot_new=nKnot+1;
-		break;
-	}
-	case DEATH:
-	{
-		newIdx=__OO_NewIdx_MoveDeath(basis,info);
-		new->newKnot=knotList[newIdx - 1];
-		new->numSeg=0;
-		new->newIdx=newIdx;
-		new->nKnot_new=nKnot - 1;
-		break;
-	}
-	case MOVE: 
-	{
-		newIdx=__OO_NewIdx_MoveDeath(basis,info);
-		new->newKnot=__OO_NewKnot_BirthMove_old(basis,info);;
-		new->numSeg=1;
-		new->SEG[0].R1=new->newKnot;
-		new->SEG[0].R2=new->newKnot;
-		new->SEG[0].outlierKnot=new->newKnot; 
-		new->newIdx=newIdx;
-		new->nKnot_new=nKnot;
-		break;
-	}
-	}
-	I16PTR  KS_old=basis->ks;
-	I16PTR  KE_old=basis->ke;
-	if (flag==BIRTH) {
-		I32 nKnot=basis->nKnot;
-		newcol->k2_old=KE_old[nKnot - 1];
-		newcol->k1=newcol->k2_old+1;
-	}
-	else if (flag==DEATH) {
-		newcol->k2_old=KE_old[newIdx - 1];
-		newcol->k1=KS_old[newIdx - 1];
-	}
-	else if (flag==MOVE) {
-		newcol->k2_old=KE_old[newIdx - 1];
-		newcol->k1=KS_old[newIdx - 1];
-	}
-	new->jumpType=flag;
-}
-static void OO_Propose_01(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR newcol,PROP_DATA_PTR info)
-{	
-	I32  goodNum=basis->goodNum; 
-	I16  nKnot=basis->nKnot;
-	BEAST2_RANDSEEDPTR PRND=info->pRND;
-	MOVETYPE flag;
-	{
-		I32  Ktotal=info->model->curr.K;
-		I32  MAXKNOTNUM=basis->prior.maxKnotNum;
-		I32  MAX_K_StopAddingNewTerms=basis->mcmc_Kstopping;
-		U08  rnd=*(PRND->rnd08)++;
-		if (rnd < basis->propprob.birth) { 
-			flag=BIRTH;
-			if (nKnot >=MAXKNOTNUM )	           flag=MOVE;			
-			if (Ktotal > MAX_K_StopAddingNewTerms) flag=(nKnot==0) ? BIRTH : MOVE;			
-		} else if (rnd < basis->propprob.move)   
-			flag=nKnot==0 ? BIRTH : MOVE;		
-		else 
-			flag=nKnot==0 ? BIRTH : DEATH;
-	}  
-	I32              samples=info->samples[0];	
-	if (samples > 0) { 
-		_CalcDevExtremPos(info);
-		info->nSample_ExtremVecNeedUpdate=samples+40L;
-	}
-	TKNOT_PTR  knotList=basis->KNOT;
-	I32 newIdx;      
-	I32 maxIdx;
-	switch (flag)
-	{
-	case BIRTH:
-	{
+	{		
+		I32 maxIdx;
 		new->newKnot=__OO_NewKnot_BirthMove(basis,info,&maxIdx);
 		if (new->newKnot==0 && nKnot==0) {
 			new->newKnot=maxIdx;
@@ -588,22 +450,23 @@ static void OO_Propose_01(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR
 			new->SEG[0].R1=new->newKnot;
 			new->SEG[0].R2=new->newKnot;
 			new->SEG[0].outlierKnot=new->newKnot; 
-			new->newIdx=-9999;            
+			new->newIdx=-9999;                       
 			new->nKnot_new=nKnot+1;
 		}	else {
-			flag=DEATH;			 
+			flag=DEATH; 			
 		}
 		break;
 	}
 	case MOVE: 
 	{
-		newIdx=__OO_NewIdx_MoveDeath(basis,info);
+		I32 maxIdx;
 		new->newKnot=__OO_NewKnot_BirthMove(basis,info,&maxIdx);
 		if (new->newKnot > 0) {
 			new->numSeg=1;
 			new->SEG[0].R1=new->newKnot;
 			new->SEG[0].R2=new->newKnot;
 			new->SEG[0].outlierKnot=new->newKnot; 
+			I32 newIdx=__OO_NewIdx_MoveDeath(basis,info);
 			new->newIdx=newIdx;
 			new->nKnot_new=nKnot;
 		}	else {
@@ -614,7 +477,7 @@ static void OO_Propose_01(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR
 	}
  	if (flag==DEATH)
 	{
-		newIdx=__OO_NewIdx_MoveDeath(basis,info);
+		I32 newIdx=__OO_NewIdx_MoveDeath(basis,info);
 		new->newKnot=knotList[newIdx - 1];
 		new->numSeg=0;
 		new->newIdx=newIdx;
@@ -624,96 +487,14 @@ static void OO_Propose_01(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR
 	I16PTR  KE_old=basis->ke;
 	if (flag==BIRTH) {
 		I32 nKnot=basis->nKnot;
-		newcol->k2_old=KE_old[nKnot - 1];
-		newcol->k1=newcol->k2_old+1;
-	}
-	else if (flag==DEATH) {
-		newcol->k2_old=KE_old[newIdx - 1];
-		newcol->k1=KS_old[newIdx - 1];
-	}
-	else if (flag==MOVE) {
-		newcol->k2_old=KE_old[newIdx - 1];
-		newcol->k1=KS_old[newIdx - 1];
-	}
-	new->jumpType=flag;
-}
-static void OO_Propose_2(	BEAST2_BASIS_PTR basis,NEWTERM_PTR new,NEWCOLINFO_PTR newcol,PROP_DATA_PTR info)
-{	
-	I32  goodNum=basis->goodNum; 
-	I16  nKnot=basis->nKnot;
-	BEAST2_RANDSEEDPTR PRND=info->pRND;
-	MOVETYPE flag;
-	{
-		I32  Ktotal=info->model->curr.K;
-		I32  MAXKNOTNUM=basis->prior.maxKnotNum;
-		I32  MAX_K_StopAddingNewTerms=basis->mcmc_Kstopping;
-		U08  rnd=*(PRND->rnd08)++;
-		if (rnd < basis->propprob.birth) { 
-			flag=BIRTH;
-			if (nKnot >=MAXKNOTNUM )	           flag=MOVE;			
-			if (Ktotal > MAX_K_StopAddingNewTerms) flag=(nKnot==0) ? BIRTH : MOVE;			
-		} else if (rnd < basis->propprob.move)   
-			flag=nKnot==0 ? BIRTH : MOVE;		
-		else 
-			flag=nKnot==0 ? BIRTH : DEATH;
-	}  
-	I32              samples=info->samples[0];	
-	if (samples > 0) { 
-		_CalcDevExtremPos(info);
-		info->nSample_ExtremVecNeedUpdate=samples+40L;
-	}
-	TKNOT_PTR  knotList=basis->KNOT;
-	I16 newIdx;      
-	switch (flag)
-	{
-	case BIRTH:
-	{
-		newIdx=-9999;
-		new->newKnot=__OO_NewKnot_BirthMove_old(basis,info);
-		new->numSeg=1;
-		new->SEG[0].R1=1;       
-		new->SEG[0].R2=info->N; 
-		new->SEG[0].outlierKnot=new->newKnot; 
-		new->newIdx=newIdx;
-		new->nKnot_new=nKnot+1;
-		break;
-	}
-	case DEATH:
-	{
-		newIdx=__OO_NewIdx_MoveDeath(basis,info);		
-		new->newKnot=knotList[newIdx - 1];
-		new->numSeg=0;
-		new->newIdx=newIdx;
-		new->nKnot_new=nKnot - 1;
-		break;
-	}
-	case MOVE: 
-	{
-		newIdx=__OO_NewIdx_MoveDeath(basis,info);
-		new->newKnot=__OO_NewKnot_BirthMove_old(basis,info); 
-		new->numSeg=1;
-		new->SEG[0].R1=1;       
-		new->SEG[0].R2=info->N; 
-		new->SEG[0].outlierKnot=new->newKnot; 
-		new->newIdx=newIdx;
-		new->nKnot_new=nKnot;
-		break;
-	}
-	}
-	I16PTR  KS_old=basis->ks;
-	I16PTR  KE_old=basis->ke;
-	if (flag==BIRTH) {
-		I32 nKnot=basis->nKnot;
-		newcol->k2_old=KE_old[nKnot - 1];
-		newcol->k1=newcol->k2_old+1;
-	}
-	else if (flag==DEATH) {
-		newcol->k2_old=KE_old[newIdx - 1];
-		newcol->k1=KS_old[newIdx - 1];
-	}
-	else if (flag==MOVE) {
-		newcol->k2_old=KE_old[newIdx - 1];
-		newcol->k1=KS_old[newIdx - 1];
+		new->newcols.k2_old=KE_old[nKnot - 1];
+		new->newcols.k1=new->newcols.k2_old+1;
+	} else if (flag==DEATH) {
+		new->newcols.k2_old=KE_old[new->newIdx - 1];
+		new->newcols.k1=KS_old[new->newIdx - 1];
+	} else if (flag==MOVE) {
+		new->newcols.k2_old=KE_old[new->newIdx - 1];
+		new->newcols.k1=KS_old[new->newIdx - 1];
 	}
 	new->jumpType=flag;
 }

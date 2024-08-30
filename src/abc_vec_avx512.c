@@ -4,22 +4,22 @@
 #include "abc_000_macro.h"
 #include "abc_000_warning.h"
 #define STATIC   static
-#if  defined(CLANG_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_CLANG) && !defined(cpu_ARM64) 
     #pragma clang optimize on
 	#pragma clang attribute push (__attribute__((target("avx,avx2,avx512f,avx512dq,avx512bw,avx512vl"))),apply_to=function)
 #endif
-#if  defined(GCC_COMPILER) && !defined(ARM64_OS) 
+#if  defined(COMPILER_GCC) && !defined(cpu_ARM64) 
     #pragma optimization_level 3
     #pragma GCC optimize("O3,Ofast,inline,omit-frame-pointer,no-asynchronous-unwind-tables")  
 	 #pragma GCC target("avx,avx2,avx512f,avx512dq,avx512bw,avx512vl") 
 #endif
 #include "abc_vec.h"
-#if defined(WIN64_OS)||defined(WIN32_OS)
+#if defined(OS_WIN64)||defined(OS_WIN32)
     #include <malloc.h> 
 #else
     #include <alloca.h> 
 #endif
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
     #define __attribute__(x)
 #endif
 #define NF        16
@@ -42,7 +42,7 @@
 #define add         _mm512_add_ps
 #define sub         _mm512_sub_ps
 #define addi32      _mm512_add_epi32
-#if !defined(SOLARIS_COMPILER) && defined(TARGET_64) && !defined(ARM64_OS)
+#if !defined(COMPILER_SOLARIS) && defined(TARGET_64) && !defined(cpu_ARM64)
 #include <immintrin.h>
 #include "abc_math_avx512.h"
 static __mmask16 masktemplate[16];
@@ -474,7 +474,7 @@ STATIC void avx512_f32_sqrt_vec(const F32PTR x,const F32PTR y,const int N)
     }    
     _mm256_zeroupper();
 }
-#ifdef MSVC_COMPILER
+#ifdef COMPILER_MSVC
 STATIC void avx512_f32_sin_vec_inplace_MSVC(const F32PTR x,const int N)
 {
     int i=0;
@@ -717,7 +717,7 @@ STATIC void avx512_f32_sx_sxx_to_avgstd_inplace(F32PTR SX,F32PTR SXX,I32 Nsample
         maskstore(SX+i,mask,avg);
     }
 }
-#ifdef WIN64_OS 
+#ifdef OS_WIN64 
     #define WIN32_LEAN_AND_MEAN
     #include "windows.h"
 #endif
@@ -1790,7 +1790,7 @@ void SetupVectorFunction_AVX512() {
     f32_to_f64_inplace=&avx512_f32_to_f64_inplace;
     f64_to_f32_inplace=&avx512_f64_to_f32_inplace;
     i32_to_f32_scaleby_inplace=&avx512_i32_to_f32_scaleby_inplace;
-    i32_increment_bycond_inplace=&  avx512_i32_increment_bycond_inplace; 
+    i32_increment_bycond_inplace=&avx512_i32_increment_bycond_inplace; 
     i32_increment_vec2_bycond_inplace=&avx512_i32_increment_vec2_bycond_inplace;
     i08_sum_binvec=&avx512_i08_sum_binvec;
     f32_gemm_XtY2x1=avx512_f32_gemm_XtY2x1;
@@ -1814,7 +1814,7 @@ void SetupVectorFunction_AVX512() {
 #else
 static char a='a';
 #endif
-#if defined(CLANG_COMPILER) && !defined(ARM64_OS)
+#if defined(COMPILER_CLANG) && !defined(cpu_ARM64)
     #pragma clang attribute pop
 #endif
 #include "abc_000_warning.h"

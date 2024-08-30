@@ -166,8 +166,8 @@ void pcg_gauss(F32PTR RND,int N)
 				F64 U1=rnd[1] * INV_2p32;
 				int check=U24_32 <=yRatio+(1.f - yRatio) * U1;	
 				x=GAUSS.x[BinIdx+1] -  delta * U1;
-				if (BinIdx < GAUSS.inflectionId && check)      { break; }
-				if (BinIdx > GAUSS.inflectionId && check==0) { goto UpdateSamplerLabel; }
+				if ((I32) BinIdx < GAUSS.inflectionId && check)      { break; }
+				if ((I32)BinIdx > GAUSS.inflectionId && check==0) { goto UpdateSamplerLabel; }
 				if ( log(U24_32) <=-0.5f* (x * x- GAUSS.x[BinIdx]* GAUSS.x[BinIdx])  ) {
 					break;
 				}				

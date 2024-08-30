@@ -50,12 +50,12 @@ extern "C" {
 	extern I32 i08_find_nth_onebyte_binvec(U08PTR binvec,I32 N,I32 nth);
 	extern I32 i08_find_nth_onebyte_binvec_v2(U08PTR binvec,I32 N,I32 numOneBytes,U32 rnd);
 	extern I64 i08_sum(I08PTR x,int N);
-	extern int i32_insert_noduplicate(I32PTR x,I32 N,I32PTR Xnew,I32 Nnew);
-	extern int i32_unique_inplace(I32PTR x,int N);
-	extern int i32_exclude_inplace(I32PTR x,int N,I32PTR excludeList,I32 Nexclude);
+	extern int  i32_insert_noduplicate(I32PTR x,I32 N,I32PTR Xnew,I32 Nnew);
+	extern int  i32_unique_inplace(I32PTR x,int N);
+	extern int  i32_exclude_inplace(I32PTR x,int N,I32PTR excludeList,I32 Nexclude);
 	extern void f32_sumfilter(const F32PTR X,F32PTR Y,int N,int winSize);
 	extern F32  f32_corr_rmse_nan(const F32PTR X,const F32PTR Y,int N,F32PTR rmse);
-	extern void  f32_truncate_inplace(const F32PTR X,F32 value,int N);
+	extern void f32_truncate_inplace(const F32PTR X,F32 value,int N);
 	I32 i32_maxidx(const I32PTR  X,const  int N,I32PTR val);
 	I32 i32_minidx(const I32PTR  X,const  int N,I32PTR val);
 	void f32_to_strided_f64(F32PTR src,VOID_PTR dst,I64 N,I64 stride,I64 dstOffset);

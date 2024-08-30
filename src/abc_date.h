@@ -1,5 +1,4 @@
 #pragma once 
-#include<stdio.h>
 #include<inttypes.h>
 int     isValidDate(int year,int mon,int day);
 typedef struct  __YmdHms_ {

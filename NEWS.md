@@ -1,3 +1,8 @@
+# CHANGES IN Rbeast 1.0.1
+
+* Supress the printing of an empty line in the quiet mode, thanks to Jiapei  Ma and Marina Siebold.
+* Add a few additional method option (e.g., bic2 and bic1.5)
+
 # CHANGES IN Rbeast 1.0.0
 
 * Fix the warning message regarding "format ‘%x’ expects argument of type ‘unsigned int’, but argument 2 has type ‘VOID_PTR’ {aka ‘void *’} [-Wformat=]"
