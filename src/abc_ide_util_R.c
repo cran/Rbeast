@@ -37,7 +37,7 @@ I32      GetConsoleWidth() {
 	return (I32)GetOptionWidth();
 }
 int IsClass(void* ptr,char* class) {
-	if (OBJECT(ptr)) {
+	if (Rf_isObject(ptr)) { 
 		SEXP klass=getAttrib(ptr,R_ClassSymbol);
 		for (int i=0; i < length(klass); i++) {
 			if (strcmp(CHAR(STRING_ELT(klass,i)),class)==0) {
@@ -48,13 +48,13 @@ int IsClass(void* ptr,char* class) {
 	return 0;
 }
 int IsCell(void* ptr)    { return 0L; }
-int IsChar(void* ptr)    { return TYPEOF((SEXP)ptr)==STRSXP; }
-int IsEmpty(void* ptr)   { return ptr==R_NilValue||GetNumberOfElements(ptr)==0; }
-int IsStruct(void* ptr)  { return isNewList((SEXP)ptr)||ptr==R_NilValue;       }
-int IsNumeric(void* ptr) { return isNumeric((SEXP)ptr); }
-int IsDouble(void* ptr)  { return TYPEOF((SEXP)ptr)==REALSXP; }
-int IsSingle(void* ptr)  { return 0; }
-int IsInt32(void* ptr)   { return TYPEOF((SEXP)ptr)==INTSXP;  }
+int IsChar(void* ptr)    { if (ptr==NULL) return 0; return TYPEOF((SEXP)ptr)==STRSXP; }
+int IsEmpty(void* ptr)   { if (ptr==NULL) return 0; return ptr==R_NilValue||GetNumberOfElements(ptr)==0; }
+int IsStruct(void* ptr)  { if (ptr==NULL) return 0; return isNewList((SEXP)ptr)||ptr==R_NilValue;       }
+int IsNumeric(void* ptr) { if (ptr==NULL) return 0; return isNumeric((SEXP)ptr); }
+int IsDouble(void* ptr)  { if (ptr==NULL) return 0; return TYPEOF((SEXP)ptr)==REALSXP; }
+int IsSingle(void* ptr)  { if (ptr==NULL) return 0; return 0; }
+int IsInt32(void* ptr)   { if (ptr==NULL) return 0; return TYPEOF((SEXP)ptr)==INTSXP;  }
 int IsInt16(void* ptr)   { return 0; }
 int IsInt64(void* ptr)   { return 0; }
 int IsLogical(void* ptr) { return TYPEOF((SEXP)ptr)==LGLSXP; }

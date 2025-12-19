@@ -6,398 +6,495 @@
 \alias{rbeast}
 \alias{Rbeast}
 \alias{RBEAST}
-\title{Bayesian changepoint detection detection and time series decomposition for trend, periodicity or seasonality, and abrupt changes}
+
+\title{Bayesian changepoint detection and time series decomposition into trend, seasonality, and abrupt changes}
+
 \description{
-   A Bayesian model averaging algorithm called BEAST to decompose time series or 1D sequential data into individual components, such as abrupt changes, trends, and periodic/seasonal variations. BEAST is useful for changepoint detection (e.g., breakpoints, joinpoints, or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation.
-   \cr \cr
-   \if{html}{\figure{Nile.jpg}{options: width="95\%" alt="Figure: Nile.jpg"}}
-   \if{latex}{\figure{Nile.pdf}{options: width=10cm}}
-  }
-\usage{
-  beast(   
-         y, 
-         start          = 1,
-         deltat         = 1, 
-         season         = c("harmonic", "svd", "dummy", "none"), 
-         period         = NULL,  		   
-         scp.minmax     = c(0,10), sorder.minmax   = c(0,5),  	  
-         tcp.minmax     = c(0,10), torder.minmax   = c(0,1), 	   
-	     sseg.min       = NULL,    sseg.leftmargin = NULL,  sseg.rightmargin = NULL,
-	     tseg.min       = NULL,    tseg.leftmargin = NULL,  tseg.rightmargin = NULL, 
-         method         = c( 'bayes',   'bic',    'aic',    'aicc', 'hic',
-	                          'bic0.25', 'bic0.5', 'bic1.5', 'bic2'  ),	 
-         detrend        = FALSE, 
-         deseasonalize  = FALSE,
-         mcmc.seed      = 0,      
-         mcmc.burnin    = 200, 
-         mcmc.chains    = 3,
-         mcmc.thin      = 5,
-         mcmc.samples   = 8000,
-         precValue      = 1.5,
-         precPriorType  = c('componentwise','uniform','constant','orderwise'),
-         hasOutlier	    = FALSE,
-         ocp.minmax     = c(0,10),			 
-         print.param    = TRUE,
-         print.progress = TRUE,
-         print.warning  = TRUE,
-         quiet          = FALSE,
-         dump.ci        = FALSE,
-         dump.mcmc      = FALSE,
-         gui            = FALSE,	
-         ...
-      )
+\code{beast} is a high-level interface to the BEAST algorithm, a Bayesian model averaging approach for decomposing regular time series or other 1D sequential data into individual components, including abrupt changes, trends, and periodic/seasonal variations. BEAST is useful for changepoint detection (e.g., breakpoints, joinpoints, or structural breaks), nonlinear trend analysis, time series decomposition, and time series segmentation.
+\cr\cr
+
+   % checkRd reports the error for the following: "height/width attributes should be in pixels"
+   %  \if{html}{\figure{Nile.jpg}{options: width="95\%" alt="Figure: Nile.jpg"}}
+   
+   % package biplotEZ:  the folllowing passes the check.
+   % \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+   
+   % package inca::inca.Rd:  the folllowing passes the check.
+   % \if{html}{\figure{logo.png}{options: style='float:right;width:156px;'}}
+   
+   % package frailtyMMpen::frailtyMM.Rd:  the folllowing passes the check.
+   %\if{html}{\figure{fig1.png}{options: style="width:750px;max-width:75\%;"}}
+   
+   
+\if{html}{\figure{Nile.jpg}{options: style="width:80\%;max-width:95\%" alt="Figure: Nile.jpg"}}
+\if{latex}{\figure{Nile.pdf}{options: width=10cm}}
 }
+
+\usage{
+beast(
+  y,
+  start          = 1,
+  deltat         = 1,
+  season         = c("harmonic", "svd", "dummy", "none"),
+  period         = NULL,
+  scp.minmax     = c(0, 10), sorder.minmax   = c(0, 5),
+  tcp.minmax     = c(0, 10), torder.minmax   = c(0, 1),
+  sseg.min       = NULL,     sseg.leftmargin = NULL, sseg.rightmargin = NULL,
+  tseg.min       = NULL,     tseg.leftmargin = NULL, tseg.rightmargin = NULL,
+  s.complexfct   = 0.0,
+  t.complexfct   = 0.0,
+  method         = c("bayes", "bic", "aic", "aicc", "hic",
+                     "bic0.25", "bic0.5", "bic1.5", "bic2"),
+  detrend        = FALSE,
+  deseasonalize  = FALSE,
+  mcmc.seed      = 0,
+  mcmc.burnin    = 200,
+  mcmc.chains    = 3,
+  mcmc.thin      = 5,
+  mcmc.samples   = 8000,
+  precValue      = 1.5,
+  precPriorType  = c("componentwise", "uniform", "constant", "orderwise"),
+  hasOutlier     = FALSE,
+  ocp.minmax     = c(0, 10),
+  print.param    = TRUE,
+  print.progress = TRUE,
+  print.warning  = TRUE,
+  quiet          = FALSE,
+  dump.ci        = FALSE,
+  dump.mcmc      = FALSE,
+  gui            = FALSE,
+  ...
+)
+}
+
 \arguments{
 
-  \item{y}{ a vector for an evenly-spaced regular time series. Missing values such as NA and NaN are allowed.
-			\itemize{
-				\item  If \code{y} is irregular or unordered in time (e.g., multiple years of daily data spanning across leap years: 365 points in some years, and 366 in others), use the \code{\link[Rbeast]{beast.irreg}} function instead.
-				
-				\item  If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
-				
-				\item  If \code{y} is an object of class 'ts','xts', or 'zoo', its time attributes (i.e.,start, end, frequency) will be used to specify the next several args such as   \code{start},\code{detlta},\code{period}, and \code{season}: No need to provide them explicitly; even if provided, the values are ignored to honor the time attributes of \code{y}. For example, if \code{y} has a frequency = 1, \code{season = 'none'} is always assumed; if \code{y} has a frequency > 1 (i.e., with a periodic component) but \code{season='none'} is specified by the user, 'none' will be replaced by 'harmonic'.
-            }  
-
-			If a list of multiple time series is provided for \code{y}, the multivariate version of the BEAST algorithm will be invoked to decompose the multiple time series and detect common changepoints altogether. This feature is \code{experimental} only and under further development. Check \code{\link[Rbeast]{ohio}} for a working example.			
+  \item{y}{
+  \code{y} is a numeric vector representing an evenly spaced regular time series. Missing values such as \code{NA} and \code{NaN} are allowed.
+  \itemize{
+    \item If \code{y} is irregular or unordered in time (e.g., daily data spanning multiple years with leap years: 365 points in some years, 366 in others), use \code{\link[Rbeast]{beast.irreg}} instead.
+    \item If \code{y} is a matrix or 3D array consisting of multiple regular or irregular time series (e.g., stacked images), use \code{\link[Rbeast]{beast123}} instead.
+    \item If \code{y} is an object of class \code{"ts"}, \code{"xts"}, or \code{"zoo"}, its time attributes (i.e., \code{start}, \code{end}, \code{frequency}) are used to infer \code{start}, \code{deltat}, \code{period}, and \code{season}. User-specified values for these arguments are then ignored to honor the time attributes of \code{y}. For example, if \code{y} is a ts object with \code{frequency = 1}, \code{season = "none"} is always assumed; if \code{frequency > 1} (i.e., some periodic component is present in \code{y}) but \code{season = "none"} is supplied, it is silently replaced by \code{season="harmonic"}.
   }
-  
-
-  \item{start}{ numeric (default to 1.0) or \code{Date}; the time of the 1st datapoint of \code{y}. It can be specified as a scalar (e.g., 2021.0644),  a vector of three values in the order of Year, Month, and Day (e.g., \code{c(2021,1,24)} ), or a R's Date object (e.g., \code{as.Date('2021-1-24')} ).}
-  
-  \item{deltat}{ numeric (default to 1.0) or string; the time interval between consecutive data points. Its unit should be consistent with \code{start}. If \code{start} takes a numeric scalar, the unit is arbitrary and irrelevant to beast (e.g., 2021.3 can be of any unit: Year 2021.3, 2021.3 meters, 2021.3 degrees ...). If \code{start} is a vector of Year, Month, and Day or an R's Date, \code{deltat} has the unit of YEAR. For example, if \code{start=c(2021,1,24)} for a monthly time series, \code{start} is converted to a fractional year 2021+(24-0.5)/365=2021.0644 and \code{deltat=1/12} needs to be set in order to specify the monthly interval. Alternatively,  \code{deltat} can be provided as a string to specify whether its unit is day, month, or year. Examples include '7 days', '7d', '1/2 months', '1 mn', '1.0 year', and '1y'. }
-
-  \item{season}{ characters (default to 'harmonic'); specify if \code{y} has a periodic component or not. Four strings are possible.
-				\itemize{
-					\item  \code{'none'}: \code{y} is trend-only; no periodic components are present in the time series. The args for the seasonal component (i.e.,\code{sorder.minmax}, \code{scp.minmax} and \code{sseg.max}) will be irrelevant and ignored. 
-					
-					\item  \code{'harmonic'}: \code{y} has a periodic/seasonal component. The term \code{season} is a misnomer, being used here to broadly refer to any periodic variations present in \code{y}. The periodicity is NOT a model parameter estimated by BEAST but a known constant given by the user through \code{freq}. By default, the periodic component is modeled as a harmonic curve--a combination of sins and cosines.
-					
-					\item  \code{'dummy'}: the same as \code{'harmonic'} except that the periodic/seasonal component is modeled as a non-parametric curve. The harmonic order arg \code{sorder.minmax} is irrelevant and is ignored.
-					\item  \code{'svd'}: (experimental feature) the same as \code{'harmonic'} except that the periodic/seasonal component is modeled as a linear combination of function bases derived from a Single-value decomposition. The SVD-based basis functions are more parsimonious than the harmonic sin/cos bases in parameterizing the seasonal variations; therefore, more subtle changepoints are likely to be detected.
-				}  
-  
+  If \code{y} is provided as a \emph{list} of multiple time series, the multivariate version of the BEAST algorithm is invoked to decompose multiple series and detect common changepoints jointly. This feature is \emph{experimental} and under active development. See \code{\link[Rbeast]{ohio}} for a working example.
   }
-  
-  \item{period}{ numeric or string. Specify the period for the seasonal/periodic component in \code{y}. Needed only for data with a periodic/cyclic component (e.g., season=\code{'harmonic'}, \code{'svd'} or \code{'dummy'}) and not used for trend-only data (i.e., \code{season='none'}).  The period of the cyclic component should have a unit consisent with the unit of \code{deltat}. It holds that \code{period=deltat*freq} where \code{freq} is the number of data samples per period. (Note that the \code{freq} argument in earlier versions becomes obsolete and now is replaced by \code{period}. \code{freq} is still supported but\code{period} takes precedence if both are provided.)  \code{period} or the number of data points per period is not a BEAST model parameter and it has to be specified by the user. But if \code{period} is missing, BEAST first attempts to guess its value via auto-correlation before fitting the model. If \code{period} <= 0, \code{season='none'} is assumed, and  the trend-only model is fitted without a seasonal/cyclic component. If needed, use a string to specify whether the unit of period is day, month, or year. Examples are '1.0 year', '12 months', '365d', '366 days'.}
 
-  \item{scp.minmax}{ a vector of 2 integers (>=0); the min and max number of seasonal changepoints (scp) allowed in segmenting the seasonal component. \code{scp.minmax} is used only if \code{y} has a seasonal component (i.e., season=\code{'harmonic'}, \code{'svd'} or \code{'dummy'}) and ignored for trend-only data. If the min and max changepoint numbers are equal, BEAST assumes a constant number of scp and won't infer the posterior probability of the number of changepoints, but it still estimates the occurrence probability of the changepoints over time (i.e., the most likely times at which these changepoints occur). If both the min and max numbers are set to 0, no changepoints are allowed; then a global harmonic model is used to fit the seasonal component, but still, the most likely harmonic order will be inferred if sorder.minmax[1] is not equal to sorder.minmax[2].}
-  
-  \item{sorder.minmax}{ a vector of 2 integers (>=1); the min and max harmonic orders considered to fit the seasonal component. \code{sorder.minmax} is used only used if the time series has a seasonal component (i.e., season=\code{'harmonic'} or \code{'svd'}) and ignored for trend-only data or when \code{season='dummy'}. If the min and max orders are equal (\code{sorder.minmax[1]=sorder.minmax[2]}), BEAST assumes a constant harmonic order used and won't infer the posterior probability of harmonic orders. }
-  
-  %%%%%%%%%%%%%%%%%%%%%	
-   
-  \item{tcp.minmax}{ a vector of 2 integers (>=0); the min and max number of trend changepoints (tcp) allowed in segmenting the trend component. If the min and max changepoint numbers are equal, BEAST assumes a constant number of changepoints and won't infer the posterior probability of the number of changepoints for the trend, but it still estimates the occurrence probability of the changepoints over time (i.e., the most likely times at which these changepoints occur in the trend). If both the min and max numbers are set to 0, no changepoints are allowed; then a global polynomial trend is used to fit the trend component, but still, the most likely polynomial order will be inferred if torder.minmax[1] is not equal to torder.minmax[2].}
-
-  \item{torder.minmax}{ a vector of 2 integers (>=0); the min and max orders of the polynomials considered to fit the trend component. The 0-th order corresponds to a constant term/a flat line and the 1st order is a line. If \code{torder.minmax[1]=torder.minmax[2]}, BEAST assumes a constant polynomial order used and won't infer the posterior probability of polynomial orders. }	
-  
-  %%%%%%%%%%%%%%%%%%%%%	
-  
-  \item{sseg.min}{ an integer (>0); the min segment length allowed between two neighboring season changepoints. That is, when fitting a piecewise harmonic seasonal model, two changepoints are not allowed to occur within a time window of length \code{sseg.min}. \code{sseg.min} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{sseg.min*deltat}. \code{sseg.min} defaults to NULL and its value will be given a default value in reference to \code{freq}. }	
-  
-  \item{sseg.leftmargin}{ an integer (>=0); the number of leftmost data points excluded for seasonal changepoint detection. That is, when fitting a piecewise harmonic seasonal model, no changepoints are allowed in the starting window/segment of length \code{sseg.leftmargin}. \code{sseg.leftmargin} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{sseg.leftmargin*deltat}. If missing, \code{sseg.leftmargin} defaults to \code{sseg.min}.}
-  
-  \item{sseg.rightmargin}{ an integer (>=0); the number of rightmost data points excluded for seasonal changepoint detection. That is, when fitting a piecewise harmonic seasonal model, no changepoints are allowed in the ending window/segment of length \code{sseg.rightmargin}. \code{sseg.rightmargin} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{sseg.rightmargin*deltat}. If missing, \code{sseg.rightmargin} defaults to \code{sseg.min}.}  
-    	
-  \item{tseg.min}{ an integer (>0); the min segment length allowed between two neighboring trend changepoints. That is, when fitting a piecewise polynomial trend model, two changepoints are not allowed to occur within a time window of length \code{tseg.min}. \code{tseg.min} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{tseg.min*deltat}. \code{tseg.min} defaults to NULL and its value will be given a default value in reference to \code{freq} if the time series has a cyclic component.}
-  
-  \item{tseg.leftmargin}{ an integer (>=0); the number of leftmost data points excluded for trend changepoint detection. That is, when fitting a piecewise polynomial trend model, no changepoints are allowed in the starting window/segment of length \code{tseg.leftmargin}. \code{tseg.leftmargin} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{tseg.leftmargin*deltat}. If missing, \code{tseg.leftmargin} defaults to \code{tseg.min}.}
-  
-  \item{tseg.rightmargin}{ an integer (>=0); the number of rightmost data points excluded for trend changepoint detection. That is, when fitting a piecewise polynomial trend model, no changepoints are allowed in the ending window/segment of length \code{tseg.rightmargin}. \code{tseg.rightmargin} must be an unitless integer--the number of time intervals/data points so that the time window in the original unit is \code{tseg.rightmargin*deltat}. If missing, \code{tseg.rightmargin} defaults to \code{tseg.min}.}  
-
- %%%%%%%%%%%%%%%%%%%%%	
-  
-  \item{method}{ a string (default to 'bayes'); specify the method for formulating model posterior probability.
-         \itemize{
-			\item  \code{'bayes'}: the full Bayesian formulation as described in Zhao et al. (2019). 					
-			\item  \code{'bic'}:  approximation of posterior probability using the Bayesian information criterion bic=n*ln(SSE)+ k*ln(n) where k and n are the numbers of parameters and datapoints.					
-			\item  \code{'aic'}:  approximation of posterior probability using the Akaike information criterion aic=n*ln(SSE)+ 2k.					
- 			\item  \code{'aicc'}:  approximation of posterior probability using the corrected Akaike information criterion aicc=aic+ (2k^2+k*2)/(n-k-1).					
- 			\item  \code{'hic'}:  approximation of posterior probability using the Hannan-Quinn information criterion  hic = n*ln(SSE) +  2k*ln(ln(n).					
-			\item  \code{'bic0.25'}:  approximation using the Bayesian information criterion adopted from Kim et al. (2016) <doi:10.1016/j.jspi.2015.09.008>; bic0.25 = n*ln(SSE) + 0.25k*ln(n) with less complexity penelaty than the standard BIC.
-			\item  \code{'bic0.50'}:  the same as above except that the penalty factor is 0.50.
-			\item  \code{'bic1.5'}:  the same as above except that the penalty factor is 1.5.
-			\item  \code{'bic2'}:  the same as above except that the penalty factor is 2.0.
-
-		} %   \itemize
-  } %  \item{method}
-     
-  \item{detrend}{ logical; If \code{TRUE}, a global trend is first fitted and removed from the time series before running BEAST; after BEAST finishes, the global trend is added back to the BEAST result. }
-  
-  \item{deseasonalize}{ logical; If \code{TRUE}, a global seasonal model is first fitted and removed from the time series before running BEAST; after BEAST finishes, the global seasonal curve is added back to the BEAST result. \code{deseasonalize} is ignored if \code{season='none'} (i.e., trend-only data). }	
-  
-  \item{mcmc.seed}{ integer (>=0); the seed for the random number generator used for Monte Carlo Markov Chain (mcmc).  If \code{mcmc.seed=0}, an arbitrary seed is picked and the fitting results vary across runs. If fixed to the same non-zero integer, the result can be re-produced for different runs. But the results from the same seed may still vary if run on different computers because the random generator library depends on CPU's instruction sets.}	 
- 
-  \item{mcmc.chains}{ integer (>0); the number of  MCMC chains.}
-  
-  \item{mcmc.thin}{ integer (>0); a factor to thin chains (e.g., if thinningFactor=5, samples will be taken every 3 iterations)}
-  
-  \item{mcmc.burnin}{ integer (>0); the number of burn-in samples discarded at the start of each chain}
-  
-  \item{mcmc.samples}{ integer (>=0); the number of samples collected per MCMC chain. The total number of iterations is \code{(burnin+samples*thin)*chains}.}
-
-  
-%%%%%%%%%%%%%%%%%%%%%	
-  
-  \item{precValue}{  numeric (>0); the hyperparameter of the precision prior; the default value is 1.5. \code{precValue} is useful only when \code{precPriorType}='constant', as further explained below}
-  \item{precPriorType}{ characters. It takes one of 'constant', 'uniform',  'componentwise' (the default), and 'orderwise'. Below are the differences between them.
-            \enumerate{
-                 \item \code{'constant'}:  the precision parameter used to parameterize the model coefficients is fixed to a constant specified by \code{precValue}. In other words, \code{precValue} is a user-defined hyperparameter and the fitting result may be sensitive to the chosen values of \code{precValue}.
-                 \item \code{'uniform'}:  the precision parameter used to parameterize the model coefficients is a random variable; its initial value is specified by \code{precValue}. In other words, \code{precValue} will be inferred by the MCMC, so the fitting result will be insensitive to the choice in \code{precValue}.
-                 \item \code{'componentwise'}: multiple precision parameters are used to parameterize the model coefficients for individual components (e.g., one for season and another for trend); their initial values is specified by \code{precValue}. In other words, \code{precValue} will be inferred by the MCMC, so the fitting result will be insensitive to the choice in \code{precValue}.
-                 \item \code{'orderwise'}: multiple precision parameters are used to parameterize the model coefficients not just for individual components but also for individual orders of each component; their initial values is specified by \code{precValue}. In other words, \code{precValue} will be inferred by the MCMC, so the fitting result will be insensitive to the choice in \code{precValue}.
-          } %componentwise
+  \item{start}{
+  \code{start} is numeric (default \code{1.0}) or \code{Date}; the time of the first data point of \code{y}. It can be specified as:
+  \itemize{
+    \item a scalar (e.g., \code{2021.0644});
+    \item a numeric vector \code{c(year, month, day)} (e.g., \code{c(2021, 1, 24)});
+    \item an \code{R} \code{Date} object (e.g., \code{as.Date("2021-01-24")}).
   }
-  
- 
- 
+  }
 
-  \item{hasOutlier}{boolean; if true, fit a model with an outlier component that refers to potential spikes or dips at isolated data points:   Y = trend + outlier + error if season='none',and Y = trend + season + outlier + error  if season ~= 'none'.}  
+  \item{deltat}{
+  \code{deltat} is numeric (default \code{1.0}) or character string; the time interval between consecutive data points. Its unit must be consistent with \code{start}.
+  \itemize{
+    \item If \code{start} is numeric, the unit is arbitrary and is not interpreted by BEAST (e.g., \code{2021.3} can be be of any unit, a time, a distance, etc.).
+    \item If \code{start} is a \code{c(year, month, day)} vector or a \code{Date}, \code{deltat} is interpreted in units of years. For example, for a monthly series with \code{start = c(2021, 1, 24)}, \code{start} is internally converted to a fractional year \code{2021 + (24 - 0.5)/365 = 2021.0644} and \code{deltat = 1/12} can be used to specify a 1-month interval (1/12 yr).
+    \item Alternatively, \code{deltat} can be a character string encoding both the value and the unit, such as \code{"7 days"}, \code{"7d"}, \code{"1/2 months"}, \code{"1 mn"}, \code{"1 year"}, or \code{"1y"}.
+  }
+  }
 
-  \item{ocp.minmax}{a vector of 2 integers (>=0); the min and max numbers of outlier-type changepoints (ocp) allowed in the time seriestrend component. Ocp refers to spikes or dips at isolated times that can't be modeled as trends or seasonal terms.} 
-  
-  \item{print.param}{ boolean. If \code{TRUE},the full list of input parameters to BEAST  will be printed out prior to the MCMC inference; the naming for this list (e.g., metadata, prior, and mcmc) differs slightly from the input to \code{beast}, but there is a one-to-one correspondence (e.g., prior$trendMinSepDist=tseg.min). Internally, beast converts the input parameters to the forms of metadata, prior,and mcmc. Type 'View(beast)' to see the details or check the \code{beast123} function. }	
-  
-  \item{print.progress}{ boolean;If \code{TRUE}, print a progressbar. }	
+  \item{season}{
+  Character (default \code{"harmonic"}). Specifies whether \code{y} has a periodic component and how it is modeled:
+  \itemize{
+    \item \code{"none"}: \code{y} is treated as trend-only; no periodic components are modeled. Seasonal parameters (e.g., \code{sorder.minmax}, \code{scp.minmax}, \code{sseg.min}) are ignored.
+    \item \code{"harmonic"}: \code{y} has a periodic/seasonal component. The term \code{season} is used broadly for any periodic variation in \code{y}. The period of the seasonal component is not a BEAST model parameter; it is treated as known and must be supplied via \code{period}. For \code{"harmonic"}, the seasonal component is modeled as a harmonic curve (a combination of sines and cosines).
+    \item \code{"dummy"}: As for \code{"harmonic"}, except that the periodic/seasonal component is modeled as a non-parametric curve. The harmonic order argument \code{sorder.minmax} is then irrelevant and ignored.
+    \item \code{"svd"} (experimental): As for \code{"harmonic"}, but with the seasonal component expressed as a linear combination of basis functions derived from a singular value decomposition (SVD). These basis functions can be more parsimonious than pure harmonic bases and may improve detection of subtle seasonal changepoints.
+  }
+  }
 
-  \item{print.warning}{ boolean;If \code{TRUE}, print warning messages }	  
-  
-  \item{quiet}{ boolean. If \code{TRUE}, print nothing.}	
+  \item{period}{
+  Numeric or character string. The period of the seasonal/periodic component in \code{y}. It is needed only when a periodic component is present (e.g., \code{season = "harmonic"}, \code{"svd"}, or \code{"dummy"}) and is ignored for trend-only data (\code{season = "none"}). The period must be in the same time unit as \code{deltat}, and it should satisfy \code{period = deltat * freq}, where \code{freq} is the number of data points per period.
+  \itemize{
+    \item In earlier versions, a separate \code{freq} argument was used; it is now obsolete and replaced by \code{period}. For backward compatibility, \code{freq} is still accepted via \code{...}, but \code{period} takes precedence if both are provided.
+    \item If \code{period} is missing, BEAST attempts to guess a plausible period via autocorrelation. This guess can be unreliable, so users are strongly encouraged to specify \code{period} explicitly whenever a periodic component is present.
+    \item If \code{period <= 0}, \code{season = "none"} is assumed and a trend-only model is fitted.
+    \item When \code{start} or \code{deltat} is specified using dates, \code{period} may also be provided as a string, such as \code{"1 year"}, \code{"12 months"}, \code{"365d"}, or \code{"366 days"}.
+  }
+  }
 
-  \item{dump.ci}{ boolean; If \code{TRUE}, credible intervals (i.e., out$season$CI or out$trend$CI) will be computed for the estimated seasonal and trend components. Computing CI is time-consuming, due to sorting, so set \code{ci} to FALSE if a symmetric credible interval (i.e., out$trend$SD and out$season$SD) suffices.}	  
-  
-  \item{dump.mcmc}{ boolean; If \code{TRUE}, dump individual samples of the MCMC chains.}	  
-  
-  \item{gui}{ boolean. If \code{TRUE}, BEAST will be run with a GUI window to show an animation of the MCMC sampling in the model space step by step; as an experimental feature, "\code{gui=TRUE}" works only for Windows x64 systems not Windows 32 or Linux/Mac.}	
- 	
-  \item{\dots}{additional parameters. There are many more settings for the implementation but not made available in the beast() interface; please use the function \code{beast123()} instead }
- 
+  \item{scp.minmax}{
+  A numeric vector of length 2 (integers \code{>= 0}); the minimum and maximum numbers of seasonal changepoints (scp) allowed in segmenting the seasonal component. Used only when \code{y} has a seasonal component (i.e., \code{season = "harmonic"}, \code{"svd"}, or \code{"dummy"}) and ignored for trend-only data. \code{scp.minmax[2]} couldn't be smaller than \code{scp.minmax[1]}.
+  \itemize{
+    \item If \code{scp.minmax[1] == scp.minmax[2]}, BEAST assumes a fixed number of seasonal changepoints and does not infer the posterior distribution over the number of changepoints, though it still estimates the probabilities and locations of most likely changepoints over time.
+    \item If \code{scp.minmax[1] == scp.minmax[2] == 0}, both the min and max numbers of scp are set to 0. That is, no seasonal changepoints are allowed; a single global seasonal model is used, but the harmonic order may still be inferred if \code{sorder.minmax[1] != sorder.minmax[2]}.
+  }
+  }
+
+  \item{sorder.minmax}{
+  A numeric vector of length 2 (integers \code{>= 1}); the minimum and maximum harmonic orders considered for the seasonal component. Used only when \code{season = "harmonic"} or \code{"svd"} and ignored for trend-only data or when \code{season = "dummy"}.
+  \itemize{
+    \item If \code{sorder.minmax[1] == sorder.minmax[2]}, BEAST assumes a fixed harmonic order and does not infer the posterior distribution over harmonic orders.
+  }
+  }
+
+  \item{tcp.minmax}{
+  A numeric vector of length 2 (integers \code{>= 0}); the minimum and maximum numbers of trend changepoints (tcp) allowed in segmenting the trend component. 
+  \itemize{
+    \item If \code{tcp.minmax[1] == tcp.minmax[2]}, BEAST assumes a fixed number of trend changepoints and does not infer the posterior distribution over the number of changepoints, though it still estimates changepoint probabilities and locations.
+    \item If \code{tcp.minmax[1] == tcp.minmax[2] == 0}, both the min and max numbers are set to 0. That is, no trend changepoints are allowed, and a single global polynomial trend is fitted. The polynomial order may still be inferred if \code{torder.minmax[1] != torder.minmax[2]}.
+  }
+  }
+
+  \item{torder.minmax}{
+  A numeric vector of length 2 (integers \code{>= 0}); the minimum and maximum polynomial orders considered for the trend component. If missing, \code{tcp.minmax} defaults to \code{c(0,1)}. Order 0 corresponds to a constant (flat) trend; order 1 corresponds to a linear trend.
+  \itemize{
+    \item If \code{torder.minmax[1] == torder.minmax[2]}, BEAST assumes a fixed polynomial order and does not infer the posterior distribution over polynomial orders.
+  }
+  }
+
+  \item{sseg.min}{
+  An integer (\code{> 0}); the minimum segment length, in number of time steps, allowed between neighboring seasonal changepoints. When fitting a piecewise seasonal model, two seasonal changepoints cannot be closer than \code{sseg.min} time intervals.
+  \code{sseg.min} is unitless (counts of time steps); the corresponding time window in the underlying units is \code{sseg.min * deltat}. If \code{NULL}, a default is chosen internally (typically based on the the period).
+  }
+
+  \item{sseg.leftmargin}{
+  Integer (\code{>= 0}); the number of leftmost observations excluded from seasonal changepoint detection. No seasonal changepoints are allowed in the initial window of length \code{sseg.leftmargin}. This is specified in time steps; the corresponding time window is \code{sseg.leftmargin * deltat}. If \code{NULL}, it defaults to \code{sseg.min}.
+  }
+
+  \item{sseg.rightmargin}{
+  Integer (\code{>= 0}); the number of rightmost observations excluded from seasonal changepoint detection. No seasonal changepoints are allowed in the final window of length \code{sseg.rightmargin}. This is specified in time steps; the corresponding time window is \code{sseg.rightmargin * deltat}. If \code{NULL}, it defaults to \code{sseg.min}.
+  }
+
+  \item{tseg.min}{
+  Integer (\code{> 0}); the minimum segment length, in number of time steps, allowed between neighboring trend changepoints. When fitting a piecewise polynomial trend, two trend changepoints cannot be closer than \code{tseg.min} time intervals.
+  \code{tseg.min} is unitless (counts of time steps); the corresponding time window is \code{tseg.min * deltat}. If \code{NULL}, a default is chosen internally (often in reference to the presence or absence of a cyclic component).
+  }
+
+  \item{tseg.leftmargin}{
+  Integer (\code{>= 0}); the number of leftmost observations excluded from trend changepoint detection. No trend changepoints are allowed in the initial window of length \code{tseg.leftmargin}. This is specified in time steps; the corresponding time window is \code{tseg.leftmargin * deltat}. If \code{NULL}, it defaults to \code{tseg.min}.
+  }
+
+  \item{tseg.rightmargin}{
+  Integer (\code{>= 0}); the number of rightmost observations excluded from trend changepoint detection. No trend changepoints are allowed in the final window of length \code{tseg.rightmargin}. This is specified in time steps; the corresponding time window is \code{tseg.rightmargin * deltat}. If \code{NULL}, it defaults to \code{tseg.min}.
+  }
+
+  \item{s.complexfct}{
+  Numeric (default \code{0.0}); a hyperprior parameter--newly added in Version 1.02--controlling the complexity of the seasonal curve (i.e., the number of seasonal changepoints). A prior of the form \eqn{ p(k) \propto \exp[\lambda (k+1)]} is placed on the number of seasonal changepoints \eqn{k}, where \eqn{\lambda} is \code{seasonComplexityFactor}. Setting \eqn{\lambda = 0} yields a non-informative prior \eqn{ p(k) \propto 1.0}  where all model dimensions are equally likely \emph{a priori}. Users may tune \code{seasonComplexityFactor} in the range \code{[-20, 20]} or an even wider range: negative values (e.g., \eqn{\lambda = -15.9}) favor fewer changepoints (simpler seasonal curves), whereas positive values (e.g., \eqn{\lambda = 5.76}) favor more changepoints (more complex curves).
+  }
+
+  \item{t.complexfct}{
+  Numeric (default \code{0.0}); analogous to \code{s.complexfct}, but for the trend component and the number of trend changepoints.
+  }
+
+  \item{method}{
+  Character (default \code{"bayes"}). Specifies how model posterior probabilities are formulated or approximated:
+  \itemize{
+    \item \code{"bayes"}: Full Bayesian formulation as described in Zhao et al. (2019).
+    \item \code{"bic"}: Approximate posterior probabilities using the Bayesian Information Criterion (BIC),
+      \eqn{\mathrm{BIC} = n \log(\mathrm{SSE}) + k \log(n)}, where \eqn{k} is the number of parameters and \eqn{n} the number of observations.
+    \item \code{"aic"}: Approximate posterior probabilities using Akaike's Information Criterion (AIC),
+      \eqn{\mathrm{AIC} = n \log(\mathrm{SSE}) + 2k}.
+    \item \code{"aicc"}: Approximate posterior probabilities using the corrected AIC (AICc),
+      \eqn{\mathrm{AICc} = \mathrm{AIC} + \frac{2k^2 + 2k}{n - k - 1}}.
+    \item \code{"hic"}: Approximate posterior probabilities using the Hannan-Quinn Information Criterion (HIC),
+      \eqn{\mathrm{HIC} = n \log(\mathrm{SSE}) + 2k \log(\log(n))}.
+    \item \code{"bic0.25"}: BIC-type approximation adopted from Kim et al. (2016) \doi{10.1016/j.jspi.2015.09.008} with reduced complexity penalty,
+      \eqn{\mathrm{BIC}_{0.25} = n \log(\mathrm{SSE}) + 0.25 k \log(n)}.
+    \item \code{"bic0.5"}: As above but with penalty factor \code{0.5}.
+    \item \code{"bic1.5"}: As above but with penalty factor \code{1.5}.
+    \item \code{"bic2"}: As above but with penalty factor \code{2.0}.
+  }
+  }
+
+  \item{detrend}{
+  Logical; if \code{TRUE}, a global trend is first fitted and removed from the series before running BEAST, and then added back to the BEAST result at the end.
+  }
+
+  \item{deseasonalize}{
+  Logical; if \code{TRUE}, a global seasonal model is first fitted and removed before running BEAST, and then added back to the BEAST result. Ignored if \code{season = "none"} (trend-only data).
+  }
+
+  \item{mcmc.seed}{
+  Integer (\code{>= 0}); seed for the random number generator used in the MCMC. If \code{mcmc.seed = 0}, an arbitrary seed is used and results may vary across runs. Using the same non-zero seed makes results reproducible on the same machine, though differences across platforms/CPUs may still arise due to differences in random number libraries or CPU instruction sets.
+  }
+
+  \item{mcmc.chains}{
+  Integer (\code{> 0}); the number of parallel MCMC chains.
+  }
+
+  \item{mcmc.thin}{
+  Integer (\code{> 0}); thinning factor. If \code{mcmc.thin = k}, every \code{k}-th iteration is retained and the others are discarded.
+  }
+
+  \item{mcmc.burnin}{
+  Integer (\code{> 0}); number of initial iterations discarded as burn-in for each chain.
+  }
+
+  \item{mcmc.samples}{
+  Integer (\code{>= 0}); number of samples collected per MCMC chain. The total number of iterations is \code{(mcmc.burnin + mcmc.samples * mcmc.thin) * mcmc.chains}.
+  }
+
+  \item{precValue}{
+  Numeric (\code{> 0}); hyperparameter for the precision priors on model coefficients. The default is \code{1.5}. It is used directly only when \code{precPriorType = "constant"} (see below); in other cases it serves as an initial value.
+  }
+
+  \item{precPriorType}{
+  Character; one of \code{"constant"}, \code{"uniform"}, \code{"componentwise"} (default), or \code{"orderwise"}. These control how precision parameters for the model coefficients are treated:
+  \enumerate{
+    \item \code{"constant"}: A single precision parameter is fixed at \code{precValue}. The fit may be sensitive to the chosen value.
+    \item \code{"uniform"}: A single precision parameter is treated as a random variable with initial value \code{precValue}; its posterior is inferred via MCMC. The results are less sensitive to the initial choice of \code{precValue}.
+    \item \code{"componentwise"}: Separate precision parameters are used for different components (e.g., season vs. trend), each initialized by \code{precValue} and inferred via MCMC.
+    \item \code{"orderwise"}: Separate precision parameters are used for different components and for different orders within each component, all initialized by \code{precValue} and inferred via MCMC.
+  }
+  }
+
+  \item{hasOutlier}{
+  Logical; if \code{TRUE}, fit a model with an outlier component representing potential spikes or dips at isolated data points:
+  \itemize{
+    \item \code{Y = trend + outlier + error} if \code{season = "none"},
+    \item \code{Y = trend + season + outlier + error} otherwise.
+  }
+  }
+
+  \item{ocp.minmax}{
+  Numeric vector of length 2 (integers \code{>= 0}); the minimum and maximum numbers of outlier-type changepoints (ocp) allowed in the series. Outliers refer to spikes or dips at isolated times that cannot be captured by the trend or seasonal components.
+  }
+
+  \item{print.param}{
+  Logical; if \code{TRUE}, the full list of internal BEAST parameters (\code{metadata}, \code{prior}, \code{mcmc}, \code{extra}) is printed before MCMC begins. These internal objects correspond one-to-one with the arguments of \code{beast}. For example, \code{prior$trendMinSepDist} corresponds to \code{tseg.min}. See \code{\link[Rbeast]{beast123}} or inspect the source of \code{beast} for details.
+  }
+
+  \item{print.progress}{
+  Logical; if \code{TRUE}, a progress bar is printed.
+  }
+
+  \item{print.warning}{
+  Logical; if \code{TRUE}, warning messages are printed.
+  }
+
+  \item{quiet}{
+  Logical; if \code{TRUE}, suppress most console output (overrides \code{print.param} and \code{print.progress}).
+  }
+
+  \item{dump.ci}{
+  Logical; if \code{TRUE}, credible intervals for the trend and seasonal components (e.g., \code{out$trend$CI}, \code{out$season$CI}) are computed and returned. Computing credible intervals is relatively time-consuming (due to sorting and summarizing many MCMC samples). If only symmetric uncertainty summaries are needed, the posterior standard deviations \code{out$trend$SD} and \code{out$season$SD} may suffice and \code{dump.ci} can be set to \code{FALSE}.
+  }
+
+  \item{dump.mcmc}{
+  Logical; if \code{TRUE}, individual MCMC samples are dumped to the output.
+  }
+
+  \item{gui}{
+  Logical; if \code{TRUE}, BEAST runs with a GUI window showing an animation of the MCMC sampling in model space (numbers and locations of trend/seasonal changepoints). This feature is \emph{experimental} and currently available only on 64-bit Windows systems (not 32-bit Windows, macOS, or Linux).
+  }
+
+  \item{\dots}{
+  Additional arguments reserved for future extensions and backward compatibility. Certain low-level settings are only available via \code{beast123()} (through \code{metadata}, \code{prior}, \code{mcmc}, and \code{extra}), not via \code{beast()}.
+  }
 }
 
 \value{
-  The output is an object of class "beast". It is a list, consisting of the following variables. Its structure is the same as the outputs from the other two alternative functions \code{\link[Rbeast]{beast.irreg}} and \code{\link[Rbeast]{beast123}}. In the explanations below, we assume the input \code{y} is a single time series of length \code{N}:
+The result is an object of class \code{"beast"}, i.e., a list with structure identical to the outputs of \code{\link[Rbeast]{beast.irreg}} and \code{\link[Rbeast]{beast123}}. The exact array dimensions depend on the input \code{y}. Below we assume a single time series input of length \code{N}.
 
-  \item{time}{a vector of size \code{1xN}: the times at the \code{N} sampled locations. By default, it is simply set to \code{1:N} if the input arguments \code{delta}, \code{start}, or \code{time} are missing.}
-  \item{data}{a vector, matrix, or 3D array; this is a copy of the input \code{y} if extra$dumpInputData = TRUE. If extra$dumpInputData=FALSE, it is set to NULL. If the original input \code{y} is irregular (as in \code{\link[Rbeast]{beast.irreg}}), the copy here is the regular version aggregated from the original at the time interval specified by deltat (in \code{\link[Rbeast]{beast.irreg}} or metadata$deltaTime (in \code{\link[Rbeast]{beast123}}). }
-  \item{marg_lik}{numeric; the average of the model marginal likelihood; the greater marg_lik, the better the fitting for a given time series; that is, -1 will be better than -10; 10 better than -1 and -10.}
-  \item{R2}{numeric; the R-square of the model fitting.}
-  \item{RMSE}{numeric; the RMSE of the model fitting.}
-  \item{sig2}{numeric; the estimated variance of the model error.}
-  \item{trend}{a list object consisting of various outputs related to the estimated trend component:
-  	\itemize{
-		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of trend changepoints. Individual models sampled by BEAST has a varying dimension (e.g., number of changepoints or knots), so several alternative statistics (e.g., \code{ncp_mode}, \code{ncp_median}, and \code{ncp_pct90}) are also given to summarize the number of changepoints. For example, if \code{mcmc$samples=10}, the numbers of changepoints for the 10 sampled models are assumed to be c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1). The mean ncp is 3.1 (rounded to 3), the median is 2.5 (2),  the mode is 1, and the 90th percentile (ncp_pct90) is 6.5. 
-		 \item \code{ncp_mode}: [Number of ChangePoints]. a numeric scalar; the mode for number of changepoints. See the above for explanations.
-		 \item \code{ncp_median}: [Number of ChangePoints]. a numeric scalar; the median for number of changepoints. See the above for explanations.
-		 \item \code{ncp_pct90}: [Number of ChangePoints]. a numeric scalar; the 90th percentile for number of changepoints. See the above for explanations.
-		 
- 
-		 
-		 
-		 \item \code{ncpPr}: [Probability of the Number of ChangePoints]. A vector of length \code{(tcp.minmax[2]+1)=tcp.max+1}. It gives a probability distribution of having a certain number of trend changepoints over the range of [0,tcp.max]; for example, \code{ncpPr[1]} is the probability of having no trend changepoint; \code{ncpPr[i]} is the probability of having (i-1) changepoints: Note that it is \code{ncpPr[i]} not \code{ncpPr[i-1]} because ncpPr[1] is used for having zero changepoint.
-		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the trend at each point of time. Plotting \code{cpOccPr} will depict a continious curve of probability-of-being-changepoint. \emph{ \bold{ Of particular note, in the curve, a higher peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time and does not necessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window \code{c(0.1,0.2,0.21,0.2,0.1)} (i.e., the peak prob is 0.21 but the summed prob is 0.71}}).
-		 \item \code{order}: a vector of length N; the average polynomial order needed to approximate the fitted trend. As an average over many sampled individual piece-wise polynomial trends, \code{order} is not necessarily an integer.
+  \item{time}{
+  Numeric vector of length \code{N}; the time associated with each observation. By default, this is simply \code{1:N} if \code{start}, \code{deltat}, and any time attributes are missing.
+  }
 
-		 \item \code{cp}: [Changepoints] a vector of length \code{tcp.max=tcp.minmax[2]}; the most possible changepoint locations in the trend component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of \code{tseg.min} and then picking up to a total \code{prior$MaxKnotNum}/\code{tcp.max} of the highest peaks in the filtered curve.  NaNs are possible if no enough changepoints are identified. \code{cp} records all the possible changepoints identified and many of them are bound to be false positives. Do not blindly treat all of them as actual changepoints.
+  \item{data}{
+  A vector, matrix, or 3D array; a copy of the input \code{y} if the underlying \code{extra$dumpInputData = TRUE}. If \code{extra$dumpInputData = FALSE}, this is \code{NULL}. For irregular inputs (as in \code{\link[Rbeast]{beast.irreg}}), this field stores the aggregated regular series at time intervals spaced by \code{deltat} (or \code{metadata$deltaTime} in the \code{beast123} interface).
+  }
 
-		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{tcp.max=tcp.minmax[2]}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaining elements if \code{ncp<tcp.max}.
-		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{tcp.max x 2}; the credible intervals for the detected changepoints \code{cp}.
-		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{tcp.max}; the jumps in the fitted trend curves at the detected changepoints \code{cp}.
-		 \item \code{Y}: a vector of length N; the estimated trend component. It is the Bayesian model averaging of all the individual sampled trend.
-		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated trend component.
-		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated trend. One vector of the matrix is for the upper envelope and another for the lower envelope.
-		 \item \code{slp}: [Slope] a vector of length N;  the time-varying slope of the fitted trend component .
-		 \item \code{slpSD}: [Standar Deviation of Slope] a vector of length N;  the SD of the slope for the trend component.
-		 \item \code{slpSgnPosPr}: [PRobability of slope having a positive sign] a vector of length N;  the probability of the slope being positive (i.e., increasing trend) for the trend component. For example, if \code{slpSgnPosPr=0.80} at a given point in time, it means that 80\% of the individual trend models sampled in the MCMC chain has a positive slope at that point.
-		 \item \code{slpSgnZeroPr}: [PRobability of slope being zero] a vector of length N;  the probability of the slope being zero (i.e., a flat constant line) for the trend component. For example, if \code{slpSgnZeroPr=0.10} at a given point in time, it means that 10\% of the individual trend models sampled in the MCMC chain has a zero slope at that point.  The probability of slope being negative can be obtained from \code{1}-\code{slpSgnZeroPr}-\code{slpSgnPosPr}.
+  \item{marg_lik}{
+  Numeric; the average marginal likelihood of the sampled models. Larger values indicate better fit for a given time series (e.g., \code{-1} is better than \code{-10}; \code{10} is better than \code{-1} or \code{-10}).
+  }
 
-		 \item \code{pos_ncp}: 
-		 \item \code{neg_ncp}:  
-		 \item \code{pos_ncpPr}:
-		 \item \code{neg_ncpPr}:
-		 \item \code{pos_cpOccPr}:
-		 \item \code{neg_cpOccPr}:
-		 \item \code{pos_cp}:
-		 \item \code{neg_cp}:
-		 \item \code{pos_cpPr}:
-		 \item \code{neg_cpPr}:
-		 \item \code{pos_cpAbruptChange}:
-		 \item \code{neg_cpAbruptChange}:
-		 \item \code{pos_cpCI}:
-		 \item \code{neg_cpCI}:  The above variables have the same outputs as those variables without the prefix 'pos' and 'neg', except that we differentiate the changepoints with a POStive jump in the trend from those changepoints with a NEGative jump. For example, \code{pos_ncp} refers to the average number of trend changepoints that jump up (i.e., positively) in the trend.
-		 \item \code{inc_ncp}: 
-		 \item \code{dec_ncp}:  
-		 \item \code{inc_ncpPr}:
-		 \item \code{dec_ncpPr}:
-		 \item \code{inc_cpOccPr}:
-		 \item \code{dec_cpOccPr}:
-		 \item \code{inc_cp}:
-		 \item \code{dec_cp}:
-		 \item \code{inc_cpPr}:
-		 \item \code{dec_cpPr}:
-		 \item \code{inc_cpAbruptChange}:
-		 \item \code{dec_cpAbruptChange}:
-		 \item \code{inc_cpCI}:
-		 \item \code{dec_cpCI}:  The above variables have the same outputs as those variables without the prefix 'inc' and 'dec', except that we differentiate the changepoints at which the trend slope increases from those changepoints at which the trend slope decreases. For example, if the trend slopes before and after a chngpt is 0.4 and 2.5, then the changepoint is counted toward \code{inc_ncp}.
+  \item{R2}{
+  Numeric; coefficient of determination (R-squared) of the fitted model.
+  }
 
- 
-	} %\itemize
-		
-  }%\item{trend}
- 
- 
+  \item{RMSE}{
+  Numeric; root mean squared error of the fitted model.
+  }
 
- \item{season}{a list object consisting of various outputs related to the estimated seasonal/periodic component:
-  	\itemize{
-		 \item \code{ncp}: [Number of ChangePoints]. a numeric scalar; the mean number of seasonal changepoints.
-		 \item \code{ncpPr}: [Probability of the Number of ChangePoints]. A vector of length \code{(scp.minmax[2]+1)=scp.max+1}. It gives a probability distribution of having a certain number of seasonal changepoints over the range of [0,scp.max]; for example, \code{ncpPr[1]} is the probability of having no seasonal changepoint; \code{ncpPr[i]} is the probability of having (i-1) changepoints: Note that  the index is i rather than (i-1) because ncpPr[1] is used for having zero changepoint.
-		 \item \code{cpOccPr}: [ChangePoint OCCurence PRobability]. a vector of length N; it gives a probability distribution of having a changepoint in the seasonal component at each point of time. Plotting \code{cpOccPr} will depict a continious curve of probability-of-being-changepoint over the time. Of particular note, in the curve, a higher value at a peak indicates a higher chance of being a changepoint only at that particular SINGLE point in time, and does not necessarily mean a higher chance of observing a changepoint AROUND that time. For example, a window of cpOccPr values \code{c(0,0,0.5,0,0)} (i.e., the peak prob is 0.5 and the summed prob is 0.5) is less likely to be a changepoint compared to another window values \code{c(0.1,0.2,0.3,0.2,0.1)} (i.e., the peak prob is 0.3 but the summed prob is 0.8).
-		 \item \code{order}: a vector of length N; the average harmonic order needed to approximate the seasonal component. As an average over many sampled individual piece-wise harmonic curves, \code{order} is not necessarily an integer.
-		 \item \code{cp}: [Changepoints] a vector of length \code{scp.max=scp.minmax[2]}; the most possible  changepoint locations in the seasonal component. The locations are obtained by first applying a sum-filtering to the \code{cpOccPr} curve with a filter window size of \code{sseg.min} and then picking up to a total \code{ncp} of the highest peaks in the filtered curve. If \code{ncp<scp.max}, the remaining of the vector is filled with NaNs.
-		 \item \code{cpPr}: [Changepoints PRobability] a vector of length \code{scp.max}; the probabilities associated with the changepoints \code{cp}. Filled with NaNs for the remaining elements if \code{ncp<scp.max}.
-		 \item \code{cpCI}: [Changepoints Credible Interval] a matrix of dimension \code{scp.max x 2}; the credible intervals for the detected changepoints \code{cp}.
-		 \item \code{cpAbruptChange}: [Abrupt change at Changepoints]  a vector of length \code{scp.max}; the jumps in the fitted seasonal curves at the detected changepoints \code{cp}.
-		 \item \code{Y}: a vector of length N; the estimated seasonal component. It is the Bayesian model averaging of all the individual sampled signal.
-		 \item \code{SD}: [Standard Deviation] a vector of length N; the estimated standard deviation of the estimated seasonal component.
-		 \item \code{CI}: [Standard Deviation] a matrix of dimension \code{N x 2}; the estimated credible interval of the estimated seasonal signal. One vector of the matrix is for the upper envelope and another for the lower envelope.
-		 \item \code{amp}: [AMPlitude] a vector of length N;  the time-varying amplitude of the estimated seasonality.
-		 \item \code{ampSD}: [Standar Deviation of AMPlitude] a vector of length N; , the SD of the amplitude of the seasonality.
- 
+  \item{sig2}{
+  Numeric; estimated variance of the residual error.
+  }
 
-		 \item \code{pos_ncp}: 
-		 \item \code{neg_ncp}:  
-		 \item \code{pos_ncpPr}:
-		 \item \code{neg_ncpPr}:
-		 \item \code{pos_cpOccPr}:
-		 \item \code{neg_cpOccPr}:
-		 \item \code{pos_cp}:
-		 \item \code{neg_cp}:
-		 \item \code{pos_cpPr}:
-		 \item \code{neg_cpPr}:
-		 \item \code{pos_cpAbruptChange}:
-		 \item \code{neg_cpAbruptChange}:
-		 \item \code{pos_cpCI}:
-		 \item \code{neg_cpCI}:  The above variables have the same outputs as those variables without the prefix 'pos' and 'neg', except that we differentiate the changepoints with a POStive jump in the trend from those changepoints with a NEGative jump. For example, \code{pos_ncp} refers to the average number of trend changepoints that jump up (i.e., positively) in the trend.
- 
+  \item{trend}{
+  \code{trend} is a \code{list} of outputs related to the estimated trend component:
+  \itemize{
+    \item \code{ncp}: Mean number of trend changepoints. Since individual sampled models can have different numbers of changepoints, several alternative summaries (\code{ncp_mode}, \code{ncp_median}, \code{ncp_pct90}) are also provided. For example, if \code{mcmc$samples = 10} and the numbers of changepoints across models are \code{c(0, 2, 4, 1, 1, 2, 7, 6, 6, 1)}, then the mean \code{ncp} is \code{3.1}, the median \code{2.5}, the mode \code{1}, and the 90th percentile (\code{ncp_pct90}) \code{6.5}.
+    \item \code{ncp_mode}: Mode of the number of trend changepoints.
+    \item \code{ncp_median}: Median of the number of trend changepoints.
+    \item \code{ncp_pct90}: 90th percentile of the number of trend changepoints.
+    \item \code{ncpPr}: Numeric vector of length \code{tcp.minmax[2] + 1}; probability distribution over the number of trend changepoints in \code{0:tcp.minmax[2]}. For example, \code{ncpPr[1]} is the probability of having no trend changepoint; \code{ncpPr[i]} is the probability of having \code{i - 1} changepoints.
+    \item \code{cpOccPr}: Numeric vector of length \code{N}; changepoint occurrence probability at each time index for the trend component. Plotting \code{cpOccPr} yields a continuous "probability-of-being-a-changepoint" curve. A higher peak at a single time step does \emph{not} necessarily imply a higher \emph{overall} probability of a changepoint in a neighborhood compared to a broader peak with lower maximum but higher summed probability. For example, a window of \code{cpOccPr} values \code{c(0, 0, 0.5, 0, 0)} (peak 0.5, sum 0.5) likely indicates a smaller chance of a changepoint than another window \code{c(0.1, 0.2, 0.21, 0.2, 0.1)} (peak 0.21, sum 0.71).
+    \item \code{order}: Numeric vector of length \code{N}; average polynomial order of the trend over sampled models at each time step. As a posterior average, it need not be an integer.
+    \item \code{cp}: Numeric vector of length up to \code{tcp.minmax[2]}; estimated trend changepoint locations. These are obtained by smoothing \code{cpOccPr} with a window of size \code{tseg.min} and selecting up to \code{tcp.minmax[2]} peaks from the smoothed curve. Some entries may be \code{NaN} if fewer changepoints are identified. Not all reported changepoints should be treated as "true"; some may be false positives. Check the associated posterior probabilities (\code{cpPr}) for confidence.
+    \item \code{cpPr}: Numeric vector of length \code{tcp.minmax[2]}; posterior probability associated with each changepoint in \code{cp}. Trailing entries are \code{NaN} if fewer changepoints are identified.
+    \item \code{cpCI}: Numeric matrix of dimension \code{tcp.minmax[2] x 2}; credible intervals for changepoint locations in \code{cp}.
+    \item \code{cpAbruptChange}: Numeric vector of length \code{tcp.minmax[2]}; magnitude of jumps in the trend at the detected changepoints.
+    \item \code{Y}: Numeric vector of length \code{N}; estimated trend component (Bayesian model average over sampled trends).
+    \item \code{SD}: Numeric vector of length \code{N}; posterior standard deviation of the trend.
+    \item \code{CI}: Numeric matrix of dimension \code{N x 2}; credible interval for the trend, with lower and upper envelopes.
+    \item \code{slp}: Numeric vector of length \code{N}; time-varying slope of the trend component.
+    \item \code{slpSD}: Numeric vector of length \code{N}; posterior standard deviation of the slope.
+    \item \code{slpSgnPosPr}: Numeric vector of length \code{N}; posterior probability that the slope is positive at each time point (i.e., increasing trend). For example, \code{slpSgnPosPr = 0.80} at a given time indicates that 80\% of sampled trends have a positive slope there.
+    \item \code{slpSgnZeroPr}: Numeric vector of length \code{N}; posterior probability that the slope is effectively zero at each time point. The probability of negative slope can be obtained as \code{1 - slpSgnZeroPr - slpSgnPosPr}.
+    \item \code{pos_ncp}, \code{neg_ncp}, \code{pos_ncpPr}, \code{neg_ncpPr},
+          \code{pos_cpOccPr}, \code{neg_cpOccPr}, \code{pos_cp}, \code{neg_cp},
+          \code{pos_cpPr}, \code{neg_cpPr}, \code{pos_cpAbruptChange},
+          \code{neg_cpAbruptChange}, \code{pos_cpCI}, \code{neg_cpCI}:
+      As above, but restricted to trend changepoints with positive jumps (\code{pos_*}) or negative jumps (\code{neg_*}) in the trend. For example, \code{pos_ncp} is the mean number of trend changepoints where the trend level jumps up.
+    \item \code{inc_ncp}, \code{dec_ncp}, \code{inc_ncpPr}, \code{dec_ncpPr},
+          \code{inc_cpOccPr}, \code{dec_cpOccPr}, \code{inc_cp}, \code{dec_cp},
+          \code{inc_cpPr}, \code{dec_cpPr}, \code{inc_cpAbruptChange},
+          \code{dec_cpAbruptChange}, \code{inc_cpCI}, \code{dec_cpCI}:
+      As above, but restricted to changepoints where the trend slope increases (\code{inc_*}) or decreases (\code{dec_*}). For example, if the trend slope changes from \code{0.4} to \code{2.5}, that changepoint contributes to \code{inc_ncp}.
+  }
+  }
 
- 
-	} %\itemize
-		
-  }%\item{trend}  
- 
+  \item{season}{
+   \code{season} is a \code{list} analogous to \code{trend}, but for the seasonal/periodic component (when present):
+  \itemize{
+    \item \code{ncp}: Mean number of seasonal changepoints.
+    \item \code{ncp_mode}, \code{ncp_median}, \code{ncp_pct90}: As for \code{trend}, but for seasonal changepoints.
+    \item \code{ncpPr}: Numeric vector of length \code{scp.minmax[2] + 1}; probability distribution over the number of seasonal changepoints in \code{0:scp.minmax[2]}. For example, \code{ncpPr[1]} is the probability of having no seasonal changepoint.
+    \item \code{cpOccPr}: Numeric vector of length \code{N}; seasonal changepoint occurrence probability over time. The same caveat applies as for \code{trend$cpOccPr}: the height of a single peak does not fully determine the overall probability of a changepoint in its neighborhood.
+    \item \code{order}: Numeric vector of length \code{N}; average harmonic order needed to approximate the seasonal component. As a posterior average over piecewise harmonic/SVD-based curves, this need not be an integer.
+    \item \code{cp}, \code{cpPr}, \code{cpCI}, \code{cpAbruptChange}:
+      Analogous to the trend fields, but for the seasonal component, with length determined by \code{scp.minmax[2]}.
+    \item \code{Y}: Numeric vector of length \code{N}; estimated seasonal component (Bayesian model average).
+    \item \code{SD}: Numeric vector of length \code{N}; posterior standard deviation of the seasonal component.
+    \item \code{CI}: Numeric matrix of dimension \code{N x 2}; credible interval for the seasonal component.
+    \item \code{amp}: Numeric vector of length \code{N}; time-varying amplitude of the seasonal component.
+    \item \code{ampSD}: Numeric vector of length \code{N}; posterior standard deviation of the amplitude.
+    \item \code{pos_ncp}, \code{neg_ncp}, \code{pos_ncpPr}, \code{neg_ncpPr},
+          \code{pos_cpOccPr}, \code{neg_cpOccPr}, \code{pos_cp}, \code{neg_cp},
+          \code{pos_cpPr}, \code{neg_cpPr}, \code{pos_cpAbruptChange},
+          \code{neg_cpAbruptChange}, \code{pos_cpCI}, \code{neg_cpCI}:
+      Seasonal analogues of the trend outputs with the same names, restricted to seasonal changepoints with positive (\code{pos_*}) or negative (\code{neg_*}) jumps in the seasonal curve. For example, \code{pos_ncp} refers to the average number of seasonal changepoints at which the seasonal component jumps up.
+  }
+  }
+  
+ \item{outlier}{
+   \code{outlier} is a \code{list} analogous to \code{trend} or \code{season}, but for the outlier component ( present only if setting \code{hasOutlier=TRUE})
+  } %\item{outlier}
+  
+}
 
-} %value
- 
- 
 \seealso{
-  \code{\link[Rbeast]{beast}},    \code{\link[Rbeast]{beast.irreg}},  \code{\link[Rbeast]{beast123}}, \code{\link[Rbeast]{minesweeper}},  \code{\link[Rbeast]{tetris}},   \code{\link[Rbeast]{geeLandsat}} 
+  \code{\link[Rbeast]{beast.irreg}},
+  \code{\link[Rbeast]{beast123}},
+  \code{\link[Rbeast]{minesweeper}},
+  \code{\link[Rbeast]{tetris}},
+  \code{\link[Rbeast]{geeLandsat}}
 }
 
 \note{
-The three functions \code{beast}(),  \code{beast.irreg}(), and  \code{beast123}() are essentially the same BEAST algorithm but with different APIs. There is a one-to-one correspondence between the parameters for beast() and beast.irreg() and the 'metadata', 'prior','mcmc', and 'extra' objects in the beast123() interface. Examples are:
-
-  \code{start            <->   metadata$startTime }\cr 
-  \code{deltat          <->  metadata$deltaTime }\cr   
-  \code{deseasonalize   <->  metadata$deseasonalize }\cr
-  \code{hasOutlier      <->  metadata$hasOutlierCmpnt }\cr
-  \code{scp.minmax[1]   <->  prior$seasonMinOrder }\cr
-  \code{scp.minmax[2]   <->  prior$seasonMaxOrder }\cr
-  \code{sseg.min        <->  prior$seasonMinSepDist}\cr  
-  \code{tcp.torder[1]   <->  prior$trendMinOrder}\cr
-  \code{tseg.leftmargin <->  prior$trendLeftMargin}\cr
-  \code{mcmc.seed       <->  mcmc$seed}\cr
-  \code{dump.ci         <->  extra$computeCredible}\cr
-  
-Experts should use the the beast123 function.
-} 
+The three functions \code{beast()}, \code{beast.irreg()}, and \code{beast123()} implement the same BEAST algorithm but with different APIs. There is a one-to-one correspondence between (1) the arguments of \code{beast()} / \code{beast.irreg()} and (2) the \code{metadata}, \code{prior}, \code{mcmc}, and \code{extra} lists used by \code{beast123()}. Examples include:
+\cr
+	%\format{
+	  \tabular{lcl}{
+		\code{start}             \tab <-> \tab \code{metadata$startTime} \cr
+		\code{deltat}            \tab <-> \tab \code{metadata$deltaTime} \cr
+		\code{deseasonalize}     \tab <-> \tab \code{metadata$deseasonalize} \cr
+		\code{hasOutlier}        \tab <-> \tab \code{metadata$hasOutlier}\cr
+		\code{scp.minmax[1:2]}   \tab <-> \tab \code{prior$seasonMinKnotNum, prior$seasonMaxKnotNum}\cr
+		\code{sorder.minmax[1:2]} \tab <-> \tab  \code{prior$seasonMinOrder, prior$seasonMaxOrder}\cr
+		\code{sseg.min}           \tab <-> \tab \code{prior$seasonMinSepDist}\cr
+		\code{tcp.minmax[1:2]}    \tab <-> \tab \code{prior$trendMinKnotNum, prior$trendMaxKnotNum}\cr
+		\code{torder.minmax[1:2]} \tab <-> \tab \code{prior$trendMinOrder, prior$trendMaxOrder}\cr
+		\code{tseg.leftmargin}    \tab <-> \tab \code{prior$trendLeftMargin}\cr
+		\code{tseg.rightmargin}  \tab <-> \tab \code{prior$trendRightMargin}\cr
+		\code{s.complexfct}      \tab <-> \tab \code{prior$seasonComplexityFactor}\cr
+		\code{t.complexfct}      \tab <-> \tab \code{prior$trendComplexityFactor}\cr
+		\code{mcmc.seed}         \tab <-> \tab \code{mcmc$seed}\cr
+		\code{dump.ci}           \tab <-> \tab \code{extra$computeCredible}.\cr
+	  }
+	%} %\format
  
-\examples{
 
+For large data sets, irregular time series, or stacked images, \code{beast123()} is generally the recommended interface.
+}
+
+\examples{
 library(Rbeast)
+
 \donttest{
 
 #------------------------------------Example 1----------------------------------------#
-# 'googletrend_beach' is the monthly Google Trend popularity of searching for 'beach' 
-# in the US from 2004 to 2022. Sudden changes in the time series coincide with known 
-# extreme  weather events (e.g., 2006 North American Blizzard, 2011 US hottest summer 
-# on record, Record warm January in 2016) or the covid19 outbreak.
+# 'googletrend_beach' is the monthly Google Trends popularity of searching for 'beach'
+# in the US from 2004 to 2022. Sudden changes coincide with known extreme weather
+# events (e.g., 2006 North American Blizzard, 2011 record US summer heat, record warm
+# January in 2016) or the COVID-19 outbreak.
 
- out <- beast(googletrend_beach)
- 
- plot(out)                          
- plot(out, vars=c('t','slpsgn') ) # plot the trend and probability of slope sign only.
-                                  # In the slpsgn panel, the upper red portion refers to
-                                  # probability of trend slope being positive, the middle 
-                                  # green to the prob of slope being zero, and the lower 
-                                  # blue to the probability of slope being negative.
-                                  # Run "?plot.beast" for details on the plot function.
+out <- beast(googletrend_beach)
+
+plot(out)
+plot(out, vars = c("t", "slpsgn"))  # plot trend and slope-sign probabilities only.
+                                    # In the slpsgn panel, the upper red band is the
+                                    # probability that the trend slope is positive,
+                                    # the middle green band the probability that the
+                                    # slope is effectively zero, and the lower blue
+                                    # band the probability that it is negative.
+                                    # See ?plot.beast for details.
 
 #------------------------------------Example 2----------------------------------------#
-# Yellowstone is a half-monthly satellite time series of 774 NDVI(vegetation greeness) 
-# observations starting from July 1-15,1981(i.e., start=c(1981,7,7)) at a Yellowstone
-# forest site. It has 24 data points per year (i.e., freq=24). Note that the beast 
-# function  hanldes only evenly-spaced regular time series. Irregular data need to be
-# first  aggegrated at a regular time interval of your choice--the aggregation 
-# functionality is implemented in beast.irreg() and beast123().
+# Yellowstone is a half-monthly satellite NDVI time series of length 774 starting
+# from July 1-15, 1981 (start ~ c(1981, 7, 7)) at a forest site in Yellowstone.
+# There are 24 data points per year. The 1988 Yellowstone Fire caused a sudden drop
+# in greenness. Note that the beast function  hanldes only evenly-spaced regular time
+# series. Irregular data need to be first  aggegrated at a regular time interval of 
+# your choice--the aggregation functionality is implemented in beast.irreg() and beast123().
 
- data(Yellowstone)
- plot( 1981.5+(0:773)/24, Yellowstone, type='l')  # A sudden drop in greenness in 1988 
-                                                  # due to the 1988 Yellowstone Fire
+data(Yellowstone)
+plot(1981.5 + (0:773) / 24, Yellowstone, type = "l") # A sudden drop in greenness in 1988 
+                                                     # due to the 1988 Yellowstone Fire
 
-# Yellowstone is not a object of class 'ts' but a pure vector without time attributes. 
-# Below, no extra argument is supplied, so default values (i.e.,start=1, deltat=1) are 
-# used and the time is 1:774. 'period' is missing and so is guessed via auto-correlation.
-# Use of auto-correlation to compute the period of a cyclic time series is not always 
-# reliable, so it is suggested to always supply 'period' directly, as in Example 2 and
-# Example 3.
+# Yellowstone is a plain numeric vector (no time attributes). Below, no extra
+# arguments are supplied, so default values (start = 1, deltat = 1) are used and
+# time is 1:774. The period is missing and is guessed via autocorrelation.
+# Autocorrelation-based period estimates can be unreliable; examples below show
+# how to specify time/period explicitly.
 
- o = beast(Yellowstone)   # By defualt, the times assumed to be 1:length(Yellowstone) 
-                          # and a periodic component is assumed (season='harmonic')
- plot(o)
- 
-#o = beast(Yellowstone, quiet=TRUE)                        # print no warning messages
-#o = beast(Yellowstone, quiet=TRUE, print.progress=FALSE)  # print nothing
+o <- beast(Yellowstone)   # By default, time = 1:length(Yellowstone), season = "harmonic"
+plot(o)
+
+# o <- beast(Yellowstone, quiet = TRUE)                        # suppress warnings
+# o <- beast(Yellowstone, quiet = TRUE, print.progress = FALSE) # suppress all output
 
 #------------------------------------Example 3----------------------------------------#
-# The time info such as start,delta,and period is explicitly provided. 'start' can be 
-# given as (1) a fractional number, (2) a vector comprising year, month,& day, or (3)
-# a R's Date. In (1), the unit of start and deltat does not necessarily refer to time and can 
-# be arbitrary (e.g., a sequence of data observed at evenly-spaced distaces along a 
-# transect or a elevation gradient)
+# Time information (start, deltat, period) specified explicitly of Yellowstone.
 
- # (1) Unknown unit such that 1981.5137 can be interpreted arbitrarily
- o=beast(Yellowstone, start=1981.5137,            deltat=1/24,  period=1.0) 
- 
- # Use a string to explictly specify a time unit so that times are intepreted as dates
- # o=beast(Yellowstone, start=1981.5137, deltat='1/24 year', period=1.0) # 1.0 = 1 yr
- # o=beast(Yellowstone, start=1981.5137, deltat='0.5 mon',   period=1.0) # 1.0 = 1 yr
- # o=beast(Yellowstone, start=1981.5137, deltat=1/24, period='1 yr')    # 1/24 = 1/24 yr
- # o=beast(Yellowstone, start=1981.5137, deltat=1/24, period='365 days')# 1/24 = 1/24 yr
-  
- # (2) start is provided as YMD, the unit is year: deltat=1/24 year=0.5 month
- # o=beast(Yellowstone, start=c(1981,7,7),         deltat=1/24,  period=1.0)
+# (1) Arbitrary unit: 1981.5137 can be interpreted flexibly in any units not neccessarily
+# referting to times
+o <- beast(Yellowstone, start = 1981.5137, deltat = 1/24, period = 1.0)
 
- # (3) start is provided as Date, the unit is year: deltat=1/24 year=0.5 month
- #o=beast(Yellowstone, start=as.Date('1981-7-7'), deltat=1/24, period=1.0)  
+# Strings can be used to explicitly specify time unitsas dates or years:
+# o <- beast(Yellowstone, start = 1981.5137, deltat = "1/24 year", period = 1.0)
+# o <- beast(Yellowstone, start = 1981.5137, deltat = "0.5 mon",   period = 1.0)
+# o <- beast(Yellowstone, start = 1981.5137, deltat = 1/24, period = "1 year")
+# o <- beast(Yellowstone, start = 1981.5137, deltat = 1/24, period = "365 days")
 
- print(o)                           # o is a R LIST object with many fields
- str(o)                             # See a list of fields in o
- 
- plot(o)                            # plot many variables 
- plot(o, vars=c('y','s','t') )      # plot the Y, seasonal, and trend components only
- plot(o, vars=c('s','scp','samp','t','tcp','tslp'))# Plot some selected variables in 
-                                                   # 'o'. Type "?plot.beast" to see 
-                                                   # more about vars
- plot(o, vars=c('s','t'),col=c('red','blue') )     # Specify colors of selected subplots
+# (2) start as year-month-day (unit is year: deltat = 1/24 year = 0.5 month)
+# o <- beast(Yellowstone, start = c(1981, 7, 7), deltat = 1/24, period = 1.0)
 
- plot(o$time, o$season$Y,type='l') # directly plot output: the fitted season
- plot(o$time, o$season$cpOccPr)    # directly plot output: season chgpt  prob
- plot(o$time, o$trend$Y,type='l')  # directly plot output: the fitted trend
- plot(o$time, o$trend$cpOccPr)     # directly plot output: trend chgpt occurrence prob
- plot(o$time, o$season$order)      # directly plot output: avg harmonic order
- 
- plot(o, interactive=TRUE)         # manually choose which variables to plot
+# (3) start as Date (unit is year: deltat = 1/24 year = 0.5 month)
+# o <- beast(Yellowstone, start = as.Date("1981-07-07"), deltat = 1/24, period = 1.0)
+
+print(o)     # 'o' is a list with many fields
+str(o)       # See a list of fields in the BEAST output o
+
+plot(o)                            # plot many default variables
+plot(o, vars = c("y","s","t"))     # plot the data, seasonal, and trend components only
+plot(o, vars = c("s","scp","samp","t","tcp","tslp")) # selected variables (see ?plot.beast)
+plot(o, vars = c("s","t"), col = c("red","blue"))    # Specify colors of selected subplots
+
+plot(o$time, o$season$Y, type = "l")    # fitted seasonal component
+plot(o$time, o$season$cpOccPr)          # seasonal changepoint probabilities
+plot(o$time, o$trend$Y, type = "l")     # fitted trend component
+plot(o$time, o$trend$cpOccPr)           # trend changepoint probabilities
+plot(o$time, o$season$order)            # average harmonic order over time
+
+plot(o, interactive = TRUE)            # interactively choose variables to plot
 
 }
-
 \donttest{
 
 #------------------------------------Example 4----------------------------------------#
@@ -433,6 +530,10 @@ library(Rbeast)
      torder.minmax  = c(0,1), # Min and maxx polynomial orders to fit trend
      tseg.min       = 24,     # The min length of segments btw neighboring trend chnpts
      tseg.leftmargin= 10,     # No trend chgpts allowed in the starting 10 datapoints
+     s.complexfct   = 0.26,   # Manually tune it to fit a more complex seasonal curve
+	                          #  than the non-informative prior on number of changepts
+     t.complexfct   = -5.2,   # Manually tune it to fit a more complex trend curve
+	                          #  than the non-informative prior on number of changepts 
      deseasonalize  = TRUE,   # Remove the global seasonality before fitting the beast model
      detrend        = TRUE,   # Remove the global trend before fitting the beast model
      mcmc.seed      = 0,      # A seed for mcmc's random nummber generator; use a
@@ -586,6 +687,11 @@ library(Rbeast)
   out    = beast(births,start=c(1946,1,15), deltat=1/12, freq  =12 )  
   out    = beast(births,start=c(1946,1,15), deltat=1/12, period=1.0 )  
   plot(out)  
+
+  # Fit the seasonal component using a singular-value-decompostion-based basis functions
+  # rathat than the default harmonic sin/cos basis functions.
+  out    = beast(births,start=c(1946,1,15), deltat=1/12, period=1.0, season="svd" )  
+  plot(out)    
   
 }
 
@@ -668,9 +774,12 @@ library(Rbeast)
 # trend
 \dontrun{ 
  NileVec        = as.vector(Nile)
- NileVec[50]    = NileVec[50] + 1500                   # Add an artificial spike at t=50
+ NileVec[50]    = NileVec[50] + 1500                 # Add an large artificial spike at t=50
  o = beast(NileVec, season='none', hasOutlier=TRUE)
  plot(o)
+ 
+ o = beast(Nile, season='none', hasOutlier=TRUE)     # Fit a model with outliers
+ plot(o) 
  }
 
 }

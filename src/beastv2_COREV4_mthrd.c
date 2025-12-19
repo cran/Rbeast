@@ -17,7 +17,7 @@
 #include "abc_rand.h"
 #include "abc_vec.h"   
 #include "abc_math.h"  
-#include <stdio.h>	               
+#include <stdio.h>	   
 #include "globalvars.h"  
 #include "beastv2_header.h"
 #include "beastv2_func.h" 
@@ -52,13 +52,14 @@ int beast2_main_corev4_mthrd(void* dummy) {
 	const U16PTR  RND16_END=RND16+MAX_RAND_NUM * 2 - 7;
 	const U08PTR  RND08_END=RND08+MAX_RAND_NUM * 4 - 7 -3;     
 	const F32PTR  RNDGAMMA_END=RNDGAMMA+MAX_RAND_NUM - MODEL.precState.nPrecGrp-1L;
-	const F32PTR Xt_mars;
-	const F32PTR Xnewterm;      
-	const F32PTR Xt_zeroBackup; 
+	F32PTR Xt_mars;       
+	F32PTR Xnewterm;      
+	F32PTR Xt_zeroBackup; 
 	AllocateXXXMEM(&Xt_mars,&Xnewterm,&Xt_zeroBackup,&MODEL,opt,&MEM);
 	BEAST2_YINFO     yInfo;
 	AllocateYinfoMEM(&yInfo,opt,&MEM);
-	const BEAST2_RESULT resultChain={ NULL,},result={ NULL,};
+    BEAST2_RESULT resultChain={ NULL,};
+	BEAST2_RESULT result={ NULL,};
 	BEAST2_Result_AllocMEM(&resultChain,opt,&MEM); 	
 	BEAST2_Result_AllocMEM(&result,opt,&MEM);
 	const   I32  NumCIVars=MODEL.NUMBASIS+opt->extra.computeTrendSlope;
@@ -262,7 +263,7 @@ int beast2_main_corev4_mthrd(void* dummy) {
 					numBadIterations=0;
 				} 
 				F32 delta_lik=MODEL.prop.marg_lik - MODEL.curr.marg_lik;
-				if   ( !(NEW.jumpType==MOVE||basis->type==OUTLIERID) ) {
+				if (!(NEW.jumpType==MOVE||basis->type==OUTLIERID||basis->type==DUMMYID)) {
 					F32 factor=basis->ModelPrior(basis,&NEW.newcols,&NEW); 
 					delta_lik+=factor;
 				}
@@ -307,7 +308,7 @@ int beast2_main_corev4_mthrd(void* dummy) {
 						MODEL.curr.marg_lik=MODEL.prop.marg_lik;
 						MODEL.curr.K=MODEL.prop.K;     
 					}
-					#if  DEBUG_MODE==1 
+					#if DEBUG_MODE==1
 					if (q==1) {
 					}
 					else {
@@ -585,8 +586,8 @@ int beast2_main_corev4_mthrd(void* dummy) {
 						i32_to_f32_scaleby_inplace(resultChain.tncpPr,(tMAXNUMKNOT+1),inv_sample);
 						i32_to_f32_scaleby_inplace(resultChain.tcpOccPr,N,inv_sample);
 						for (int i=0; i < q; i++) {
-							F32 offset=0.0f;
-							f32_sx_sxx_to_avgstd_inplace(resultChain.tY+i * N,resultChain.tSD+i * N,sample,yInfo.sd[i],yInfo.mean[i],N);
+							F32 offset=yInfo.mean[i];
+							f32_sx_sxx_to_avgstd_inplace(resultChain.tY+i * N,resultChain.tSD+i * N,sample,yInfo.sd[i],offset,N);
 						}
 						if (extra.computeTrendOrder) 	i32_to_f32_scaleby_inplace(resultChain.torder,N,inv_sample);	
 						if (extra.computeTrendSlope) {
@@ -748,7 +749,7 @@ int beast2_main_corev4_mthrd(void* dummy) {
 			#define _q(x)      r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,q)
 			#define _q2(x)     r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,q*q)
 			#define _2N(x)     r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,N+N)
-			#define _2Nq(x)     r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,N*q+N*q)
+			#define _2Nq(x)    r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,N*q+N*q)
 			#define _skn_1(x)  r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,sMAXNUMKNOT+1)
 			#define _tkn_1(x)  r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,tMAXNUMKNOT+1)
 			#define _okn_1(x)  r_ippsMulC_32f_I(invChainNumber,(F32PTR)result.x,oMAXNUMKNOT+1)
@@ -757,9 +758,9 @@ int beast2_main_corev4_mthrd(void* dummy) {
 			_q2(sig2);
 			if (MODEL.sid >=0||MODEL.vid>0) {
 				_1(sncp); _skn_1(sncpPr);	     _N(scpOccPr); _Nq(sY); _Nq(sSD); 
-				if (extra.computeSeasonOrder)    _N(sorder);
+				if (extra.computeSeasonOrder)   { _N(sorder); }
 				if (extra.computeSeasonAmp)     {_N(samp),_N(sampSD);}
-				if (extra.computeCredible)       _2Nq(sCI);
+				if (extra.computeCredible)      { _2Nq(sCI); }
 				*result.sncp_mode=f32_maxidx(result.sncpPr,sMAXNUMKNOT+1,&maxncpProb);
 				*result.sncp_median=GetPercentileNcp(result.sncpPr,sMAXNUMKNOT+1,0.5);
 				*result.sncp_pct90=GetPercentileNcp(result.sncpPr,sMAXNUMKNOT+1,0.9);
@@ -767,9 +768,9 @@ int beast2_main_corev4_mthrd(void* dummy) {
 			}
 			if (MODEL.tid >=0) {
 				_1(tncp); _tkn_1(tncpPr);	     _N(tcpOccPr); _Nq(tY); _Nq(tSD); 
-				if (extra.computeTrendOrder)     _N(torder);
+				if (extra.computeTrendOrder)    { _N(torder); }
 				if (extra.computeTrendSlope)    { _N(tslp),_N(tslpSD),_N(tslpSgnPosPr),_N(tslpSgnZeroPr);}
-				if (extra.computeCredible)       _2Nq(tCI);
+				if (extra.computeCredible)      { _2Nq(tCI); }
 				*result.tncp_mode=f32_maxidx(result.tncpPr,tMAXNUMKNOT+1,&maxncpProb);
 				*result.tncp_median=GetPercentileNcp(result.tncpPr,tMAXNUMKNOT+1,0.5);
 				*result.tncp_pct90=GetPercentileNcp(result.tncpPr,tMAXNUMKNOT+1,0.9);
@@ -900,7 +901,7 @@ int beast2_main_corev4_mthrd(void* dummy) {
 				*(CP+i)=(F32) cptList[i]* dT+T0,\
 				*(CPPROB+i)=(F32) mem[i];\
 		         I32 cptLoc=cptList[i]==0 ? 1 : cptList[i];\
-				 *(CP_CHANGE+i)=Y[cptLoc] - Y[cptLoc - 1];\
+				 if (Y)  *(CP_CHANGE+i)=Y[cptLoc] - Y[cptLoc - 1];\
 			}\
 			for (int i=trueCptNumber; i <MAX_KNOTNUM; i++) {\
 				*(CP+i)=nan;\
@@ -1012,7 +1013,7 @@ int beast2_main_corev4_mthrd(void* dummy) {
 			int N=opt->io.N;
 			for (int i=0; i < q;++i) {
 				if (yInfo.Yseason) {
-						r_ippsAdd_32f_I(yInfo.Yseason+N*i,result.sY+N* i,N);
+					r_ippsAdd_32f_I(yInfo.Yseason+N*i,result.sY+N* i,N);
 					if (result.sCI) {
 						r_ippsAdd_32f_I(yInfo.Yseason+N * i,result.sCI+2*N*i,N);
 						r_ippsAdd_32f_I(yInfo.Yseason+N * i,result.sCI+2*N*i+N,N);
@@ -1021,7 +1022,7 @@ int beast2_main_corev4_mthrd(void* dummy) {
 						r_ippsAdd_32f_I(yInfo.Yseason+N * i,result.data+N*i,N);
 				}
 				if (yInfo.Ytrend) {
-						r_ippsAdd_32f_I(yInfo.Ytrend+N * i,result.tY+N*i,N);
+					r_ippsAdd_32f_I(yInfo.Ytrend+N * i,result.tY+N*i,N);
 					if (result.tCI) {
 						r_ippsAdd_32f_I(yInfo.Ytrend+N * i,result.tCI+2*N*i,N);
 						r_ippsAdd_32f_I(yInfo.Ytrend+N * i,result.tCI+2*N*i+N,N);

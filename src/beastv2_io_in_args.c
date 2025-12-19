@@ -12,7 +12,7 @@
 #include "globalvars.h"
 #include "beastv2_func.h"    
 #include "beastv2_io.h"
-#include <stdio.h>	          
+#include <stdio.h>	   
 #define CondErrMsgRet0(cond,...)   if(cond) { r_error(__VA_ARGS__); return 0;}
 #define CondErrActionRet0(cond,Action,...)   if(cond) { (Action) ;r_error(__VA_ARGS__); return 0;}
 #define ifelse(cond,a,b)  ((cond)?(a):(b))
@@ -519,6 +519,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 		U08   sig2;
 		U08   precValue;
 		U08   alpha1,alpha2,delta1,delta2;
+		U08  seasonComplexityFactor;
+		U08  trendComplexityFactor;
 	} m={0,};
 	#define o  (*prior)
 	if (nrhs < 4) 	
@@ -565,6 +567,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 			if (io->meta.hasOutlierCmpnt) o.outlierBasisFuncType=(tmp=GetField123Check(S,"outlierBasisFuncType",10)) ? GetScalar(tmp) : (m.outlierBasisFuncType=1);
 			o.modelPriorType=(tmp=GetField123Check(S,"modelPriorType",10)) ?		GetScalar(tmp) : (m.modelPriorType=1);
 			o.precPriorType=__GetPrecPriorType(S);
+			o.seasonComplexityFactor=(tmp=GetFieldCheck(S,"seasonComplexityFactor")) ? GetScalar(tmp) : (m.seasonComplexityFactor=1);
+			o.trendComplexityFactor=(tmp=GetFieldCheck(S,"trendComplexityFactor"))  ? GetScalar(tmp) : (m.trendComplexityFactor=1);
 		}
 	} 
 	o.numBasis=1L+io->meta.hasSeasonCmpnt+io->meta.hasOutlierCmpnt;
@@ -664,6 +668,8 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 	if (m.delta1)		     o.delta1=0.00000001f;
 	if (m.delta2)		     o.delta2=0.00000001f;
 	if (m.precPriorType)			o.precPriorType=UniformPrec;
+	if (m.trendComplexityFactor)    o.trendComplexityFactor=0.0;
+	if (m.seasonComplexityFactor)   o.seasonComplexityFactor=0.0;
 	if (m.seasonBasisFuncType) {
 		if      (o.precPriorType==UniformPrec)		o.seasonBasisFuncType=0;
 		else if (o.precPriorType==ConstPrec)          o.seasonBasisFuncType=0;
@@ -683,6 +689,7 @@ static int  GetArg_2nd_Prior__(VOIDPTR prhs[],int nrhs,BEAST2_PRIOR_PTR prior,BE
 		else if (o.precPriorType==OrderWise)          o.outlierBasisFuncType=1;
 	}	 
 	if (m.modelPriorType)			o.modelPriorType=1L;
+	o.modelPriorType=o.modelPriorType%3;             
 	return 1;
 #undef o
 }
@@ -965,6 +972,16 @@ I32 PostCheckArgs(A(OPTIONS_PTR) opt) {
 		opt->prior.precPriorType=UniformPrec;
 	}
 	opt->extra.printProgress=GLOBAL_PRNT_PROGRESS;
+	if (opt->io.q > 1) {
+		opt->extra.computeSeasonAmp=0;
+		opt->extra.computeTrendSlope=0;
+		opt->extra.tallyIncDecTrendJump=0;
+		opt->extra.tallyPosNegTrendJump=0;
+		opt->extra.tallyPosNegOutliers=0;
+		opt->extra.tallyPosNegSeasonJump=0;
+		opt->extra.computeTrendChngpt=1;
+		opt->extra.computeSeasonChngpt=1;
+	}
 	return 1;
 }
 int BEAST2_GetArgs(VOIDPTR prhs[],int nrhs,A(OPTIONS_PTR) opt) {

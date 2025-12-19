@@ -9,7 +9,7 @@
 #include "abc_vec.h"  
 #include "beastv2_func.h"
 #include "beastv2_prior_precfunc.h"
-#include <stdio.h>	       
+#include <stdio.h>	   
 F32  GetPercentileNcp(F32PTR prob,I32 N,F32 pctile) {
 	F32 cumProb=0.f;
 	for (int i=0; i < N; i++) {

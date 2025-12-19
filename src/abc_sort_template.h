@@ -278,13 +278,14 @@ static void FINDEX(heapify)(DTYPE arr[],int N,int i,int* index) {
 }
 static void FINDEX(heapSort)(DTYPE arr[],int low,int high,int *index) {
 	DTYPE* arrstart=arr+low;
+	int  * indexstart=index+low;
 	int  N=high - low+1;
 	for (int i=N/2 - 1; i >=0; i--) {
-		FINDEX(heapify)(arrstart,N,i,index);
+		FINDEX(heapify)(arrstart,N,i,indexstart);
 	}
 	for (int i=N - 1; i >=0; i--) {
-		SwapElemIndex(arrstart,index,0,i);
-		FINDEX(heapify)(arrstart,i,0,index);
+		SwapElemIndex(arrstart,indexstart,0,i);
+		FINDEX(heapify)(arrstart,i,0,indexstart);
 	}
 }
 static int FUNC(isorderedarray)(DTYPE arr[],int  low,int  high) {

@@ -6,7 +6,20 @@
 \description{
    A poor man's implementation of the minesweeper game in R. Yes, you are right: it has nothing to do with time series decomposition, changepoint detection, and time series segmentation. Its only remote connection to Rbeast is that this is a practice script I wrote to learn R graphics for implementing Rbeast.
    \cr \cr
-   \if{html}{\figure{minesweeper.png}{options: width="35\%" alt="Figure: minesweeper.png"}}
+   
+   % checkRd reports the error for the following: "height/width attributes should be in pixels"
+   %\if{html}{\figure{minesweeper.png}{options: width="35\%" alt="Figure: minesweeper.png"}}
+   
+   % package biplotEZ:  the folllowing passes the check.
+   % \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+   
+   % package inca::inca.Rd:  the folllowing passes the check.
+   % \if{html}{\figure{logo.png}{options: style='float:right;width:156px;'}}
+   
+   % package frailtyMMpen::frailtyMM.Rd:  the folllowing passes the check.
+   %\if{html}{\figure{fig1.png}{options: style="width:750px;max-width:75\%;"}}
+   
+   \if{html}{\figure{minesweeper.png}{options: style="float:none;width:175px;max-width:55\%;" alt="Figure: minesweeper.png"}}
    \if{latex}{\figure{minesweeper.pdf}{options: width=5cm}}
   }
 \usage{

@@ -17,7 +17,7 @@
 #include "abc_rand.h"
 #include "abc_vec.h"   
 #include "abc_math.h"  
-#include <stdio.h>	               
+#include <stdio.h>	   
 #include "globalvars.h"  
 #include "beastv2_header.h"
 #include "beastv2_func.h" 
@@ -72,8 +72,7 @@ static void BEAST2_EvaluateModel_BIC(BEAST2_MODELDATA* curmodel,BEAST2_BASIS_PTR
 }
 #define LOCAL(...) do{ __VA_ARGS__ } while(0);
 #define  DEBUG_MODE  0
-int beast2_main_core_bic_mthrd(void* dummy)
-{
+int beast2_main_core_bic_mthrd(void* dummy) {
 	whichCriteria=(int) dummy;
 	MemPointers MEM=(MemPointers){.init=mem_init,};
 	MEM.init(&MEM);
@@ -99,14 +98,14 @@ int beast2_main_core_bic_mthrd(void* dummy)
 	const U16PTR  RND16_END=RND16+MAX_RAND_NUM * 2 - 7;
 	const U08PTR  RND08_END=RND08+MAX_RAND_NUM * 4 - 7 -3;     
 	const F32PTR  RNDGAMMA_END=RNDGAMMA+MAX_RAND_NUM - MODEL.precState.nPrecGrp-1L;
-	const F32PTR Xt_mars;
-	const F32PTR Xnewterm;      
-	const F32PTR Xt_zeroBackup; 
+	F32PTR Xt_mars;       
+	F32PTR Xnewterm;      
+	F32PTR Xt_zeroBackup; 
 	AllocateXXXMEM(&Xt_mars,&Xnewterm,&Xt_zeroBackup,&MODEL,opt,&MEM);
 	BEAST2_YINFO     yInfo;
 	AllocateYinfoMEM(&yInfo,opt,&MEM);
-	const BEAST2_RESULT resultChain={ NULL,};
-	BEAST2_RESULT       result={ NULL,};
+    BEAST2_RESULT resultChain={ NULL,};
+	BEAST2_RESULT result={ NULL,};
 	BEAST2_Result_AllocMEM(&resultChain,opt,&MEM); 	
 	BEAST2_Result_AllocMEM(&result,opt,&MEM);
 	const   I32  NumCIVars=MODEL.NUMBASIS+opt->extra.computeTrendSlope;
@@ -736,7 +735,6 @@ int beast2_main_core_bic_mthrd(void* dummy)
 			    #undef _okn_1
 			}
 			if (skipCurrentPixel) {
-			     q_warning("\nWARNING(#%d):The max number of bad iterations exceeded. Can't decompose the current time series\n",skipCurrentPixel);
 			     break;
 			}
 		}
@@ -907,7 +905,7 @@ int beast2_main_core_bic_mthrd(void* dummy)
 				*(CP+i)=(F32) cptList[i]* dT+T0,\
 				*(CPPROB+i)=(F32) mem[i];\
 		         I32 cptLoc=cptList[i]==0 ? 1 : cptList[i];\
-				 *(CP_CHANGE+i)=Y[cptLoc] - Y[cptLoc - 1];\
+				 if (Y)  *(CP_CHANGE+i)=Y[cptLoc] - Y[cptLoc - 1];\
 			}\
 			for (int i=trueCptNumber; i <MAX_KNOTNUM; i++) {\
 				*(CP+i)=nan;\
@@ -1042,6 +1040,7 @@ int beast2_main_core_bic_mthrd(void* dummy)
 		pthread_mutex_lock(&mutex);
 		NUM_OF_PROCESSED_GOOD_PIXELS+=!skipCurrentPixel;              
 		NUM_OF_PROCESSED_PIXELS++;					
+		pthread_mutex_unlock(&mutex);
 		F32 elaspedTime=GetElaspedTimeFromBreakPoint();
 		if (NUM_OF_PROCESSED_GOOD_PIXELS > 0 && NUM_PIXELS > 1 && (pixelIndex%50==0||elaspedTime > 1))  {
 			PERCENT_COMPLETED=(F32)NUM_OF_PROCESSED_PIXELS/NUM_PIXELS;

@@ -4,156 +4,301 @@
 #include "beastv2_header.h"
 #include "abc_mcmc.h"
 #include "abc_math.h"  
-static F64 K_OUT_OF_N(I32 N,I32 k)                     {F64 y=1;for (I32 i=0; i <k; i++)	y *=(F64) (N-i)/(F64)(k-i) ;	return y;}
-static F64 GetNumModelsGivenK(I32 N,I32 minSep,I32 K) {return K_OUT_OF_N(N - minSep * K - 1,K - 1);}
-static F64 GetGroupingNum(I32 n,I32 ng,I32 k) {
-	if (k * ng < n||n < ng) 	   return 0;	
-	if (n==ng)					   return 1;	
-	if (n < k+ng)				   return K_OUT_OF_N(n - 1,ng - 1);
+#include "globalvars.h"
+static F64 K_OUT_OF_N(I32 N,I32 k)     {
+	if ( k < 0||k > N) return 0;
+	k=min(k,N-k); 
+	F64 y=1,Ndbl=N,Kdbl=k;
+	for (I32 i=0; i <k; i++)	y *=Ndbl--/Kdbl--;
+	return y;
+}
+static F64 GetNumModelsGivenK(I32 N,I32 minSep,I32 K) {
+	return K_OUT_OF_N(N - minSep * K+K- 1,K - 1);
+}
+static F64 GetGroupingNumv1(I32 n,I32 ng,I32 k) {
+	if (k * ng < n||n < ng) 	  return 0;	
+	if (n==ng)			          return 1;	
+	if (n < k+ng)			      return K_OUT_OF_N(n - 1,ng - 1);	
 	F64 r=0;
-	for (I32 i=0; i <=(n/k);++i) {	r+=K_OUT_OF_N(ng,i) * GetGroupingNum(n-i*k,ng-i,k-1);}
+	for (I32 i=0; i <=(n/k);++i) {	r+=K_OUT_OF_N(ng,i) * GetGroupingNumv1(n-i*k,ng-i,k-1);}
 	return r;
 }
-void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32 minSep,F64PTR TNUM,F64PTR totalNum) {
-	I32 KMAX=maxNumseg * maxOrder;
-	memset(TNUM,0,KMAX*maxNumseg* sizeof(F64));
+static  F64 GetGroupingNumv2(I32 n,I32 ng,I32 k) {
+	if (n==ng*k) return 1;
+	if (k==2   ) return K_OUT_OF_N(ng,n - ng);
+	F64 res=0,flipsign=-1.0;
+	int ilimit=min( (n - ng)/k,ng); 
+	for (int i=0; i <=ng; i++) {
+		flipsign=-flipsign;
+		res+=flipsign * K_OUT_OF_N(ng,i) * K_OUT_OF_N(n - i * k - 1,ng - 1);
+	}	
+	return res < 0.5 ? 0 : res; 
+}
+void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32 minSep,F64PTR numMat,F64PTR totalNum,F64PTR NmodelsPerK,int priorType) {
+	if (priorType==0||NmodelsPerK==NULL) {
+		return;
+	}
 	for (I32 ng=1; ng <=maxNumseg; ng++) {
-		for (I32 n=minOrder*ng; n <=maxOrder*ng;++n) {
-			TNUM[(ng-1)* KMAX+n - 1]=GetGroupingNum(n - (minOrder-1)*ng,ng,maxOrder - (minOrder-1));
+		NmodelsPerK[ng - 1]=GetNumModelsGivenK(N,minSep,ng);
+		if (NmodelsPerK[ng - 1] > 0) NmodelsPerK[ng - 1]=log(NmodelsPerK[ng - 1]);
+	}
+	I32 KMAX=maxNumseg * maxOrder;
+	memset(numMat,0,sizeof(F64) * KMAX * maxNumseg);
+	for (int ng=1; ng <=maxNumseg; ng++) {		
+		for (int n=minOrder * ng; n <=maxOrder * ng;++n) {
+			numMat[(ng - 1) * KMAX+n - 1]=K_OUT_OF_N( n-ng* minOrder+ng-1,ng-1);
+			if (numMat[(ng - 1) * KMAX+n - 1]  > 0) numMat[(ng - 1) * KMAX+n - 1]=log(numMat[(ng - 1) * KMAX+n - 1]);
+		}	
+	}
+	return;
+	if (priorType==2) {
+		for (I32 ng=1; ng <=maxNumseg; ng++) {
+			NmodelsPerK[ng - 1]=GetNumModelsGivenK(N,minSep,ng) * pow( maxOrder-minOrder+1,ng);
+		}
+		return;
+	}
+	memset(numMat,0,sizeof(F64) * KMAX * maxNumseg);
+	for (int ng=1; ng <=maxNumseg; ng++) {
+		NmodelsPerK[ng - 1]=GetNumModelsGivenK(N,minSep,ng);	
+		for (int n=minOrder * ng; n <=maxOrder * ng;++n) {
+			numMat[(ng-1) * KMAX+n-1]=GetGroupingNumv2(n - (minOrder-1) * ng,ng,maxOrder-(minOrder-1) );
 		}
 	}
-	memset(totalNum,0,sizeof(F64) * KMAX);
-	for (I32 ng=1; ng <=maxNumseg;++ng) {
-		F64 NumModelsPerK=GetNumModelsGivenK(N,minSep,ng);
-		for (I32 n=minOrder*ng; n <=maxOrder*ng;++n) {
-			totalNum[n-1]+=TNUM[(ng-1L)* KMAX+n - 1] * NumModelsPerK;
+	if (priorType==3) {
+		memset(totalNum,0,sizeof(F64) * KMAX);
+		for (I32 ng=1; ng <=maxNumseg;++ng) {
+			for (I32 n=minOrder * ng; n <=maxOrder * ng;++n) {
+				totalNum[n - 1]+=numMat[(ng - 1L) * KMAX+n - 1] * NmodelsPerK[ng-1];
+			}
 		}
+		return;
 	}
-	for (I32 n=minOrder*1L; n <=KMAX;++n) totalNum[n - 1]=-log(totalNum[n - 1]);	
+	if (priorType==4) {
+		for (I32 ng=1; ng <=maxNumseg;++ng) {
+			for (I32 n=minOrder * ng; n <=maxOrder * ng;++n) {
+				numMat[(ng - 1) * KMAX+n - 1] *=NmodelsPerK[ng - 1];
+			}
+		}
+		return;
+	}
 }
 static F32 ST_ModelPriorFactor0(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
-	return 0.f; 
+	I32  Kold=basis ->K/(1L+(basis->type==SEASONID));
+	I32  Knew=(newcol->k2_new - newcol->k2_old)/(1L+(basis->type==SEASONID))+Kold;
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  O1=basis->prior.minOrder+(basis->type==TRENDID);
+	F64PTR MAT=basis->priorMat;
+	F64PTR VEC=basis->priorNmodelsPerNseg;
+	F64 factor0  ;         
+	factor0=0+basis->prior.modelComplexity * ( (nSegNew - nSegOld)+(Knew- nSegNew*O1)- (Kold-nSegOld * O1));
+	return (F32)factor0;
 }
 static F32 ST_ModelPriorFactor1(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
-	I32  N=newcol->N;
-	I32  Kold=basis->K;
-	I32  Knew=Kold+(newcol->k2_new- newcol->k2_old);
-	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
-	I32  Sold=basis->nKnot+1;
-	I32  Snew=new->nKnot_new+1;
-	I32 O1=basis->prior.minOrder+(basis->type==TRENDID);
-	I32 O2=basis->prior.maxOrder+(basis->type==TRENDID);
-	I32 NUMORDER=basis->prior.maxOrder - basis->prior.minOrder;
-	F64 OLD=K_OUT_OF_N(Kold - Sold * (O1 - 1) -1,Sold-1);
-	F64 NEW=K_OUT_OF_N(Knew - Snew * (O1 - 1) -1,Snew-1);
-	F32 factor0=OLD/NEW  * (F32)(NUMORDER*Sold+1)/(NUMORDER*Snew+1);	
+	I32  Kold=basis ->K/(1L+(basis->type==SEASONID));
+	I32  Knew=(newcol->k2_new - newcol->k2_old)/(1L+(basis->type==SEASONID))+Kold;
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  O1=basis->prior.minOrder+(basis->type==TRENDID);
+	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
+	F64PTR MAT=basis->priorMat;
+	F64PTR VEC=basis->priorNmodelsPerNseg;
+	F64 factor0=VEC[nSegOld - 1] - VEC[nSegNew - 1]+MAT[(nSegOld - 1) * KMAX+Kold - 1] - MAT[(nSegNew - 1) * KMAX+Knew - 1];
+	factor0=factor0+basis->prior.modelComplexity * ( (nSegNew - nSegOld)+(Knew- nSegNew*O1)- (Kold-nSegOld * O1));
 	F32 factor;
 	if (new->jumpType==ChORDER)  
 		factor=factor0; 
 	else if (new->jumpType==BIRTH) {
-		factor=(F32)basis->goodNum/(N - basis->nKnot);
-		factor=factor0 * factor;
+		F32 propprobRatio=(F32)basis->goodNum/( basis->nKnot+1L);
+		factor=factor0+log(propprobRatio);
 	} else {
-		factor=(F32)(basis->goodNum+basis->prior.minSepDist*2)/(N-new->nKnot_new);
-		factor=factor0/factor;
+		F32 propprobRatio=(F32)(basis->goodNum+basis->prior.minSepDist*2)/basis->nKnot;
+		factor=factor0  - log(propprobRatio);
 	}
-	return (F32) log(factor);
+	return (F32) factor ;
 }
 static F32 ST_ModelPriorFactor2(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
-	I32 N=newcol->N;
-	I32  Kold=basis->K;
-	I32  Knew=Kold+(newcol->k2_new-newcol->k2_old);
-	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
-	I32  Sold=basis->nKnot+1;
-	I32  Snew=new->nKnot_new+1;
-	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder; 
+	I32  Kold=basis ->K/(1L+(basis->type==SEASONID));
+	I32  Knew=(newcol->k2_new - newcol->k2_old)/(1L+(basis->type==SEASONID))+Kold;
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  O1=basis->prior.minOrder+(basis->type==TRENDID);
 	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
 	F64PTR MAT=basis->priorMat;
-	F32    factor0=MAT[(Sold-1) * KMAX+Kold - 1] * (NUMORDER*Sold+1L)
-		              /( MAT[(Snew-1) * KMAX+Knew - 1] * (NUMORDER*Snew+1L));
+	F64PTR VEC=basis->priorNmodelsPerNseg;
+	F64 factor0=VEC[nSegOld - 1] - VEC[nSegNew - 1]+MAT[(nSegOld - 1) * KMAX+Kold - 1] - MAT[(nSegNew - 1) * KMAX+Knew - 1];
+	factor0=factor0+basis->prior.modelComplexity * log((F32)nSegNew/nSegOld *(F32)(Knew - nSegNew * O1+1)/(Kold - nSegOld * O1+1));
 	F32 factor;
 	if (new->jumpType==ChORDER)  
 		factor=factor0; 
 	else if (new->jumpType==BIRTH) {
-		factor=(F32)basis->goodNum/(N - basis->nKnot);
-		factor=factor0 * factor;
+		F32 propprobRatio=(F32)basis->goodNum/( basis->nKnot+1L);
+		factor=factor0+log(propprobRatio);
+	} else {
+		F32 propprobRatio=(F32)(basis->goodNum+basis->prior.minSepDist*2)/basis->nKnot;
+		factor=factor0  - log(propprobRatio);
 	}
-	else {
-		factor=(F32)(basis->goodNum+basis->prior.minSepDist*2)/(N-new->nKnot_new);
-		factor=factor0/factor;
+	return (F32) factor ;
+}
+static F32 ST_ModelPriorFactor3(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
+	I32  Kold=basis ->K/(1L+(basis->type==SEASONID));
+	I32  Knew=(newcol->k2_new - newcol->k2_old)/(1L+(basis->type==SEASONID))+Kold;
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder;
+	F64PTR MAT=basis->priorMat;
+	F64PTR VEC=basis->priorVec;
+	F64 factor0=VEC[Kold - 1]/VEC[Knew - 1]; 
+	factor0=log(factor0)+basis->prior.modelComplexity * log((F32)nSegNew/nSegOld);
+	F32 factor;
+	if (new->jumpType==ChORDER)  
+		factor=factor0; 
+	else if (new->jumpType==BIRTH) {
+		F32 propprobRatio=(F32)basis->goodNum/( basis->nKnot+1L);
+		factor=factor0+log(propprobRatio);
+	} else {
+		F32 propprobRatio=(F32)(basis->goodNum+basis->prior.minSepDist*2)/basis->nKnot;
+		factor=factor0  - log(propprobRatio);
 	}
-	return log(factor);
+	return (F32) factor ;
 }
-static F32 ST_ModelPriorFactor3(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new)
-{   
-	    I32  N=newcol->N ;
-		I32  Kold=basis->K;
-		I32  Knew=Kold+(newcol->k2_new - newcol->k2_old);
-		if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
-	    F32 factor0=basis->priorVec[Knew-1] - basis->priorVec[Kold - 1];
-		F32 factor;
-		if (new->jumpType==ChORDER)
-			factor=factor0;
-		else if (new->jumpType==BIRTH) {
-			factor=(F32)basis->goodNum/(N - basis->nKnot+1);
-			factor=factor0+log( factor);
-		}	else {
-			factor=(F32)(basis->goodNum+basis->prior.minSepDist * 2)/(new->nKnot_new+1);
-			factor=factor0 -log(factor);
-		}
-		return (factor);	  
-}
-static F32 ST_ModelPriorFactor4(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new)
-{	
-	I32  Kold=basis->K;
-	I32  Knew=Kold+(newcol->k2_new-newcol->k2_old);
-	if (basis->type==SEASONID) { Knew/=2;	Kold/=2; }
-	I32  Sold=basis->nKnot+1;
-	I32  Snew=new->nKnot_new+1; 
-	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder; 
+static F32 ST_ModelPriorFactor4(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
+	I32  Kold=basis ->K/(1L+(basis->type==SEASONID));
+	I32  Knew=(newcol->k2_new - newcol->k2_old)/(1L+(basis->type==SEASONID))+Kold;
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
 	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
 	F64PTR MAT=basis->priorMat;
-	F32    factor=MAT[(Sold-1)* KMAX+Kold- 1] * (NUMORDER * Sold+1)/(MAT[(Snew-1) *KMAX+Knew - 1] *(NUMORDER*Snew+1));
-	return (F32) logf(factor);	
-}
-static F32 ST_ModelPriorFactor5(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new)
-{
-	F32 factor=0;
-	int delta_k1=basis->nKnot;
-	delta_k1++;
-	int delta_k2=new->nKnot_new;
-	delta_k2++;
-	I32 Kold=basis->K;
-	I32 Knew=basis->K+newcol->k2_new - newcol->k2_old;
-	if (delta_k1==delta_k2 && Kold==Knew)
-		factor=0;
-	else {
-		int k=min(delta_k1,delta_k2);
-		int j;
-		int j0;
-		j=max(Kold,Knew);
-		j0=min(Kold,Knew);
-		if (basis->type==SEASONID) {
-			j=j/2;
-			j0=j0/2;
-		}
-		factor=1;
-		for (rI32 i=1; i <=k - 1; i++)
-			factor=factor * (j - 1 - i+1)/(j0 - 1 - i+1);
-		factor=factor * (j - 1 - (k - 1))/k;
-		factor=fastlog(factor);
-		factor=delta_k1 < delta_k2 ? -factor : factor;
+	F64 factor0=MAT[(nSegOld - 1) * KMAX+Kold - 1]/MAT[(nSegNew - 1) * KMAX+Knew - 1] ; 
+	factor0=basis->prior.modelComplexity * log(factor0);
+	F32 factor;
+	if      (new->jumpType==ChORDER)
+		factor=factor0;
+	else if (new->jumpType==BIRTH) {
+		F32 propprobRatio=(F32)basis->goodNum/( basis->nKnot+1L);
+		factor=factor0+log(propprobRatio);
+	} else {
+		F32 propprobRatio=(F32)(basis->goodNum+basis->prior.minSepDist*2)/basis->nKnot;
+		factor=factor0  - log(propprobRatio);
 	}
-	return factor;
+	return (F32) factor;
+}
+static F32 ST_ModelPriorFactor3_old(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {   
+	I32  Kold=basis ->K/(1L+(basis->type==SEASONID));
+	I32  Knew=(newcol->k2_new - newcol->k2_old)/(1L+(basis->type==SEASONID))+Kold;
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
+	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder;
+	F64PTR MAT=basis->priorMat;
+	F64PTR VEC=basis->priorNmodelsPerNseg;
+	F32  factor1=VEC[nSegOld - 1]/VEC[nSegNew - 1];	
+	F64  factor2=MAT[(nSegOld - 1) * KMAX+Kold - 1]/(MAT[(nSegNew - 1) * KMAX+Knew - 1]) 
+		           *  (nSegOld* NUMORDER+1.0)/(nSegNew * NUMORDER+1.0);
+	F32 factor;
+	if (new->jumpType==ChORDER) {
+		factor=log(factor2);
+	} else if (new->jumpType==BIRTH) {
+		F32 factor3=log((F32)basis->goodNum/(basis->nKnot+1));
+		factor1=log(factor1);
+		factor2=log(factor2);
+	} else {
+		F32 factor3=log((F32)(basis->goodNum)/basis->nKnot );  
+		factor1=log(factor1);
+		factor2=log(factor2);
+    }
+	return (factor);
+}
+static F32 ST_ModelPriorFactor4_old(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
+	I32  N=newcol->N;
+	I32  Kold=basis ->K/(1+(basis->type==SEASONID));
+	I32  Knew=Kold+(newcol->k2_new - newcol->k2_old)/(1+(basis->type==SEASONID));
+	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder;
+	F64PTR MAT=basis->priorMat;
+	F64PTR VEC=basis->priorNmodelsPerNseg;
+	F32  factor1=VEC[nSegOld - 1]/VEC[nSegNew - 1];	
+	F64  factor2=MAT[(nSegOld - 1) * KMAX+Kold - 1]/(MAT[(nSegNew - 1) * KMAX+Knew - 1]) 
+		           *  (F32)(nSegOld* NUMORDER+1)/(nSegNew * NUMORDER+1);
+	F32 factor;
+	if (new->jumpType==ChORDER) {
+		factor=log(factor2);
+	} else if (new->jumpType==BIRTH) {
+		F32 factor3=log((F32)basis->goodNum/(basis->nKnot+1));
+		factor1=log(factor1);
+		factor2=log(factor2);
+		factor=basis->prior.modelComplexity * factor1+factor2+factor3;
+	} else {
+		F32 factor3=log((F32)(basis->goodNum+basis->prior.minSepDist * 2)/basis->nKnot );  
+		factor1=log(factor1);
+		factor2=log(factor2);
+		factor=basis->prior.modelComplexity * factor1+factor2 - factor3;
+    }
+	return (factor);
+}
+static F32 ST_ModelPriorFactor5(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
+	I32  N=newcol->N;
+	I32  Kold=basis ->K/(1+(basis->type==SEASONID));
+	I32  Knew=Kold+(newcol->k2_new - newcol->k2_old)/(1+(basis->type==SEASONID));
+	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder;
+	F64PTR MAT=basis->priorMat;
+	F64PTR VEC=basis->priorNmodelsPerNseg;
+	F32  factor1=VEC[nSegOld - 1]/VEC[nSegNew - 1];	
+	F64  factor2=-(nSegNew- nSegOld) *log(NUMORDER+1);
+	F32 factor;
+	if (new->jumpType==ChORDER) {
+		factor=factor2;
+	} else if (new->jumpType==BIRTH) {
+		F32 factor3=log((F32)basis->goodNum/(basis->nKnot+1));
+		factor1=log(factor1);
+		factor=basis->prior.modelComplexity * factor1+factor2+factor3;
+		if (basis->nKnot <1)
+		r_printf("\nbirth %d %f  %f  %f %f\n",basis->nKnot,factor1,factor2,factor3,factor);
+	} else {
+		F32 factor3=log((F32)(basis->goodNum+basis->prior.minSepDist * 2)/basis->nKnot );  
+		factor1=log(factor1);
+		factor=basis->prior.modelComplexity * factor1+factor2 - factor3;
+    }
+	return (factor);
+}
+static F32 ST_ModelPriorFactor6(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new) {
+	I32  N=newcol->N;
+	I32  Kold=basis ->K/(1+(basis->type==SEASONID));
+	I32  Knew=Kold+(newcol->k2_new - newcol->k2_old)/(1+(basis->type==SEASONID));
+	I32  KMAX=(basis->prior.maxKnotNum+1L) * (basis->prior.maxOrder+(basis->type==TRENDID));
+	I32  nSegOld=basis->nKnot+1L;
+	I32  nSegNew=new  ->nKnot_new+1L;
+	I32  NUMORDER=basis->prior.maxOrder - basis->prior.minOrder;
+	F64PTR DimVec=basis->priorVec;
+	F64PTR ModelVec=basis->priorNmodelsPerNseg;
+	F32  factor1=DimVec[Kold- 1]/DimVec[Knew - 1];
+	F64  factor2=ModelVec[nSegOld - 1]/ModelVec[nSegNew - 1];
+	factor1=basis->prior.modelComplexity * log(factor1);
+	factor2=log(factor2);
+	F32 factor;
+	if (new->jumpType==ChORDER) {
+		factor=factor1+factor2;
+	} else if (new->jumpType==BIRTH) {
+		F32 factor3=log((F32)basis->goodNum/(basis->nKnot+1));		
+		factor=factor1+factor2+factor3;
+		if (basis->nKnot <1)
+		r_printf("\nbirth %d %f  %f  %f %f\n",basis->nKnot,factor1,factor2,factor3,factor);
+	} else {
+		F32 factor3=log((F32)(basis->goodNum+basis->prior.minSepDist * 2)/basis->nKnot );  
+		factor=factor1+factor2 - factor3;
+    }
+	return (factor);
 }
 void* Get_ModelPrior (I08 id) {
 	switch (id) {
 	case 0: return ST_ModelPriorFactor0;
 	case 1: return ST_ModelPriorFactor1;
-	case 2: return ST_ModelPriorFactor2;
-	case 3: return ST_ModelPriorFactor3;
-	case 4: return ST_ModelPriorFactor4;
-	case 5: return ST_ModelPriorFactor5;
+	case 2: return ST_ModelPriorFactor1;
 	}
 	return NULL;
 }

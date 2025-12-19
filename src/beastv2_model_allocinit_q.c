@@ -18,7 +18,7 @@ extern void* Get_GenRandomBasis(I08);
 extern void* Get_AllocInitBasis(I08);
 extern void* Get_PickBasisID(I08,I08,I32PTR);
 extern void* Get_CvtKnotsToBinVec(I08 id);
-extern void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32 minSep,F64PTR TNUM,F64PTR totalNum);
+extern void PreCaclModelNumber(I32 minOrder,I32 maxOrder,I32 maxNumseg,I32 N,I32 minSep,F64PTR TNUM,F64PTR totalNum,F64PTR nModels,int type);
 #define MODEL (*model)
 void  ReInit_PrecValues(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt) {
 	I32 hasNaNsInfs=0;
@@ -140,6 +140,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.rightMargin=opt->prior.trendRightMargin;
 			basis->prior.minOrder=opt->prior.trendMinOrder;
 			basis->prior.maxOrder=opt->prior.trendMaxOrder;
+			basis->prior.modelComplexity=opt->prior.trendComplexityFactor;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
 			AllocInitBasisMEM(basis,N,K_MAX,MEM);
 			basis->mcmc_Kstopping=K_MAX - (basis->prior.maxOrder+1);
@@ -162,24 +163,18 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 				preCalc_XmarsTerms_extra_fmt3(TREND->COEFF_A,TREND->COEFF_B,N);
 			else
 				preCalc_XmarsTerms_extra(TREND->COEFF_A,TREND->COEFF_B,N);
-			I32 tMAXNUMKNOT=basis->prior.maxKnotNum;
-			I32 tMINSEPDIST=basis->prior.minSepDist;
-			F32PTR scaleFactor=MyALLOC(*MEM,tMAXNUMKNOT+1,F32,0);
-			{
-				F32PTR MEMBUF1=MODEL.curr.XtX;  
-				F32PTR MEMBUF2=MODEL.curr.XtX+(tMAXNUMKNOT+1);
-				preCalc_scale_factor(scaleFactor,N,tMAXNUMKNOT,tMINSEPDIST,MEMBUF1,MEMBUF2);
-			}
-			basis->scalingFactor=scaleFactor;
 			I32 NUMSEG=opt->prior.trendMaxKnotNum+1;
 			I32 MINORDER=opt->prior.trendMinOrder+1;
 			I32 MAXORDER=opt->prior.trendMaxOrder+1;
-			if (opt->prior.modelPriorType==4) {
+			I32 MINSEP=opt->prior.trendMinSepDist;
+			if (opt->prior.modelPriorType >=1 && opt->prior.modelPriorType <=14) {
 				F64PTR priorVec=MyALLOC(*MEM,NUMSEG * MAXORDER,F64,64);
 				F64PTR priorMat=MyALLOC(*MEM,NUMSEG * MAXORDER * NUMSEG,F64,64);
-				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,opt->prior.trendMinSepDist,priorMat,priorVec);
+				F64PTR priorNModels=MyALLOC(*MEM,NUMSEG,F64,64);
+				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,MINSEP,priorMat,priorVec,priorNModels,opt->prior.modelPriorType);
 				basis->priorMat=priorMat;
 				basis->priorVec=priorVec;	
+				basis->priorNmodelsPerNseg=priorNModels;
 			}
 		}
 		else if (type==SEASONID)
@@ -192,6 +187,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.rightMargin=opt->prior.seasonRightMargin;
 			basis->prior.minOrder=opt->prior.seasonMinOrder;
 			basis->prior.maxOrder=opt->prior.seasonMaxOrder;
+			basis->prior.modelComplexity=opt->prior.seasonComplexityFactor;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
 			AllocInitBasisMEM(basis,N,K_MAX,MEM);
 			basis->mcmc_Kstopping=K_MAX - (2 * basis->prior.maxOrder);
@@ -208,25 +204,19 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			SEASON->SQR_CSUM=MyALLOC(*MEM,(N+1L)*sMAXORDER * 2L,F32,64) ;  
 			SEASON->SCALE_FACTOR=MyALLOC(*MEM,sMAXORDER * 2L,F32,0);
 			preCalc_terms_season(SEASON->TERMS,SEASON->SQR_CSUM,SEASON->SCALE_FACTOR,N,opt->io.meta.period,sMAXORDER);
-			I32 sMAXNUMKNOT=basis->prior.maxKnotNum;
-			I32 sMINSEPDIST=basis->prior.minSepDist;
-			F32PTR scaleFactor=MyALLOC(*MEM,sMAXNUMKNOT+1,F32,0);
-			{
-				F32PTR MEMBUF1=MODEL.curr.XtX;  
-				F32PTR MEMBUF2=MODEL.curr.XtX+(sMAXNUMKNOT+1);
-				preCalc_scale_factor(scaleFactor,N,sMAXNUMKNOT,sMINSEPDIST,MEMBUF1,MEMBUF2);
-			}
-			basis->scalingFactor=scaleFactor;
 			I32 NUMSEG=opt->prior.seasonMaxKnotNum+1;
 			I32 MINORDER=opt->prior.seasonMinOrder;
 			I32 MAXORDER=opt->prior.seasonMaxOrder;
-			if (opt->prior.modelPriorType==4) {
+			I32 MINSEP=opt->prior.seasonMinSepDist;
+			if (opt->prior.modelPriorType >=1 && opt->prior.modelPriorType <=14) {
 				F64PTR priorVec=MyALLOC(*MEM,NUMSEG * MAXORDER,F64,64);
 				F64PTR priorMat=MyALLOC(*MEM,NUMSEG * MAXORDER * NUMSEG,F64,64);
-				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,opt->prior.seasonMinSepDist,priorMat,priorVec);
+				F64PTR priorNModels=MyALLOC(*MEM,NUMSEG,F64,64);
+				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,MINSEP,priorMat,priorVec,priorNModels,opt->prior.modelPriorType);
 				basis->priorMat=priorMat;
 				basis->priorVec=priorVec;
-			}
+				basis->priorNmodelsPerNseg=priorNModels;
+			} 
 		}
 		else if (type==DUMMYID)
 		{
@@ -239,6 +229,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.rightMargin=opt->prior.seasonRightMargin;
 			basis->prior.minOrder=-1;
 			basis->prior.maxOrder=-1;
+			basis->prior.modelComplexity=opt->prior.seasonComplexityFactor;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
 			AllocInitBasisMEM(basis,N,K_MAX,MEM);
 			basis->mcmc_Kstopping=K_MAX - (2 * opt->io.meta.period);
@@ -262,24 +253,18 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 				DUMMY->TERMS=MyALLOC(*MEM,N * sMAXORDER * 2L,F32,64), 
 				preCalc_terms_season(DUMMY->TERMS,NULL,NULL,N,opt->io.meta.period,sMAXORDER);
 			}
-			I32 sMAXNUMKNOT=basis->prior.maxKnotNum;
-			I32 sMINSEPDIST=basis->prior.minSepDist;
-			F32PTR scaleFactor=MyALLOC(*MEM,sMAXNUMKNOT+1,F32,0);
-			{
-				F32PTR MEMBUF1=MODEL.curr.XtX;  
-				F32PTR MEMBUF2=MODEL.curr.XtX+(sMAXNUMKNOT+1);
-				preCalc_scale_factor(scaleFactor,N,sMAXNUMKNOT,sMINSEPDIST,MEMBUF1,MEMBUF2);
-			}
-			basis->scalingFactor=scaleFactor;
 			I32		NUMSEG=opt->prior.seasonMaxKnotNum+1;
 			I32		MINORDER=opt->prior.seasonMinOrder=1;
 			I32		MAXORDER=opt->prior.seasonMaxOrder=2;
-			if (opt->prior.modelPriorType==4) {
-				F64PTR	priorVec=MyALLOC(*MEM,NUMSEG * MAXORDER,F64,64);
-				F64PTR	priorMat=MyALLOC(*MEM,NUMSEG * MAXORDER * NUMSEG,F64,64);
-				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,opt->prior.seasonMinSepDist,priorMat,priorVec);
+			I32     MINSEP=opt->prior.seasonMinSepDist;
+			if (opt->prior.modelPriorType >=1 && opt->prior.modelPriorType <=14) {
+				F64PTR priorVec=MyALLOC(*MEM,NUMSEG * MAXORDER,F64,64);
+				F64PTR priorMat=MyALLOC(*MEM,NUMSEG * MAXORDER * NUMSEG,F64,64);
+				F64PTR priorNModels=MyALLOC(*MEM,NUMSEG,F64,64);
+				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,MINSEP,priorMat,priorVec,priorNModels,opt->prior.modelPriorType);
 				basis->priorMat=priorMat=NULL;
 				basis->priorVec=priorVec=NULL;
+				basis->priorNmodelsPerNseg=priorNModels=NULL;
 			}
 		}
 		else if (type==SVDID)
@@ -293,6 +278,7 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 			basis->prior.rightMargin=opt->prior.seasonRightMargin;
 			basis->prior.minOrder=opt->prior.seasonMinOrder;
 			basis->prior.maxOrder=opt->prior.seasonMaxOrder;
+			basis->prior.modelComplexity=opt->prior.seasonComplexityFactor;
 			isComponentFixed[i]=basis->prior.minOrder==basis->prior.maxOrder && basis->prior.minKnotNum==0 && basis->prior.maxKnotNum==0;
 			AllocInitBasisMEM(basis,N,K_MAX,MEM);
 			basis->mcmc_Kstopping=K_MAX - ( basis->prior.maxOrder); 		
@@ -318,24 +304,18 @@ void AllocInitModelMEM(BEAST2_MODEL_PTR model,BEAST2_OPTIONS_PTR opt,MemPointers
 						ptr1+=N+1;
 				} 
 			}
-			I32 sMAXNUMKNOT=basis->prior.maxKnotNum;
-			I32 sMINSEPDIST=basis->prior.minSepDist;
-			F32PTR scaleFactor=MyALLOC(*MEM,sMAXNUMKNOT+1,F32,0);
-			{
-				F32PTR MEMBUF1=MODEL.curr.XtX;  
-				F32PTR MEMBUF2=MODEL.curr.XtX+(sMAXNUMKNOT+1);
-				preCalc_scale_factor(scaleFactor,N,sMAXNUMKNOT,sMINSEPDIST,MEMBUF1,MEMBUF2);
-			}
-			basis->scalingFactor=scaleFactor;
 			I32 NUMSEG=opt->prior.seasonMaxKnotNum+1;
 			I32 MINORDER=opt->prior.seasonMinOrder;
 			I32 MAXORDER=opt->prior.seasonMaxOrder;
-			if (opt->prior.modelPriorType==4) {
+			I32 MINSEP=opt->prior.seasonMinSepDist;
+			if (opt->prior.modelPriorType >=1 && opt->prior.modelPriorType <=14) {
 				F64PTR priorVec=MyALLOC(*MEM,NUMSEG * MAXORDER,F64,64);
 				F64PTR priorMat=MyALLOC(*MEM,NUMSEG * MAXORDER * NUMSEG,F64,64);
-				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,opt->prior.seasonMinSepDist,priorMat,priorVec);
-				basis->priorMat=priorMat;
-				basis->priorVec=priorVec;
+				F64PTR priorNModels=MyALLOC(*MEM,NUMSEG,F64,64);
+				PreCaclModelNumber(MINORDER,MAXORDER,NUMSEG,N,MINSEP,priorMat,priorVec,priorNModels,opt->prior.modelPriorType);
+				basis->priorMat=priorMat ;
+				basis->priorVec=priorVec ;
+				basis->priorNmodelsPerNseg=priorNModels ;
 			}
 		}
 		else if (type==OUTLIERID) {

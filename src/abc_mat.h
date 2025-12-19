@@ -49,8 +49,7 @@ typedef struct {
 typedef struct {
 	I32 N;
 	I32 Nlda; 
-	F32PTR X;
-	F32PTR Xnewterm;
+	F32PTR X,Xnewterm;
 	I16 nbands;
 	I16 ks_x[5];
 	I16 kterms_x[5];

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
-#if !defined(cpu_ARM64) && !defined(cpu_POWERPC)
+#if !defined(cpu_ARM64) && !defined(cpu_POWERPC)  
 	#include <immintrin.h> 
     #include "abc_math_avx.h"
 #endif
@@ -20,10 +20,10 @@
 #include "abc_date.h"
 #include "beastv2_io.h"
 #if  ( !defined(R_RELEASE) && !defined(M_RELEASE) && !defined(P_RELEASE)  )||defined( PLAY_MODE)
-#include "mrbeast_header.h"
-#include "mrbeast_io.h" 
-#include "sbmfast.h"
-#include "sbmfast_io.h"
+	#include "mrbeast_header.h"
+	#include "mrbeast_io.h" 
+	#include "sbmfast.h"
+	#include "sbmfast_io.h"
 #endif
 #include "globalvars.h"
 #if defined(OS_WIN64) 
@@ -94,7 +94,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 		GLOBAL_CPU_CURRENT=GLOBAL_CPU_REQUEST;
 		SetupRoutines_ByCPU(GLOBAL_CPU_CURRENT);
 	}
-	#define __STRING_LEN__ 20
+	#define __STRING_LEN__          20
 	char  algorithm[__STRING_LEN__+1];
 	GetCharArray(prhs[0],algorithm,__STRING_LEN__);
 	void * ANS=NULL;
@@ -104,28 +104,15 @@ void * mainFunction(void *prhs[],int nrhs) {
 		#if P_INTERFACE==1
 			prhs[1]=CvtToPyArray_NewRef(prhs[1]);
 		#endif
-		if (BEAST2_GetArgs(prhs,nrhs,&option)==0) {
+		if (  BEAST2_GetArgs(prhs,nrhs,&option)==0 ) {
 			BEAST2_DeallocateTimeSeriesIO(&(option.io));
 		    #if P_INTERFACE==1
 				Py_XDECREF(prhs[1]);
 		    #endif
 			return IDE_NULL;
 		}		
-		option.io.out.result=NULL;		 	
-		if (option.io.q==1) {
-			ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;	
-		} else {			
-			option.extra.computeSeasonAmp=0;
-			option.extra.computeTrendSlope=0;
-			option.extra.tallyIncDecTrendJump=0;
-			option.extra.tallyPosNegTrendJump=0;
-			option.extra.tallyPosNegOutliers=0;
-			option.extra.tallyPosNegSeasonJump=0;
-			option.extra.computeTrendChngpt=1;
-			option.extra.computeSeasonChngpt=1;
-			BEAST2_print_options(&option); 
-			ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
-		}
+		option.io.out.result=NULL;		 
+		ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
 		GLOBAL_OPTIONS=(BEAST2_OPTIONS_PTR)&option;
 		if (option.io.numOfPixels==1) {
 			beast2_main_corev4();
@@ -152,12 +139,18 @@ void * mainFunction(void *prhs[],int nrhs) {
 			thread_id=malloc(sizeof(pthread_t) * NUM_THREADS);
   		   int8_t *thread_stat=malloc(sizeof(int8_t) * NUM_THREADS);
 			for (I32 i=0; i < NUM_THREADS; i++) {
-             #if defined(OS_LINUX)||defined (OS_WIN32)||defined (OS_WIN64) 
+             #if (defined(OS_LINUX)||defined (OS_WIN32)||defined (OS_WIN64) )  &&  USING_MUSL==0
 				cpu_set_t cpuset;
 				CPU_ZERO(&cpuset);
 				CPU_SET( i%NUM_CORES,&cpuset);
 				pthread_attr_setaffinity_np(&attr,sizeof(cpu_set_t),&cpuset);
 				thread_stat[i]=pthread_create( &thread_id[i],&attr,beast2_main_corev4_mthrd,(void*)NULL);
+             #elif (defined(OS_LINUX)||defined (OS_WIN32)||defined (OS_WIN64) )  &&  USING_MUSL==1
+				cpu_set_t cpuset;
+				CPU_ZERO(&cpuset);
+				CPU_SET( i%NUM_CORES,&cpuset);
+				thread_stat[i]=pthread_create(&thread_id[i],&attr,beast2_main_corev4_mthrd,(void*)NULL);
+				pthread_setaffinity_np(thread_id[i],sizeof(cpu_set_t),&cpuset);
 			 #elif defined(OS_MAC)
 				cpu_set_t cpuset;
 				CPU_ZERO(&cpuset);
@@ -258,7 +251,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 		#if P_INTERFACE==1
 			prhs[1]=CvtToPyArray_NewRef(prhs[1]);
 		#endif
-		if (BEAST2_GetArgs(prhs,nrhs,&option)==0) {
+		if (BEAST2_GetArgs(prhs,nrhs,&option)==0)  {
 			BEAST2_DeallocateTimeSeriesIO(&(option.io));
 		    #if P_INTERFACE==1
 				Py_XDECREF(prhs[1]);
@@ -266,20 +259,7 @@ void * mainFunction(void *prhs[],int nrhs) {
 			return IDE_NULL;
 		}		
 		option.io.out.result=NULL;		 	
-		if (option.io.q==1) {
-			ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;	
-		} else {			
-			option.extra.computeSeasonAmp=0;
-			option.extra.computeTrendSlope=0;
-			option.extra.tallyIncDecTrendJump=0;
-			option.extra.tallyPosNegTrendJump=0;
-			option.extra.tallyPosNegOutliers=0;
-			option.extra.tallyPosNegSeasonJump=0;
-			option.extra.computeTrendChngpt=1;
-			option.extra.computeSeasonChngpt=1;
-			BEAST2_print_options(&option); 
-			ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
-		}
+		ANS=PROTECT(BEAST2_Output_AllocMEM(&option)); nptr++;
 		if (option.prior.precPriorType !=ConstPrec) {
 			option.prior.precPriorType=UniformPrec;
 			option.prior.precValue=0;
@@ -312,12 +292,18 @@ void * mainFunction(void *prhs[],int nrhs) {
 			thread_id=malloc(sizeof(pthread_t) * NUM_THREADS);
   		   int8_t *thread_stat=malloc(sizeof(int8_t) * NUM_THREADS);
 			for (I32 i=0; i < NUM_THREADS; i++) {
-             #if defined(OS_LINUX)||defined (OS_WIN32)||defined (OS_WIN64) 
+             #if (defined(OS_LINUX)||defined (OS_WIN32)||defined (OS_WIN64) )  &&  USING_MUSL==0
 				cpu_set_t cpuset;
 				CPU_ZERO(&cpuset);
 				CPU_SET( i%NUM_CORES,&cpuset);
 				pthread_attr_setaffinity_np(&attr,sizeof(cpu_set_t),&cpuset);
-				thread_stat[i]=pthread_create( &thread_id[i],&attr,beast2_main_core_bic_mthrd,(void*)whichCritia);
+				thread_stat[i]=pthread_create( &thread_id[i],&attr,beast2_main_corev4_mthrd,(void*)NULL);
+             #elif (defined(OS_LINUX)||defined (OS_WIN32)||defined (OS_WIN64) )  && USING_MUSL==1
+				cpu_set_t cpuset;
+				CPU_ZERO(&cpuset);
+				CPU_SET( i%NUM_CORES,&cpuset);
+				thread_stat[i]=pthread_create(&thread_id[i],&attr,beast2_main_corev4_mthrd,(void*)NULL);
+				pthread_setaffinity_np(thread_id[i],sizeof(cpu_set_t),&cpuset);
 			 #elif defined(OS_MAC)
 				cpu_set_t cpuset;
 				CPU_ZERO(&cpuset);

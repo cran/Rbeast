@@ -6,7 +6,7 @@ typedef struct {
 	void**  addr;
 	int     size;
 	int     align;
-	I64     offset_from_origin;                        
+	I64     offset_from_origin;    
 } MemNode;
 I64    memnodes_calc_offsets(MemNode* list,int* maxAlignment);
 void   memnodes_assign_from_alignedbase(MemNode* list,VOIDPTR prawaligned);  

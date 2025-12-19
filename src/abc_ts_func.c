@@ -92,33 +92,6 @@ void preCalc_XmarsTerms_extra_fmt3(F32PTR COEFF_A,F32PTR COEFF_B,I32 N)
 		}
 	}
 }
-void preCalc_scale_factor(F32PTR sclFactor,I32 N,I32 maxKnotNum,I32 minSepDist,F32PTR mem1,F32PTR mem2)
-{
-	if (sclFactor==NULL) {
-		return;
-	}
-	F32 N_tmp,tmp1,tmp2;
-	for (int k=0; k <=maxKnotNum; k++) {
-		N_tmp=N - (k+1)*(minSepDist - 1) - 1.f;
-		if (k==0)	{
-			*mem1=1.0f;
-			tmp1=logf(1.0f);
-		} else {			
-			f32_seq(mem1,(F32)1,(F32)1,k);
-			r_ippsSubC_32f_I(1.f,mem1,k);
-			r_ippsSubCRev_32f_I(N_tmp,mem1,k);
-			r_ippsLn_32f_I(mem1,k);
-			r_ippsSum_32f(mem1,k,&tmp1,ippAlgHintAccurate);
-		}
-		N_tmp=N - (k+2)*(minSepDist - 1) - 1.f;		
-		f32_seq(mem2,1.f,1.f,k+1);
-		r_ippsSubC_32f_I(1.f,mem2,k+1);
-		r_ippsSubCRev_32f_I(N_tmp,mem2,k+1);
-		r_ippsLn_32f_I(mem2,k+1);	
-		r_ippsSum_32f(mem2,k+1,&tmp2,ippAlgHintAccurate);
-		sclFactor[k]=(N - (k+2)*minSepDist+1) *expf(tmp1 - tmp2);
-	}	
-}
 void KnotList_to_Bincode(U08PTR  good,I32 N,U16 minSepDist,U16PTR knotList,I64 knotNum) {
 	r_ippsSet_8u(1,good,N);	
 	for (int i=1; i <=knotNum; i++)	{		

@@ -1,20 +1,22 @@
 #pragma once
-#include <inttypes.h> 
+#include <inttypes.h>      
 #include <float.h>
 #include "abc_000_macro.h"
-#define FLOAT_TYPE 4    
-#ifdef FLOAT
-#undef FLOAT
+ #define FLOAT_TYPE 8    
+#ifdef Float
+#undef Float
 #endif
 #if FLOAT_TYPE==4
-	typedef float FLOAT;
+	typedef float Float;
 	#define FLOAT_MAX  FLT_MAX
 	#define FLOAT_MIN (-FLT_MAX)
+#define FLOAT_SMALLEST  (FLT_MIN)
 	#define FLOAT_EPSILON FLT_EPSILON
 #elif FLOAT_TYPE==8
-	typedef double FLOAT;
+	typedef double Float;
 	#define FLOAT_MAX  DBL_MAX
 	#define FLOAT_MIN (-DBL_MAX)
+    #define FLOAT_SMALLEST  (DBL_MIN)
 	#define FLOAT_EPSILON DBL_EPSILON
 #endif
 #if defined(IsNaN)
@@ -38,7 +40,7 @@
 	typedef uint16_t  U16;
 	typedef int8_t    I08;
 	typedef uint8_t   U08;
-	#define rFLOAT		register FLOAT
+	#define rFLOAT		register Float
 	#define rF32		register float
 	#define rF64		register double
 	#define rI64		register int64_t
@@ -49,7 +51,7 @@
 	#define rU16		register uint16_t
 	#define rI08		register int8_t
 	#define rU08		register uint8_t
-	typedef FLOAT* _restrict FLOATPTR;
+	typedef Float* _restrict FLOATPTR;
 	typedef float* _restrict F32PTR;
 	typedef double* _restrict F64PTR;
 	typedef int64_t* _restrict I64PTR;
@@ -100,6 +102,7 @@ enum { _False_=0,_True_=1 };
 #endif
 #define max(a,b)			(((a) > (b)) ? (a) : (b))
 #define min(a,b)			(((a) < (b)) ? (a) : (b))
+#define MyAbs(a)			    (((a) < 0  ) ? -(a) : (a))
 #define max3(a,b,c)         max( max(a,b),c)
 #define max4(a,b,c,d)       max( max3(a,b,c),d)
 #define _IsAlmostInteger(x)  ( fabs(x-round(x)) <1e-3 )

@@ -66,6 +66,7 @@ typedef struct BEAST2_PRIOR {
 	I16   trendMinKnotNum,seasonMinKnotNum;
 	I16   trendMaxKnotNum,seasonMaxKnotNum;
 	I16   outlierMinKnotNum,outlierMaxKnotNum;
+	F32   seasonComplexityFactor,trendComplexityFactor;
 	U16   K_MAX;
 	F32   sigFactor;
 	F32   outlierSigFactor;
@@ -269,14 +270,16 @@ typedef struct BEAST2_BASIS {
 		void        (*ComputeY)(F32PTR X,F32PTR beta,F32PTR Y,BEAST2_BASIS_PTR basis,I32 Npad);
 		F32         (*ModelPrior)(BEAST2_BASIS_PTR basis,NEWCOLINFO_PTR newcol,NEWTERM_PTR new);
 	};	
-	F32PTR   scalingFactor;
 	F64PTR   priorMat;
 	F64PTR   priorVec;
+	F64PTR   priorNmodelsPerNseg;
+	I32      priorKmax;         
 	struct {
 		TKNOT  minSepDist,leftMargin,rightMargin;
 		I16    minKnotNum;
 		I16    maxKnotNum;
 		TORDER minOrder,maxOrder;
+		F32    modelComplexity;
 	} prior;
 	PROP_PROB_STRUCT	propprob;
 	I16					mcmc_Kstopping;

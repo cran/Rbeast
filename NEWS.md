@@ -1,3 +1,10 @@
+# CHANGES IN Rbeast 1.0.2
+
+* Add two new arguments s.complexfct and t.complexfct ( prior$seasonComplexityFactor and prior$trendComplexityFactor)
+* to allow users to mannually tune how complex the seasonal and trend curves are, rather than using the default
+* non-informative priors (s.complexfct=0, and t.complexfct=0).
+ 
+
 # CHANGES IN Rbeast 1.0.1
 
 * Supress the printing of an empty line in the quiet mode, thanks to Jiapei  Ma and Marina Siebold.

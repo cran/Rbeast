@@ -17,7 +17,7 @@
 #include "abc_rand.h"
 #include "abc_vec.h"   
 #include "abc_math.h"  
-#include <stdio.h>	               
+#include <stdio.h>	   
 #include "globalvars.h"  
 #include "beastv2_header.h"
 #include "beastv2_func.h" 
@@ -52,14 +52,14 @@ int beast2_main_corev4(void)   {
 	const U16PTR  RND16_END=RND16+MAX_RAND_NUM * 2 - 7;
 	const U08PTR  RND08_END=RND08+MAX_RAND_NUM * 4 - 7 -3;     
 	const F32PTR  RNDGAMMA_END=RNDGAMMA+MAX_RAND_NUM - MODEL.precState.nPrecGrp-1L;
-	const F32PTR Xt_mars;
-	const F32PTR Xnewterm;      
-	const F32PTR Xt_zeroBackup; 
+	F32PTR Xt_mars;       
+	F32PTR Xnewterm;      
+	F32PTR Xt_zeroBackup; 
 	AllocateXXXMEM(&Xt_mars,&Xnewterm,&Xt_zeroBackup,&MODEL,opt,&MEM);
 	BEAST2_YINFO     yInfo;
 	AllocateYinfoMEM(&yInfo,opt,&MEM);
-	const BEAST2_RESULT resultChain={ NULL,};
-	BEAST2_RESULT       result={ NULL,};
+    BEAST2_RESULT resultChain={ NULL,};
+	BEAST2_RESULT result={ NULL,};
 	BEAST2_Result_AllocMEM(&resultChain,opt,&MEM); 	
 	BEAST2_Result_AllocMEM(&result,opt,&MEM);
 	const   I32  NumCIVars=MODEL.NUMBASIS+opt->extra.computeTrendSlope;
@@ -267,7 +267,7 @@ int beast2_main_corev4(void)   {
 					numBadIterations=0;
 				} 
 				F32 delta_lik=MODEL.prop.marg_lik - MODEL.curr.marg_lik;
-				if   ( !(NEW.jumpType==MOVE||basis->type==OUTLIERID) ) {
+				if   ( !(NEW.jumpType==MOVE||basis->type==OUTLIERID||basis->type==DUMMYID)  ) {
 					F32 factor=basis->ModelPrior(basis,&NEW.newcols,&NEW); 
 					delta_lik+=factor;
 				}
@@ -925,12 +925,12 @@ int beast2_main_corev4(void)   {
 				*(CP+i)=(F32) cptList[i]* dT+T0,\
 				*(CPPROB+i)=(F32) mem[i];\
 		         I32 cptLoc=cptList[i]==0 ? 1 : cptList[i];\
-				 *(CP_CHANGE+i)=Y[cptLoc] - Y[cptLoc - 1];\
+				 if (Y) *(CP_CHANGE+i)=Y[cptLoc] - Y[cptLoc - 1];\
 			}\
 			for (int i=trueCptNumber; i <MAX_KNOTNUM; i++) {\
 				*(CP+i)=nan;\
 				*(CPPROB+i)=nan;\
-				  *(CP_CHANGE+i)=nan;\
+				*(CP_CHANGE+i)=nan;\
 			}	\
 			for (int i=0; i < trueCptNumber; i++)\
 				*(CP_CI+i)=(F32)cptCIList[i] * dT+T0,\
